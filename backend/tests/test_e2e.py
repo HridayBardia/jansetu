@@ -13,26 +13,33 @@ from app.api.v1.router import get_current_user
 from app.models.db_models import UserDB
 from tests.conftest import TestingSessionLocal
 
-db = TestingSessionLocal()
-mock_user = db.query(UserDB).filter(UserDB.username == "test_e2e_user").first()
-if not mock_user:
-    from app.core.security import hash_pin
-    mock_user = UserDB(
-        id="test-e2e-user-id",
-        username="test_e2e_user",
-        pin_hash=hash_pin("123456"),
-        full_name="Test User",
-        mobile_number="+919876543210",
-    )
-    db.add(mock_user)
-    db.commit()
-    db.refresh(mock_user)
-db.close()
+_mock_user_cache = None
+
+def get_or_create_mock_user():
+    global _mock_user_cache
+    if _mock_user_cache is None:
+        db = TestingSessionLocal()
+        user = db.query(UserDB).filter(UserDB.username == "test_e2e_user").first()
+        if not user:
+            from app.core.security import hash_pin
+            user = UserDB(
+                id="test-e2e-user-id",
+                username="test_e2e_user",
+                pin_hash=hash_pin("123456"),
+                full_name="Test User",
+                mobile_number="+919876543210",
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        db.close()
+        _mock_user_cache = user
+    return _mock_user_cache
 
 import pytest
 
 def override_get_current_user():
-    return mock_user
+    return get_or_create_mock_user()
 
 @pytest.fixture(autouse=True)
 def mock_auth():

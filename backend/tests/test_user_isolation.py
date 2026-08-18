@@ -13,17 +13,29 @@ def setup_users():
     db = TestingSessionLocal()
     
     # Create User 1: Hriday
-    user1 = db.query(UserDB).filter(UserDB.mobile_number == "+917016918865").first()
+    user1 = db.query(UserDB).filter(UserDB.username == "hriday_test").first()
     if not user1:
-        user1 = UserDB(id="user_hriday_test", full_name="Hriday Bardia", mobile_number="+917016918865")
+        user1 = UserDB(
+            id="user_hriday_test",
+            username="hriday_test",
+            pin_hash="fake_hash",
+            full_name="Hriday Bardia",
+            mobile_number="+917016918865"
+        )
         db.add(user1)
         db.commit()
     DemoVaultService.seed_user_vault(db, user1)
 
     # Create User 2: Varad
-    user2 = db.query(UserDB).filter(UserDB.mobile_number == "+918830482422").first()
+    user2 = db.query(UserDB).filter(UserDB.username == "varad_test").first()
     if not user2:
-        user2 = UserDB(id="user_varad_test", full_name="Varad", mobile_number="+918830482422")
+        user2 = UserDB(
+            id="user_varad_test",
+            username="varad_test",
+            pin_hash="fake_hash",
+            full_name="Varad",
+            mobile_number="+918830482422"
+        )
         db.add(user2)
         db.commit()
     DemoVaultService.seed_user_vault(db, user2)
