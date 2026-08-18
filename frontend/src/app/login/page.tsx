@@ -125,6 +125,10 @@ export default function LoginPage() {
     // MSG91 Identifier format: 917016918865 (no + symbol)
     const formattedIdentifier = `91${cleanMobile.slice(-10)}`;
 
+    console.log("MSG91 widget loaded:", typeof window.sendOtp);
+    console.log("Captcha verified:", typeof window.isCaptchaVerified === 'function' ? window.isCaptchaVerified() : false);
+    console.log("Identifier:", formattedIdentifier.replace(/\d(?=\d{4})/g, "*"));
+
     // Verify Captcha if rendered
     if (typeof window.isCaptchaVerified === 'function' && !window.isCaptchaVerified()) {
       setErrorMsg('Please complete the verification before continuing.');
@@ -138,6 +142,14 @@ export default function LoginPage() {
       window.sendOtp(
         formattedIdentifier,
         (data: any) => {
+          console.log("MSG91 SEND OTP SUCCESS:", {
+            callbackType: 'success',
+            status: data?.type || 'success',
+            reqId: data?.reqId,
+            message: data?.message,
+            response: data,
+            timestamp: new Date().toISOString()
+          });
           setIsSubmitting(false);
           if (data?.reqId) {
             setReqId(data.reqId);
@@ -148,6 +160,14 @@ export default function LoginPage() {
           setTimeout(() => otpInputRefs[0].current?.focus(), 100);
         },
         (error: any) => {
+          console.error("MSG91 SEND OTP FAILURE:", {
+            callbackType: 'failure',
+            status: error?.type || 'failure',
+            errorCode: error?.code,
+            errorMessage: error?.message,
+            response: error,
+            timestamp: new Date().toISOString()
+          });
           setIsSubmitting(false);
           setErrorMsg("We couldn't send the verification code. Please try again.");
         }
