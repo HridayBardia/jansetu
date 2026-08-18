@@ -455,17 +455,19 @@ class DemoVaultService:
         return results
 
     @staticmethod
-    def get_demo_citizen(key_or_mobile: str) -> Optional[Dict[str, Any]]:
-        query = key_or_mobile.lower().strip()
+    def get_demo_citizen(key_or_username: str) -> Optional[Dict[str, Any]]:
+        query = key_or_username.lower().strip()
+        # Resolve display aliases back to real keys
         if query == "aarav":
             query = "hriday"
         elif query == "priya":
             query = "varad"
         elif query == "arjun":
             query = "narayan"
-            
+
+        # Match by key or full_name (case-insensitive)
         for key, data in DEMO_CITIZENS.items():
-            if key == query or data.get("mobile_number") == query or data.get("mobile_number", "").replace("+91", "") == query:
+            if key == query or data.get("full_name", "").lower() == query:
                 return data
         return None
 
@@ -505,11 +507,13 @@ class DemoVaultService:
         user_id_expected = f"demo_citizen_{key.lower().strip()}"
         user = db.query(UserDB).filter(UserDB.id == user_id_expected).first()
         if not user:
+            from app.core.security import hash_pin
             user = UserDB(
                 id=user_id_expected,
+                username=alias_key,
+                pin_hash=hash_pin("000000"),  # default demo PIN; overridden by seed_synthetic_users
                 full_name=expected_name,
                 mobile_number=demo_info["mobile_number"],
-                mobile_verified=True
             )
             db.add(user)
             db.commit()
@@ -559,7 +563,9 @@ class DemoVaultService:
         if existing_docs:
             return existing_docs
 
-        demo_info = DemoVaultService.get_demo_citizen(user.mobile_number) or DemoVaultService.get_demo_citizen(user.full_name)
+        # Match by username or full_name
+        username_key = getattr(user, 'username', '') or ''
+        demo_info = DemoVaultService.get_demo_citizen(username_key) or DemoVaultService.get_demo_citizen(user.full_name)
         
         docs_to_create = []
         if demo_info:

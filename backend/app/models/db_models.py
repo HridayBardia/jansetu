@@ -11,28 +11,20 @@ class UserDB(Base):
     __tablename__ = "users"
     
     id = Column(String, primary_key=True, default=generate_uuid)
+    username = Column(String, unique=True, index=True, nullable=False)  # lowercase login handle
+    pin_hash = Column(String, nullable=False)                           # bcrypt hash of 6-digit PIN
     full_name = Column(String, nullable=False)
-    mobile_number = Column(String, unique=True, index=True, nullable=False)
-    mobile_verified = Column(Boolean, default=True)
+    mobile_number = Column(String, nullable=True)                       # informational only
     email = Column(String, nullable=True)
-    hashed_password = Column(String, nullable=True)
     role = Column(String, default="citizen")
+    # Brute-force protection
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login_at = Column(DateTime, default=datetime.utcnow)
 
-class OTPVerificationDB(Base):
-    __tablename__ = "otp_verifications"
-    
-    id = Column(String, primary_key=True, default=generate_uuid)
-    mobile_number = Column(String, index=True, nullable=False)
-    otp_hash = Column(String, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
-    attempt_count = Column(Integer, default=0)
-    max_attempts = Column(Integer, default=5)
-    resend_cooldown_until = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    verified_at = Column(DateTime, nullable=True)
+
 
 
 class JourneyDB(Base):

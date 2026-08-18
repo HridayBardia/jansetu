@@ -1,6 +1,5 @@
 import hmac
 import hashlib
-import secrets
 import json
 import base64
 import re
@@ -8,48 +7,56 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from app.core.config import settings
 
-def normalize_mobile_number(mobile: str) -> str:
+# ---------------------------------------------------------------------------
+# Username helpers
+# ---------------------------------------------------------------------------
+
+def normalize_username(username: str) -> str:
+    """Normalizes a username to lowercase with leading/trailing whitespace removed."""
+    return username.strip().lower()
+
+def validate_username(username: str) -> bool:
     """
-    Normalizes Indian mobile numbers into standard +91XXXXXXXXXX format.
-    Accepts: '7016918865', '+91 7016918865', '917016918865', '07016918865'
+    Validates username rules:
+    - 4–30 characters
+    - Only letters, numbers, underscores allowed
     """
-    digits = re.sub(r"\D", "", str(mobile))
-    if len(digits) == 10:
-        return f"+91{digits}"
-    elif len(digits) == 12 and digits.startswith("91"):
-        return f"+{digits}"
-    elif len(digits) == 11 and digits.startswith("0"):
-        return f"+91{digits[1:]}"
-    elif len(digits) > 10 and digits.startswith("91"):
-        return f"+{digits}"
-    return f"+91{digits[-10:]}" if len(digits) >= 10 else f"+91{digits}"
+    if not username:
+        return False
+    return bool(re.match(r'^[a-z0-9_]{4,30}$', username))
 
-def validate_mobile_number(mobile: str) -> bool:
-    """Checks if the normalized mobile number is a valid 10-digit Indian mobile number."""
-    normalized = normalize_mobile_number(mobile)
-    # Must be +91 followed by 10 digits starting with 6, 7, 8, 9
-    return bool(re.match(r"^\+91[6789]\d{9}$", normalized))
+# ---------------------------------------------------------------------------
+# PIN hashing using bcrypt
+# ---------------------------------------------------------------------------
 
-def generate_secure_otp() -> str:
-    """Generates a cryptographically secure 6-digit random numeric OTP."""
-    return "".join(secrets.choice("0123456789") for _ in range(6))
+import bcrypt as _bcrypt
 
-def hash_otp(mobile: str, otp: str) -> str:
+def hash_pin(pin: str) -> str:
     """
-    Computes a cryptographic HMAC-SHA256 hash of the OTP bound to the user's mobile number.
-    Plaintext OTPs are NEVER saved in database.
+    Hashes a 6-digit PIN using bcrypt with work factor 12.
+    Returns the hash as a utf-8 string suitable for database storage.
+    NEVER store the plaintext PIN.
     """
-    normalized = normalize_mobile_number(mobile)
-    message = f"{normalized}:{otp}".encode("utf-8")
-    secret = settings.SECRET_KEY.encode("utf-8")
-    return hmac.new(secret, message, hashlib.sha256).hexdigest()
+    if not pin:
+        raise ValueError("PIN must not be empty")
+    pin_bytes = pin.encode("utf-8")
+    hashed = _bcrypt.hashpw(pin_bytes, _bcrypt.gensalt(rounds=12))
+    return hashed.decode("utf-8")
 
-def verify_otp_hash(mobile: str, otp: str, expected_hash: str) -> bool:
-    """Verifies that an entered OTP matches the stored hash in constant time."""
-    computed_hash = hash_otp(mobile, otp)
-    return hmac.compare_digest(computed_hash, expected_hash)
+def verify_pin(pin: str, hashed_pin: str) -> bool:
+    """
+    Verifies a plaintext PIN against a bcrypt hash.
+    Returns True if the PIN matches, False otherwise.
+    """
+    try:
+        return _bcrypt.checkpw(pin.encode("utf-8"), hashed_pin.encode("utf-8"))
+    except Exception:
+        return False
 
-# Lightweight, zero-dependency JWT (HS256) implementation
+# ---------------------------------------------------------------------------
+# Lightweight zero-dependency JWT (HS256) implementation
+# ---------------------------------------------------------------------------
+
 def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
 
@@ -65,17 +72,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = now + expires_delta
     else:
         expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": int(expire.timestamp()), "iat": int(now.timestamp())})
-    
+
     header = {"alg": "HS256", "typ": "JWT"}
     header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
     payload_b64 = _b64url_encode(json.dumps(to_encode, separators=(",", ":")).encode("utf-8"))
-    
+
     signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
     signature = hmac.new(settings.SECRET_KEY.encode("utf-8"), signing_input, hashlib.sha256).digest()
     signature_b64 = _b64url_encode(signature)
-    
+
     return f"{header_b64}.{payload_b64}.{signature_b64}"
 
 def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
@@ -84,25 +91,24 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         parts = token.split(".")
         if len(parts) != 3:
             return None
-        
+
         header_b64, payload_b64, signature_b64 = parts
         signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
-        
+
         expected_sig = hmac.new(settings.SECRET_KEY.encode("utf-8"), signing_input, hashlib.sha256).digest()
         actual_sig = _b64url_decode(signature_b64)
-        
+
         if not hmac.compare_digest(expected_sig, actual_sig):
             return None
-            
+
         payload_bytes = _b64url_decode(payload_b64)
         payload = json.loads(payload_bytes.decode("utf-8"))
-        
+
         # Check expiration
         exp = payload.get("exp")
         if exp and datetime.utcnow().timestamp() > exp:
             return None
-            
+
         return payload
     except Exception:
         return None
-

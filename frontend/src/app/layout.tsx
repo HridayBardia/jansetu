@@ -64,7 +64,7 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
             © 2026 AI Citizen Journey Engine • Official Government Services Navigator
           </p>
           <div className="flex items-center gap-4 text-slate-400 font-medium">
-            <span>Arbitrary Mobile OTP Auth Active</span>
+            <span>Username + PIN Auth</span>
             <span>•</span>
             <span className="text-amber-400">Production Ready Architecture</span>
           </div>
@@ -81,7 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark">
       <head>
         <title>AI Citizen Journey Engine | Government Made Simpler</title>
-        <meta name="description" content="Production-Ready OTP Authentication + Citizen Document Vault + AI Journey Retrieval." />
+        <meta name="description" content="AI-powered Citizen Journey Engine — navigate Indian government services with personalized workflows and secure access." />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
       </head>
       <body className="bg-slate-950 text-slate-100 flex flex-col min-h-screen">

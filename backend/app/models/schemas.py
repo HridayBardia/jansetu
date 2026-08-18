@@ -14,28 +14,22 @@ class APIResponse(BaseModel):
     error: Optional[ErrorDetail] = None
     request_id: Optional[str] = None
 
-# Authentication & OTP Schemas
-class OTPRequest(BaseModel):
-    full_name: str
-    mobile_number: str
-
-class OTPVerifyRequest(BaseModel):
-    full_name: str
-    mobile_number: str
-    otp: str
-    msg91_token: Optional[str] = None
+# Authentication Schemas (Username + PIN)
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=4, max_length=30, description="Citizen login username")
+    pin: str = Field(..., min_length=6, max_length=6, description="6-digit numeric PIN")
 
 class UserSchema(BaseModel):
     id: str
+    username: str
     full_name: str
-    mobile_number: str
-    mobile_verified: bool = True
+    mobile_number: Optional[str] = None
     email: Optional[str] = None
     role: str = "citizen"
     created_at: datetime
     last_login_at: Optional[datetime] = None
 
-class AuthTokenResponse(BaseModel):
+class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserSchema

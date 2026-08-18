@@ -68,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="hidden sm:block text-left">
                   <p className="text-xs font-bold text-slate-200 leading-none">{user.full_name}</p>
-                  <p className="text-[10px] text-slate-400 font-mono leading-none mt-0.5">{user.mobile_number}</p>
+                  <p className="text-[10px] text-slate-400 font-mono leading-none mt-0.5">@{user.username}</p>
                 </div>
                 <button
                   onClick={logout}

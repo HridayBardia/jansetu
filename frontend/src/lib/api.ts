@@ -123,24 +123,19 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   }
 }
 
-// Authentication API Helpers
-export async function requestOtpAPI(full_name: string, mobile_number: string): Promise<any> {
-  return await apiFetch('/auth/request-otp', {
-    method: 'POST',
-    body: JSON.stringify({ full_name, mobile_number })
-  });
-}
 
-export async function verifyOtpAPI(full_name: string, mobile_number: string, otp: string, msg91_token?: string): Promise<any> {
-  const data = await apiFetch<any>('/auth/verify-otp', {
+// Authentication API Helpers
+export async function loginAPI(username: string, pin: string): Promise<any> {
+  const data = await apiFetch<any>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ full_name, mobile_number, otp, msg91_token })
+    body: JSON.stringify({ username, pin })
   });
   if (data && data.access_token && typeof window !== 'undefined') {
     localStorage.setItem('citizen_token', data.access_token);
   }
   return data;
 }
+
 
 export async function fetchMeAPI(): Promise<any> {
   return await apiFetch('/auth/me');

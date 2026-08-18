@@ -14,13 +14,15 @@ from app.models.db_models import UserDB
 from tests.conftest import TestingSessionLocal
 
 db = TestingSessionLocal()
-mock_user = db.query(UserDB).filter(UserDB.mobile_number == "+919876543210").first()
+mock_user = db.query(UserDB).filter(UserDB.username == "test_e2e_user").first()
 if not mock_user:
+    from app.core.security import hash_pin
     mock_user = UserDB(
         id="test-e2e-user-id",
+        username="test_e2e_user",
+        pin_hash=hash_pin("123456"),
         full_name="Test User",
         mobile_number="+919876543210",
-        mobile_verified=True
     )
     db.add(mock_user)
     db.commit()

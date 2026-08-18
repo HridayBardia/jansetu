@@ -3,479 +3,348 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, User, ArrowRight, Loader2, RefreshCw, AlertCircle, CheckCircle2, PhoneCall } from 'lucide-react';
-
-declare global {
-  interface Window {
-    initSendOTP?: (config: any) => void;
-    sendOtp?: (identifier: string, success: (data: any) => void, failure: (error: any) => void) => void;
-    verifyOtp?: (otp: string, success: (data: any) => void, failure: (error: any) => void) => void;
-    retryOtp?: (channel: string | null, success: (data: any) => void, failure: (error: any) => void, reqId?: string | null) => void;
-    isCaptchaVerified?: () => boolean;
-  }
-}
+import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, requestOtp, verifyOtp, devOtpNotice } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
 
-  const [step, setStep] = useState<'DETAILS' | 'OTP'>('DETAILS');
-  const [fullName, setFullName] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [username, setUsername] = useState('');
+  const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reqId, setReqId] = useState<string | null>(null);
+  const [showPin, setShowPin] = useState(false);
 
-  // Resend cooldown timer
-  const [countdown, setCountdown] = useState(60);
-  const [canResend, setCanResend] = useState(false);
-
-  const otpInputRefs = [
+  const pinRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null)
+    useRef<HTMLInputElement>(null),
   ];
-
-  // Load MSG91 OTP Provider Widget script on mount
-  useEffect(() => {
-    const widgetId = process.env.NEXT_PUBLIC_MSG91_WIDGET_ID || '366872725377313536323534';
-    const tokenAuth = process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH || '';
-
-    const script = document.createElement('script');
-    script.src = 'https://verify.msg91.com/otp-provider.js';
-    script.async = true;
-    script.onload = () => {
-      if (window.initSendOTP) {
-        window.initSendOTP({
-          widgetId: widgetId,
-          tokenAuth: tokenAuth,
-          identifier: '',
-          exposeMethods: true,
-          captchaRenderId: 'msg91-captcha',
-          success: (data: any) => {
-            if (data?.reqId) {
-              setReqId(data.reqId);
-            }
-          },
-          failure: (error: any) => {
-            console.error('MSG91 Widget Initialization Error:', error);
-          }
-        });
-      }
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
 
-  // Cooldown Timer
-  useEffect(() => {
-    let timer: any;
-    if (step === 'OTP' && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            setCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [step, countdown]);
-
-  if (isLoading || isAuthenticated) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1b2e 50%, #0a1628 100%)' }}>
+        <Loader2 size={40} style={{ color: '#3b82f6', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePinInput = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    const newDigits = [...pinDigits];
+    newDigits[index] = digit;
+    setPinDigits(newDigits);
     setErrorMsg(null);
 
-    if (!fullName.trim()) {
-      setErrorMsg('Please enter your full name');
+    if (digit && index < 5) {
+      pinRefs[index + 1]?.current?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!pinDigits[index] && index > 0) {
+        pinRefs[index - 1]?.current?.focus();
+      }
+    }
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
+  const handlePinPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const newDigits = ['', '', '', '', '', ''];
+    for (let i = 0; i < pasted.length; i++) {
+      newDigits[i] = pasted[i];
+    }
+    setPinDigits(newDigits);
+    // Focus the last filled digit or last input
+    const focusIndex = Math.min(pasted.length, 5);
+    pinRefs[focusIndex]?.current?.focus();
+  };
+
+  const handleLogin = async () => {
+    const pin = pinDigits.join('');
+    const trimmedUsername = username.trim().toLowerCase();
+
+    if (!trimmedUsername) {
+      setErrorMsg('Please enter your username.');
       return;
     }
-    const cleanMobile = mobileNumber.replace(/\D/g, '');
-    if (cleanMobile.length < 10) {
-      setErrorMsg('Please enter a valid Indian mobile number.');
+    if (trimmedUsername.length < 4) {
+      setErrorMsg('Username must be at least 4 characters.');
       return;
     }
-
-    // MSG91 Identifier format: 917016918865 (no + symbol)
-    const formattedIdentifier = `91${cleanMobile.slice(-10)}`;
-
-    console.log("MSG91 widget loaded:", typeof window.sendOtp);
-    console.log("Captcha verified:", typeof window.isCaptchaVerified === 'function' ? window.isCaptchaVerified() : false);
-    console.log("Identifier:", formattedIdentifier.replace(/\d(?=\d{4})/g, "*"));
-
-    // Verify Captcha if rendered
-    if (typeof window.isCaptchaVerified === 'function' && !window.isCaptchaVerified()) {
-      setErrorMsg('Please complete the verification before continuing.');
+    if (pin.length < 6) {
+      setErrorMsg('Please enter your complete 6-digit PIN.');
       return;
     }
 
     setIsSubmitting(true);
+    setErrorMsg(null);
 
-    // If MSG91 widget sendOtp method is available, use it directly
-    if (typeof window.sendOtp === 'function') {
-      window.sendOtp(
-        formattedIdentifier,
-        (data: any) => {
-          console.log("MSG91 SEND OTP SUCCESS:", {
-            callbackType: 'success',
-            status: data?.type || 'success',
-            reqId: data?.reqId,
-            message: data?.message,
-            response: data,
-            timestamp: new Date().toISOString()
-          });
-          setIsSubmitting(false);
-          if (data?.reqId) {
-            setReqId(data.reqId);
-          }
-          setStep('OTP');
-          setCountdown(60);
-          setCanResend(false);
-          setTimeout(() => otpInputRefs[0].current?.focus(), 100);
-        },
-        (error: any) => {
-          console.error("MSG91 SEND OTP FAILURE:", {
-            callbackType: 'failure',
-            status: error?.type || 'failure',
-            errorCode: error?.code,
-            errorMessage: error?.message,
-            response: error,
-            timestamp: new Date().toISOString()
-          });
-          setIsSubmitting(false);
-          setErrorMsg("We couldn't send the verification code. Please try again.");
-        }
-      );
-    } else {
-      // Direct API fallback via backend request
-      try {
-        await requestOtp(fullName.trim(), cleanMobile);
-        setStep('OTP');
-        setCountdown(60);
-        setCanResend(false);
-        setTimeout(() => otpInputRefs[0].current?.focus(), 100);
-      } catch (err: any) {
-        setErrorMsg("We couldn't send the verification code. Please try again.");
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const handleOtpDigitChange = async (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newDigits = [...otpDigits];
-    newDigits[index] = value.slice(-1);
-    setOtpDigits(newDigits);
-
-    if (value && index < 5) {
-      otpInputRefs[index + 1].current?.focus();
-    }
-
-    const currentOtp = newDigits.join('');
-    if (currentOtp.length === 6) {
-      await triggerVerifyOtp(fullName.trim(), mobileNumber.replace(/\D/g, ''), currentOtp);
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpInputRefs[index - 1].current?.focus();
-    }
-  };
-
-  const handleOtpPaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pastedData.length > 0) {
-      const newDigits = [...otpDigits];
-      for (let i = 0; i < pastedData.length; i++) {
-        newDigits[i] = pastedData[i];
-      }
-      setOtpDigits(newDigits);
-      
-      const currentOtp = newDigits.join('');
-      if (currentOtp.length === 6) {
-        await triggerVerifyOtp(fullName.trim(), mobileNumber.replace(/\D/g, ''), currentOtp);
+    try {
+      const res = await login(trimmedUsername, pin);
+      if (res && res.user) {
+        router.replace('/dashboard');
       } else {
-        const nextFocus = Math.min(pastedData.length, 5);
-        otpInputRefs[nextFocus].current?.focus();
+        setErrorMsg('Invalid username or PIN. Please try again.');
       }
+    } catch (err: any) {
+      const msg = err?.message || 'Login failed. Please try again.';
+      setErrorMsg(msg);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const triggerVerifyOtp = async (name: string, mobile: string, code: string) => {
-    setErrorMsg(null);
-    setIsSubmitting(true);
-
-    const completeBackendVerification = async () => {
-      try {
-        await verifyOtp(name, mobile, code);
-        router.push('/dashboard');
-      } catch (err: any) {
-        setErrorMsg('The verification code is incorrect.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-
-    if (typeof window.verifyOtp === 'function') {
-      window.verifyOtp(
-        code,
-        async (data: any) => {
-          await completeBackendVerification();
-        },
-        (error: any) => {
-          setIsSubmitting(false);
-          setErrorMsg('The verification code is incorrect.');
-        }
-      );
-    } else {
-      await completeBackendVerification();
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (!canResend) return;
-    setErrorMsg(null);
-    setIsSubmitting(true);
-
-    if (typeof window.retryOtp === 'function') {
-      window.retryOtp(
-        null,
-        (data: any) => {
-          setIsSubmitting(false);
-          setCountdown(60);
-          setCanResend(false);
-          setOtpDigits(['', '', '', '', '', '']);
-          otpInputRefs[0].current?.focus();
-        },
-        (error: any) => {
-          setIsSubmitting(false);
-          setErrorMsg("We couldn't send the verification code. Please try again.");
-        },
-        reqId
-      );
-    } else {
-      try {
-        const cleanMobile = mobileNumber.replace(/\D/g, '');
-        await requestOtp(fullName.trim(), cleanMobile);
-        setCountdown(60);
-        setCanResend(false);
-        setOtpDigits(['', '', '', '', '', '']);
-        otpInputRefs[0].current?.focus();
-      } catch (err: any) {
-        setErrorMsg("We couldn't send the verification code. Please try again.");
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const getMaskedMobileNumber = () => {
-    const clean = mobileNumber.replace(/\D/g, '');
-    if (clean.length >= 4) {
-      const lastFour = clean.slice(-4);
-      return `+91 ••••••${lastFour}`;
-    }
-    return `+91 ••••••${clean}`;
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-6">
-        
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-2">
-            <ShieldCheck className="w-6 h-6" />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #050510 0%, #0a1628 50%, #081220 100%)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      padding: '20px',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Ambient background effects */}
+      <div style={{
+        position: 'absolute', top: '-20%', left: '-10%', width: '600px', height: '600px',
+        background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-20%', right: '-10%', width: '500px', height: '500px',
+        background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Login Card */}
+      <div style={{
+        width: '100%',
+        maxWidth: '420px',
+        background: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(24px)',
+        borderRadius: '24px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 25px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.05)',
+        padding: '40px 36px',
+        position: 'relative',
+        zIndex: 1
+      }}>
+        {/* Logo / Header */}
+        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '16px',
+            background: 'linear-gradient(135deg, #1d4ed8, #7c3aed)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+            boxShadow: '0 8px 24px rgba(59,130,246,0.3)'
+          }}>
+            <ShieldCheck size={32} color="white" />
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">
-            AI CITIZEN JOURNEY ENGINE
-          </h2>
-          <p className="text-slate-400 text-xs">
-            Your government journey, simplified.
+          <h1 style={{
+            fontSize: '24px', fontWeight: 700,
+            background: 'linear-gradient(to right, #e2e8f0, #94a3b8)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            margin: '0 0 8px'
+          }}>
+            Citizen Login
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
+            AI Citizen Journey Engine
           </p>
         </div>
 
-        {/* Development Mode Notice if active */}
-        {devOtpNotice && (
-          <div className="p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl flex items-center gap-2 text-xs text-amber-200 font-semibold animate-pulse">
-            <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>{devOtpNotice}</span>
-          </div>
-        )}
-
-        {/* Error Alert */}
+        {/* Error Banner */}
         {errorMsg && (
-          <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex flex-col items-center gap-3 text-xs text-rose-300 text-center">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-            {step === 'DETAILS' && (
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                className="bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider"
-              >
-                Try Again
-              </button>
-            )}
+          <div style={{
+            background: 'rgba(239,68,68,0.1)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            animation: 'slideIn 0.2s ease'
+          }}>
+            <AlertCircle size={16} color="#ef4444" style={{ marginTop: '1px', flexShrink: 0 }} />
+            <p style={{ color: '#fca5a5', fontSize: '14px', margin: 0, lineHeight: '1.4' }}>{errorMsg}</p>
           </div>
         )}
 
-        {step === 'DETAILS' ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60"
-                />
-              </div>
-            </div>
+        {/* Username Field */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', fontWeight: 500, marginBottom: '8px', letterSpacing: '0.02em' }}>
+            Username
+          </label>
+          <div style={{ position: 'relative' }}>
+            <User size={16} color="#475569" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <input
+              id="login-username"
+              type="text"
+              value={username}
+              onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
+              onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
+              placeholder="Enter your username"
+              autoComplete="username"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '13px 14px 13px 40px',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                color: '#e2e8f0',
+                fontSize: '15px',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                fontFamily: 'inherit'
+              }}
+              onFocus={e => {
+                e.target.style.borderColor = 'rgba(59,130,246,0.5)';
+                e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)';
+              }}
+              onBlur={e => {
+                e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+        </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                Mobile Number
-              </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400 font-semibold text-sm select-none">
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  required
-                  maxLength={10}
-                  value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value)}
-                  placeholder="Enter mobile number"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-14 pr-4 py-2.5 text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 tracking-wider font-mono"
-                />
-              </div>
-            </div>
-
-            {/* MSG91 Captcha Container */}
-            <div id="msg91-captcha" className="flex justify-center my-2"></div>
-
+        {/* PIN Field */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
+              6-Digit PIN
+            </label>
             <button
-              type="submit"
-              disabled={isSubmitting || !fullName.trim() || mobileNumber.length < 10}
-              className="w-full mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition"
+              onClick={() => setShowPin(!showPin)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sending Code...</span>
-                </>
-              ) : (
-                <>
-                  <span>Continue</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
+              <span>{showPin ? 'Hide' : 'Show'}</span>
             </button>
-          </form>
-        ) : (
-          <div className="space-y-5">
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold">
-                <PhoneCall className="w-3.5 h-3.5" />
-                <span>VERIFY YOUR MOBILE</span>
-              </div>
-              <h3 className="text-sm font-bold text-white">Enter SMS Code</h3>
-              <p className="text-xs text-slate-400">
-                We sent a verification code to
-              </p>
-              <p className="font-semibold text-amber-300 text-sm tracking-wide">
-                {getMaskedMobileNumber()}
-              </p>
-            </div>
-
-            {/* 6 OTP Input Boxes */}
-            <div className="flex justify-center gap-2.5 my-4">
-              {otpDigits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={otpInputRefs[idx]}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  onPaste={handleOtpPaste}
-                  className="w-11 h-12 bg-slate-950 border border-slate-800 focus:border-amber-500/80 rounded-xl text-center text-lg font-bold text-amber-300 focus:ring-1 focus:ring-amber-500/80 focus:outline-none transition"
-                />
-              ))}
-            </div>
-
-            <div className="text-center">
-              {isSubmitting && (
-                <span className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                  <span>Verifying Code...</span>
-                </span>
-              )}
-            </div>
-
-            {/* Countdown / Resend */}
-            <div className="flex items-center justify-between text-xs pt-1 text-slate-400 border-t border-slate-800/80 mt-2">
-              {countdown > 0 ? (
-                <span>Resend OTP in <strong className="text-amber-400 font-mono">{countdown}s</strong></span>
-              ) : (
-                <span>Didn't receive the code?</span>
-              )}
-
-              <button
-                type="button"
-                disabled={!canResend || isSubmitting}
-                onClick={handleResendOtp}
-                className="text-amber-400 hover:text-amber-300 font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 underline"
-              >
-                <RefreshCw className={`w-3 h-3 ${isSubmitting ? 'animate-spin' : ''}`} />
-                <span>Resend OTP</span>
-              </button>
-            </div>
           </div>
-        )}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {pinDigits.map((digit, i) => (
+              <input
+                key={i}
+                ref={pinRefs[i]}
+                id={`pin-digit-${i}`}
+                type={showPin ? 'text' : 'password'}
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={e => handlePinInput(i, e.target.value)}
+                onKeyDown={e => handlePinKeyDown(i, e)}
+                onPaste={handlePinPaste}
+                style={{
+                  flex: 1,
+                  height: '52px',
+                  textAlign: 'center',
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${digit ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: '10px',
+                  color: '#e2e8f0',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                  caretColor: '#3b82f6',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'rgba(59,130,246,0.7)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = digit ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Login Button */}
+        <button
+          id="login-submit-btn"
+          onClick={handleLogin}
+          disabled={isSubmitting}
+          style={{
+            width: '100%',
+            padding: '14px',
+            background: isSubmitting
+              ? 'rgba(59,130,246,0.4)'
+              : 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            border: 'none',
+            borderRadius: '12px',
+            color: 'white',
+            fontSize: '15px',
+            fontWeight: 600,
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            transition: 'all 0.2s',
+            boxShadow: isSubmitting ? 'none' : '0 4px 20px rgba(59,130,246,0.3)',
+            fontFamily: 'inherit'
+          }}
+          onMouseEnter={e => { if (!isSubmitting) (e.target as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
+          onMouseLeave={e => { (e.target as HTMLButtonElement).style.transform = 'none'; }}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+              Verifying...
+            </>
+          ) : (
+            <>
+              <Lock size={16} />
+              Sign In to Citizen Portal
+              <ArrowRight size={16} />
+            </>
+          )}
+        </button>
+
+        {/* Footer Note */}
+        <p style={{ textAlign: 'center', color: '#334155', fontSize: '12px', marginTop: '24px', lineHeight: '1.5' }}>
+          This is a secured demonstration system.
+          <br />Contact your administrator to obtain credentials.
+        </p>
       </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        * { box-sizing: border-box; }
+        input::placeholder { color: #334155; }
+        input:-webkit-autofill {
+          -webkit-box-shadow: 0 0 0 1000px rgba(15,23,42,0.95) inset !important;
+          -webkit-text-fill-color: #e2e8f0 !important;
+        }
+      `}</style>
     </div>
   );
 }

@@ -12,6 +12,67 @@ from app.api.v1.router import api_v1_router
 # Ensure DB tables are created on startup
 Base.metadata.create_all(bind=engine)
 
+# Seed synthetic citizens (hriday, varad, narayan) with hashed PINs
+def seed_synthetic_users():
+    """
+    Creates the three pre-defined demo citizen accounts if they do not already exist.
+    Each account gets a fixed PIN (configured via env vars or defaults).
+    """
+    from app.core.database import SessionLocal
+    from app.models.db_models import UserDB, CitizenProfileDB
+    from app.core.security import hash_pin
+    from app.services.demo_vault_service import DEMO_CITIZENS
+
+    # Per-user PIN config: env var CITIZEN_PIN_<USERNAME> or fallback to CITIZEN_DEFAULT_PIN
+    default_pin = os.getenv("CITIZEN_DEFAULT_PIN", "000000")
+
+    db = SessionLocal()
+    try:
+        for key, data in DEMO_CITIZENS.items():
+            existing = db.query(UserDB).filter(UserDB.username == key).first()
+            if existing:
+                continue  # Already seeded
+
+            pin_env_var = f"CITIZEN_PIN_{key.upper()}"
+            pin = os.getenv(pin_env_var, default_pin)
+
+            user = UserDB(
+                id=data["user_id"],
+                username=key,
+                pin_hash=hash_pin(pin),
+                full_name=data["full_name"],
+                mobile_number=data.get("mobile_number"),
+                email=data.get("email"),
+            )
+            db.add(user)
+            db.flush()
+
+            profile = CitizenProfileDB(
+                user_id=user.id,
+                full_name=data["full_name"],
+                age=data.get("age"),
+                annual_income=data.get("annual_income"),
+                income_category=data.get("income_category"),
+                location_city=data.get("location_city"),
+                location_district=data.get("location_district"),
+                location_state=data.get("location_state"),
+                category=data.get("category", "General"),
+                occupation=data.get("occupation"),
+                education=data.get("education"),
+                is_demo=True,
+                demo_citizen_key=key,
+            )
+            db.add(profile)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[WARN] Could not seed synthetic users: {e}")
+    finally:
+        db.close()
+
+seed_synthetic_users()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Intelligent orchestration & guided workflow layer for Indian digital government services.",
@@ -58,39 +119,15 @@ def root():
 
 @app.get("/health")
 @app.get("/api/v1/health")
-def health():
+def health(db: Session = Depends(get_db)):
     return {
         "status": "healthy",
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "database": "connected",
-        "otp_provider": settings.OTP_PROVIDER,
-        "dev_otp_mode": settings.DEV_OTP_MODE,
+        "auth": "username_pin",
         "ai_provider": settings.AI_PROVIDER,
         "websocket_active_rooms": len(ws_manager.active_connections)
-    }
-
-@app.get("/api/health/auth")
-@app.get("/api/v1/health/auth")
-def health_auth(request: Request):
-    # Retrieve configuration parameters
-    widget_id = settings.MSG91_WIDGET_ID
-    widget_configured = bool(widget_id)
-    token_configured = bool(settings.MSG91_TOKEN_AUTH)
-    auth_key_configured = bool(settings.MSG91_AUTH_KEY)
-    
-    # We serve the client-side provider widget dynamically
-    msg91_script = True
-    send_otp_available = True
-    verify_otp_available = True
-
-    return {
-        "widgetConfigured": widget_configured,
-        "tokenConfigured": token_configured,
-        "authKeyConfigured": auth_key_configured,
-        "msg91Script": msg91_script,
-        "sendOtpAvailable": send_otp_available,
-        "verifyOtpAvailable": verify_otp_available
     }
 
 
@@ -102,7 +139,6 @@ def readiness(db: Session = Depends(get_db)):
         return {
             "status": "ready",
             "database": "connected",
-            "otp_provider": settings.OTP_PROVIDER,
             "ai_provider": settings.AI_PROVIDER
         }
     except Exception as e:

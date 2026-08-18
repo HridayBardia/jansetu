@@ -5,14 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, Backgr
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import (
-
-    normalize_mobile_number, validate_mobile_number, generate_secure_otp,
-    hash_otp, verify_otp_hash, create_access_token, decode_access_token
+    normalize_username, verify_pin, create_access_token, decode_access_token
 )
-from app.services.otp_provider import get_otp_provider
 
 from app.models.schemas import (
-    APIResponse, ErrorDetail, OTPRequest, OTPVerifyRequest, AuthTokenResponse, UserProfileUpdateRequest, UserSchema,
+    APIResponse, ErrorDetail, LoginRequest, LoginResponse, UserSchema, UserProfileUpdateRequest,
     GoalAnalysisRequest, GoalAnalysisResponse,
     JourneyCreateRequest, JourneyResponse, JourneyStepSchema, StepDependencySchema, NextBestAction,
     RAGQueryRequest, RAGQueryResponse,
@@ -21,7 +18,7 @@ from app.models.schemas import (
 )
 
 from app.models.db_models import (
-    UserDB, OTPVerificationDB, JourneyDB, JourneyStepDB, StepDependencyDB,
+    UserDB, JourneyDB, JourneyStepDB, StepDependencyDB,
     GovernmentSourceDB, UserDocumentDB, UserConsentDB, SystemAlertDB, SchemeDB,
     CitizenProfileDB, DocumentConsistencyDB
 )
@@ -42,28 +39,9 @@ from app.services.location_engine import LocationEngine
 from app.services.language_engine import LanguageEngine
 from app.services.ingestion_engine import IngestionEngine
 
+
 api_v1_router = APIRouter(prefix="/api/v1")
 
-# 0. Demo Mode Citizen Switcher
-@api_v1_router.get("/demo/citizens")
-def list_demo_citizens(request: Request):
-    return success_response(DemoVaultService.list_demo_citizens(), request)
-
-@api_v1_router.post("/demo/select/{citizen_key}")
-def select_demo_citizen(citizen_key: str, request: Request, db: Session = Depends(get_db)):
-    try:
-        loaded = DemoVaultService.load_demo_citizen_into_db(db, citizen_key)
-        return success_response(loaded, request)
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-
-
-
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks, UploadFile, File, Query
-from sqlalchemy.orm import Session
-
-from app.core.database import get_db
 from app.core.config import settings
 from app.core.websocket import ws_manager
 
@@ -80,6 +58,20 @@ def error_response(code: str, message: str, status_code: int, request: Request):
         request_id=get_request_id(request)
     )
 
+# 0. Demo Mode Citizen Switcher
+@api_v1_router.get("/demo/citizens")
+def list_demo_citizens(request: Request):
+    return success_response(DemoVaultService.list_demo_citizens(), request)
+
+@api_v1_router.post("/demo/select/{citizen_key}")
+def select_demo_citizen(citizen_key: str, request: Request, db: Session = Depends(get_db)):
+    try:
+        loaded = DemoVaultService.load_demo_citizen_into_db(db, citizen_key)
+        return success_response(loaded, request)
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+
+
 # --- AUTHENTICATION DEPENDENCY ---
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
     token = None
@@ -88,209 +80,74 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
         token = auth_header.split(" ")[1]
     if not token:
         token = request.cookies.get("citizen_session")
-        
+
     if not token:
-        demo_param = request.query_params.get("user_id")
-        if demo_param:
-            user = db.query(UserDB).filter(UserDB.id == demo_param).first()
-            if user:
-                return user
-        raise HTTPException(status_code=401, detail="Authentication required. Please log in with your mobile number.")
-        
+        raise HTTPException(status_code=401, detail="Authentication required. Please log in.")
+
     payload = decode_access_token(token)
     if not payload or not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Invalid or expired session. Please log in again.")
-        
+
     user = db.query(UserDB).filter(UserDB.id == payload["sub"]).first()
     if not user:
         raise HTTPException(status_code=401, detail="Citizen record not found.")
     return user
 
-@api_v1_router.get("/health/otp")
-def get_otp_health(request: Request):
-    provider_name = (settings.OTP_PROVIDER or "dev").lower()
-    
-    is_configured = False
-    service_configured = False
-    
-    if provider_name == "twilio":
-        is_configured = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
-        service_configured = bool(settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID)
-    elif provider_name == "msg91":
-        is_configured = bool(settings.MSG91_AUTH_KEY)
-        service_configured = bool(settings.MSG91_TEMPLATE_ID)
-    else:
-        is_configured = settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE
-        service_configured = settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE
-
-    return success_response({
-        "provider": provider_name,
-        "configured": is_configured,
-        "service_configured": service_configured,
-        "dev_otp_mode": settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE,
-        "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
-    }, request)
-
-@api_v1_router.get("/health/whatsapp")
-def get_whatsapp_health(request: Request):
-    provider_name = (settings.OTP_PROVIDER or "dev").lower()
-    verify_configured = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and (settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID))
-    whatsapp_sender_configured = bool(settings.TWILIO_WHATSAPP_SENDER or settings.WHATSAPP_BUSINESS_PHONE_NUMBER)
-
-    return success_response({
-        "provider": provider_name,
-        "channel": settings.OTP_CHANNEL or "whatsapp",
-        "whatsapp_business_sender": settings.WHATSAPP_BUSINESS_PHONE_NUMBER,
-        "verify_configured": verify_configured,
-        "whatsapp_sender_configured": whatsapp_sender_configured,
-        "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
-    }, request)
-
-@api_v1_router.get("/health/msg91")
-def get_msg91_health(request: Request):
-    provider_name = (settings.OTP_PROVIDER or "dev").lower()
-    widget_id = settings.MSG91_WIDGET_ID
-    widget_configured = bool(widget_id)
-    auth_key_configured = bool(settings.MSG91_AUTH_KEY)
-    token_auth_configured = bool(settings.MSG91_TOKEN_AUTH)
-
-    return success_response({
-        "provider": provider_name,
-        "widget_id": widget_id,
-        "widget_configured": widget_configured,
-        "auth_key_configured": auth_key_configured,
-        "token_auth_configured": token_auth_configured,
-        "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
-    }, request)
-
-@api_v1_router.get("/health/auth")
-def get_auth_health(request: Request):
-    # Retrieve configuration parameters
-    widget_id = settings.MSG91_WIDGET_ID
-    widget_configured = bool(widget_id)
-    token_configured = bool(settings.MSG91_TOKEN_AUTH)
-    auth_key_configured = bool(settings.MSG91_AUTH_KEY)
-    
-    # We serve the client-side provider widget dynamically
-    msg91_script = True
-    send_otp_available = True
-    verify_otp_available = True
-
-    return success_response({
-        "widgetConfigured": widget_configured,
-        "tokenConfigured": token_configured,
-        "authKeyConfigured": auth_key_configured,
-        "msg91Script": msg91_script,
-        "sendOtpAvailable": send_otp_available,
-        "verifyOtpAvailable": verify_otp_available
-    }, request)
-
-
-
-
+# In-memory brute-force tracker: {username: [(failed_at_timestamp), ...]}
+_failed_attempts: Dict[str, list] = {}
 
 # --- AUTH ENDPOINTS ---
-@api_v1_router.post("/auth/request-otp")
-async def request_otp(req: OTPRequest, request: Request, db: Session = Depends(get_db)):
-    if not req.mobile_number or not req.full_name:
-        raise HTTPException(status_code=400, detail="Full name and mobile number are required")
-        
-    normalized_mobile = normalize_mobile_number(req.mobile_number)
-    if not validate_mobile_number(normalized_mobile):
-        raise HTTPException(status_code=400, detail="Please enter a valid 10-digit Indian mobile number")
-
+@api_v1_router.post("/auth/login")
+def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    """
+    Authenticate with username + 6-digit PIN.
+    Returns a session cookie and JWT access token on success.
+    """
+    username = normalize_username(req.username)
     now = datetime.utcnow()
-    existing_otps = db.query(OTPVerificationDB).filter(
-        OTPVerificationDB.mobile_number == normalized_mobile,
-        OTPVerificationDB.verified_at == None,
-        OTPVerificationDB.expires_at > now
-    ).all()
-    
-    if existing_otps:
-        latest = existing_otps[0]
-        if latest.resend_cooldown_until and latest.resend_cooldown_until > now:
-            wait_seconds = int((latest.resend_cooldown_until - now).total_seconds())
-            raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds} seconds before requesting another code.")
 
-    expires_at = now + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
-    cooldown_until = now + timedelta(seconds=settings.OTP_RESEND_COOLDOWN_SECONDS)
-
-    verification = OTPVerificationDB(
-        mobile_number=normalized_mobile,
-        otp_hash="MANAGED_SERVICE",
-        expires_at=expires_at,
-        attempt_count=0,
-        max_attempts=settings.OTP_MAX_ATTEMPTS,
-        resend_cooldown_until=cooldown_until
-    )
-    db.add(verification)
-    db.commit()
-
-    provider = get_otp_provider()
-    provider_res = await provider.send_otp(normalized_mobile)
-
-    if not provider_res.get("success"):
+    # --- Brute-force protection (in-memory rolling window) ---
+    window_start = now.timestamp() - settings.LOGIN_WINDOW_SECONDS
+    attempts = _failed_attempts.get(username, [])
+    recent_attempts = [t for t in attempts if t > window_start]
+    if len(recent_attempts) >= settings.LOGIN_MAX_ATTEMPTS:
         raise HTTPException(
-            status_code=400,
-            detail=provider_res.get("error", "We couldn't send the verification code. Please check your mobile number and try again.")
+            status_code=429,
+            detail=f"Too many failed login attempts. Please try again in {settings.LOGIN_WINDOW_SECONDS // 60} minutes."
         )
 
-    payload = {
-        "mobile_number": normalized_mobile,
-        "expires_in_seconds": settings.OTP_EXPIRY_MINUTES * 60,
-        "cooldown_seconds": settings.OTP_RESEND_COOLDOWN_SECONDS,
-        "message": f"Verification code sent to {normalized_mobile}"
-    }
-    if settings.DEV_OTP_MODE or provider_res.get("dev_otp"):
-        payload["dev_otp"] = provider_res.get("dev_otp")
-
-    return success_response(payload, request)
-
-@api_v1_router.post("/auth/verify-otp")
-async def verify_otp(req: OTPVerifyRequest, request: Request, response: Response, db: Session = Depends(get_db)):
-    normalized_mobile = normalize_mobile_number(req.mobile_number)
-    now = datetime.utcnow()
-
-    provider = get_otp_provider()
-    verify_res = await provider.verify_otp(normalized_mobile, req.otp, req.msg91_token)
-
-    if not verify_res.get("success"):
-        raise HTTPException(status_code=400, detail=verify_res.get("error", "Invalid or expired verification code."))
-
-    # Verification successful - create or fetch user
-
-
-    user = db.query(UserDB).filter(UserDB.mobile_number == normalized_mobile).first()
-    is_new_user = False
-    if not user:
-        is_new_user = True
-        user = UserDB(
-            full_name=req.full_name.strip() or "Citizen",
-            mobile_number=normalized_mobile,
-            mobile_verified=True,
-            last_login_at=now
+    # --- DB-level account lock check ---
+    user = db.query(UserDB).filter(UserDB.username == username).first()
+    if user and user.locked_until and user.locked_until > now:
+        wait = int((user.locked_until - now).total_seconds())
+        raise HTTPException(
+            status_code=423,
+            detail=f"Account temporarily locked. Try again in {wait} seconds."
         )
-        db.add(user)
-        db.commit()
 
-        profile = CitizenProfileDB(
-            user_id=user.id,
-            full_name=user.full_name,
-            location_state="Gujarat",
-            location_city="Vadodara"
-        )
-        db.add(profile)
-        db.commit()
+    # --- Validate credentials ---
+    if not user or not verify_pin(req.pin, user.pin_hash):
+        # Record failed attempt
+        recent_attempts.append(now.timestamp())
+        _failed_attempts[username] = recent_attempts
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= settings.LOGIN_MAX_ATTEMPTS:
+                user.locked_until = now + timedelta(seconds=settings.LOGIN_WINDOW_SECONDS)
+            db.commit()
+        raise HTTPException(status_code=401, detail="Invalid username or PIN. Please try again.")
 
-        DemoVaultService.seed_user_vault(db, user)
-    else:
-        user.last_login_at = now
-        if req.full_name and req.full_name.strip() and user.full_name != req.full_name.strip():
-            user.full_name = req.full_name.strip()
-        db.commit()
-        DemoVaultService.seed_user_vault(db, user)
+    # --- Successful login: reset counters ---
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.last_login_at = now
+    db.commit()
+    _failed_attempts.pop(username, None)
 
-    token = create_access_token({"sub": user.id, "mobile": user.mobile_number, "name": user.full_name})
+    # Seed documents if not already done
+    DemoVaultService.seed_user_vault(db, user)
+
+    token = create_access_token({"sub": user.id, "username": user.username, "name": user.full_name})
 
     response.set_cookie(
         key="citizen_session",
@@ -300,27 +157,17 @@ async def verify_otp(req: OTPVerifyRequest, request: Request, response: Response
         samesite="lax"
     )
 
-    profile_db = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == user.id).first()
-    profile_data = {
-        "id": profile_db.id if profile_db else "",
-        "full_name": user.full_name,
-        "location_state": profile_db.location_state if profile_db else "Gujarat",
-        "location_city": profile_db.location_city if profile_db else "Vadodara",
-        "occupation": profile_db.occupation if profile_db else None
-    } if profile_db else {}
-
     return success_response({
         "access_token": token,
         "token_type": "bearer",
-        "is_new_user": is_new_user,
         "user": {
             "id": user.id,
+            "username": user.username,
             "full_name": user.full_name,
             "mobile_number": user.mobile_number,
-            "mobile_verified": True,
-            "created_at": user.created_at
-        },
-        "profile": profile_data
+            "created_at": user.created_at,
+            "last_login_at": user.last_login_at
+        }
     }, request)
 
 @api_v1_router.get("/auth/me")
@@ -348,9 +195,9 @@ def get_me(request: Request, current_user: UserDB = Depends(get_current_user), d
     return success_response({
         "user": {
             "id": current_user.id,
+            "username": current_user.username,
             "full_name": current_user.full_name,
             "mobile_number": current_user.mobile_number,
-            "mobile_verified": current_user.mobile_verified,
             "created_at": current_user.created_at,
             "last_login_at": current_user.last_login_at
         },
@@ -358,10 +205,13 @@ def get_me(request: Request, current_user: UserDB = Depends(get_current_user), d
         "documents_count": docs_count
     }, request)
 
+
+
 @api_v1_router.post("/auth/logout")
 def logout(request: Request, response: Response):
     response.delete_cookie(key="citizen_session")
     return success_response({"message": "Successfully logged out of Citizen Portal"}, request)
+
 
 @api_v1_router.put("/auth/profile")
 def update_profile(

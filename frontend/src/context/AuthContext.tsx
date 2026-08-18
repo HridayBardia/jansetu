@@ -1,13 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { fetchMeAPI, requestOtpAPI, verifyOtpAPI, logoutAPI, updateProfileAPI } from '@/lib/api';
+import { fetchMeAPI, loginAPI, logoutAPI, updateProfileAPI } from '@/lib/api';
 
 export interface User {
   id: string;
+  username: string;
   full_name: string;
-  mobile_number: string;
-  mobile_verified: boolean;
+  mobile_number?: string;
   created_at?: string;
   last_login_at?: string;
 }
@@ -34,17 +34,17 @@ interface AuthContextType {
   profile: CitizenProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Modal state (for Navbar login button & OnboardingModal)
   isAuthModalOpen: boolean;
   isOnboardingModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
   closeOnboardingModal: () => void;
-  requestOtp: (fullName: string, mobileNumber: string) => Promise<any>;
-  verifyOtp: (fullName: string, mobileNumber: string, otp: string, msg91Token?: string) => Promise<any>;
+  // Auth actions
+  login: (username: string, pin: string) => Promise<any>;
   logout: () => Promise<void>;
   updateProfile: (profileData: Partial<CitizenProfile>) => Promise<any>;
   refreshUser: () => Promise<void>;
-  devOtpNotice: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -57,12 +57,10 @@ const AuthContext = createContext<AuthContextType>({
   openAuthModal: () => {},
   closeAuthModal: () => {},
   closeOnboardingModal: () => {},
-  requestOtp: async () => {},
-  verifyOtp: async () => {},
+  login: async () => {},
   logout: async () => {},
   updateProfile: async () => {},
   refreshUser: async () => {},
-  devOtpNotice: null
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,7 +69,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
-  const [devOtpNotice, setDevOtpNotice] = useState<string | null>(null);
 
   const refreshUser = async () => {
     try {
@@ -99,33 +96,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const closeAuthModal = () => setIsAuthModalOpen(false);
   const closeOnboardingModal = () => setIsOnboardingModalOpen(false);
 
-  const requestOtp = async (fullName: string, mobileNumber: string) => {
-    setDevOtpNotice(null);
-    const res = await requestOtpAPI(fullName, mobileNumber);
-    if (res && res.dev_otp) {
-      setDevOtpNotice(`[DEV MODE] Verification OTP for ${res.mobile_number}: ${res.dev_otp}`);
-    }
-    return res;
-  };
-
-  const verifyOtp = async (fullName: string, mobileNumber: string, otp: string, msg91Token?: string) => {
-    const res = await verifyOtpAPI(fullName, mobileNumber, otp, msg91Token);
+  const login = async (username: string, pin: string) => {
+    const res = await loginAPI(username, pin);
     if (res && res.user) {
       setUser(res.user);
-      setProfile(res.profile || null);
       setIsAuthModalOpen(false);
-      if (res.is_new_user) {
-        setIsOnboardingModalOpen(true);
-      }
+      // Refresh full profile data
+      await refreshUser();
     }
     return res;
   };
 
   const logout = async () => {
     await logoutAPI();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('citizen_token');
+    }
     setUser(null);
     setProfile(null);
-    setDevOtpNotice(null);
   };
 
   const updateProfile = async (profileData: Partial<CitizenProfile>) => {
@@ -146,12 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         openAuthModal,
         closeAuthModal,
         closeOnboardingModal,
-        requestOtp,
-        verifyOtp,
+        login,
         logout,
         updateProfile,
         refreshUser,
-        devOtpNotice
       }}
     >
       {children}
