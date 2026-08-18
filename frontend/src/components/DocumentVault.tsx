@@ -1,4 +1,22 @@
+'use client';
+
+import React, { useState } from 'react';
+import {
+  FileText,
+  Upload,
+  CheckCircle2,
+  AlertTriangle,
+  ShieldCheck,
+  Eye,
+  Download,
+  Sparkles,
+  Info,
+  Lock,
+  FileCheck
+} from 'lucide-react';
+import { buildDocumentPacketAPI } from '@/lib/api';
 import { PdfViewerModal } from '@/components/PdfViewerModal';
+
 
 export interface DocumentItem {
   id: string;

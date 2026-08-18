@@ -7,6 +7,8 @@ import { LanguageSelector } from './LanguageSelector';
 import { JanSetuLogo } from './JanSetuLogo';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
+import { DemoCitizenSelector } from './DemoCitizenSelector';
+
 import {
   Compass,
   MapPin,
