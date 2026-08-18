@@ -3,7 +3,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, Phone, User, ArrowRight, Loader2, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, User, ArrowRight, Loader2, RefreshCw, AlertCircle, CheckCircle2, PhoneCall } from 'lucide-react';
+
+declare global {
+  interface Window {
+    initSendOTP?: (config: any) => void;
+    sendOtp?: (identifier: string, success: (data: any) => void, failure: (error: any) => void) => void;
+    verifyOtp?: (otp: string, success: (data: any) => void, failure: (error: any) => void) => void;
+    retryOtp?: (channel: string | null, success: (data: any) => void, failure: (error: any) => void, reqId?: string | null) => void;
+    isCaptchaVerified?: () => boolean;
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,9 +25,10 @@ export default function LoginPage() {
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reqId, setReqId] = useState<string | null>(null);
 
-  // Timer state
-  const [countdown, setCountdown] = useState(45);
+  // Resend cooldown timer
+  const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
   const otpInputRefs = [
@@ -29,13 +40,50 @@ export default function LoginPage() {
     useRef<HTMLInputElement>(null)
   ];
 
-  // If already authenticated, redirect to /dashboard
+  // Load MSG91 OTP Provider Widget script on mount
+  useEffect(() => {
+    const widgetId = process.env.NEXT_PUBLIC_MSG91_WIDGET_ID || '366872725377313536323534';
+    const tokenAuth = process.env.NEXT_PUBLIC_MSG91_TOKEN_AUTH || '';
+
+    const script = document.createElement('script');
+    script.src = 'https://verify.msg91.com/otp-provider.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.initSendOTP) {
+        window.initSendOTP({
+          widgetId: widgetId,
+          tokenAuth: tokenAuth,
+          identifier: '',
+          exposeMethods: true,
+          captchaRenderId: 'msg91-captcha',
+          success: (data: any) => {
+            if (data?.reqId) {
+              setReqId(data.reqId);
+            }
+          },
+          failure: (error: any) => {
+            console.error('MSG91 Widget Initialization Error:', error);
+          }
+        });
+      }
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       router.push('/dashboard');
     }
   }, [isLoading, isAuthenticated, router]);
 
+  // Cooldown Timer
   useEffect(() => {
     let timer: any;
     if (step === 'OTP' && countdown > 0) {
@@ -70,21 +118,53 @@ export default function LoginPage() {
     }
     const cleanMobile = mobileNumber.replace(/\D/g, '');
     if (cleanMobile.length < 10) {
-      setErrorMsg('Please enter a valid 10-digit Indian mobile number');
+      setErrorMsg('Please enter a valid Indian mobile number.');
+      return;
+    }
+
+    // MSG91 Identifier format: 917016918865 (no + symbol)
+    const formattedIdentifier = `91${cleanMobile.slice(-10)}`;
+
+    // Verify Captcha if rendered
+    if (typeof window.isCaptchaVerified === 'function' && !window.isCaptchaVerified()) {
+      setErrorMsg('Please complete the verification before continuing.');
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      await requestOtp(fullName.trim(), cleanMobile);
-      setStep('OTP');
-      setCountdown(45);
-      setCanResend(false);
-      setTimeout(() => otpInputRefs[0].current?.focus(), 100);
-    } catch (err: any) {
-      setErrorMsg("We couldn't send your WhatsApp verification code. Please check that the number is correct and has WhatsApp enabled.");
-    } finally {
-      setIsSubmitting(false);
+
+    // If MSG91 widget sendOtp method is available, use it directly
+    if (typeof window.sendOtp === 'function') {
+      window.sendOtp(
+        formattedIdentifier,
+        (data: any) => {
+          setIsSubmitting(false);
+          if (data?.reqId) {
+            setReqId(data.reqId);
+          }
+          setStep('OTP');
+          setCountdown(60);
+          setCanResend(false);
+          setTimeout(() => otpInputRefs[0].current?.focus(), 100);
+        },
+        (error: any) => {
+          setIsSubmitting(false);
+          setErrorMsg("We couldn't send the verification code. Please try again.");
+        }
+      );
+    } else {
+      // Direct API fallback via backend request
+      try {
+        await requestOtp(fullName.trim(), cleanMobile);
+        setStep('OTP');
+        setCountdown(60);
+        setCanResend(false);
+        setTimeout(() => otpInputRefs[0].current?.focus(), 100);
+      } catch (err: any) {
+        setErrorMsg("We couldn't send the verification code. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -94,12 +174,10 @@ export default function LoginPage() {
     newDigits[index] = value.slice(-1);
     setOtpDigits(newDigits);
 
-    // Auto-advance
     if (value && index < 5) {
       otpInputRefs[index + 1].current?.focus();
     }
 
-    // Auto-submit when all 6 digits are entered
     const currentOtp = newDigits.join('');
     if (currentOtp.length === 6) {
       await triggerVerifyOtp(fullName.trim(), mobileNumber.replace(/\D/g, ''), currentOtp);
@@ -135,13 +213,31 @@ export default function LoginPage() {
   const triggerVerifyOtp = async (name: string, mobile: string, code: string) => {
     setErrorMsg(null);
     setIsSubmitting(true);
-    try {
-      await verifyOtp(name, mobile, code);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setErrorMsg('Invalid or expired verification code. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+
+    const completeBackendVerification = async () => {
+      try {
+        await verifyOtp(name, mobile, code);
+        router.push('/dashboard');
+      } catch (err: any) {
+        setErrorMsg('The verification code is incorrect.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    if (typeof window.verifyOtp === 'function') {
+      window.verifyOtp(
+        code,
+        async (data: any) => {
+          await completeBackendVerification();
+        },
+        (error: any) => {
+          setIsSubmitting(false);
+          setErrorMsg('The verification code is incorrect.');
+        }
+      );
+    } else {
+      await completeBackendVerification();
     }
   };
 
@@ -149,21 +245,39 @@ export default function LoginPage() {
     if (!canResend) return;
     setErrorMsg(null);
     setIsSubmitting(true);
-    try {
-      const cleanMobile = mobileNumber.replace(/\D/g, '');
-      await requestOtp(fullName.trim(), cleanMobile);
-      setCountdown(45);
-      setCanResend(false);
-      setOtpDigits(['', '', '', '', '', '']);
-      otpInputRefs[0].current?.focus();
-    } catch (err: any) {
-      setErrorMsg("We couldn't send your WhatsApp verification code. Please check that the number is correct and has WhatsApp enabled.");
-    } finally {
-      setIsSubmitting(false);
+
+    if (typeof window.retryOtp === 'function') {
+      window.retryOtp(
+        null,
+        (data: any) => {
+          setIsSubmitting(false);
+          setCountdown(60);
+          setCanResend(false);
+          setOtpDigits(['', '', '', '', '', '']);
+          otpInputRefs[0].current?.focus();
+        },
+        (error: any) => {
+          setIsSubmitting(false);
+          setErrorMsg("We couldn't send the verification code. Please try again.");
+        },
+        reqId
+      );
+    } else {
+      try {
+        const cleanMobile = mobileNumber.replace(/\D/g, '');
+        await requestOtp(fullName.trim(), cleanMobile);
+        setCountdown(60);
+        setCanResend(false);
+        setOtpDigits(['', '', '', '', '', '']);
+        otpInputRefs[0].current?.focus();
+      } catch (err: any) {
+        setErrorMsg("We couldn't send the verification code. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  // Masking e.g. +91 ••••••5678
   const getMaskedMobileNumber = () => {
     const clean = mobileNumber.replace(/\D/g, '');
     if (clean.length >= 4) {
@@ -183,14 +297,14 @@ export default function LoginPage() {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight">
-            AI CITIZEN JOURNEY
+            AI CITIZEN JOURNEY ENGINE
           </h2>
           <p className="text-slate-400 text-xs">
             Your government journey, simplified.
           </p>
         </div>
 
-        {/* Development Mode OTP Notice */}
+        {/* Development Mode Notice if active */}
         {devOtpNotice && (
           <div className="p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl flex items-center gap-2 text-xs text-amber-200 font-semibold animate-pulse">
             <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
@@ -256,6 +370,9 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* MSG91 Captcha Container */}
+            <div id="msg91-captcha" className="flex justify-center my-2"></div>
+
             <button
               type="submit"
               disabled={isSubmitting || !fullName.trim() || mobileNumber.length < 10}
@@ -264,7 +381,7 @@ export default function LoginPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sending...</span>
+                  <span>Sending Code...</span>
                 </>
               ) : (
                 <>
@@ -277,19 +394,18 @@ export default function LoginPage() {
         ) : (
           <div className="space-y-5">
             <div className="text-center space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>WhatsApp Verification</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold">
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>VERIFY YOUR MOBILE</span>
               </div>
-              <h3 className="text-sm font-bold text-white">Verify your WhatsApp</h3>
+              <h3 className="text-sm font-bold text-white">Enter SMS Code</h3>
               <p className="text-xs text-slate-400">
-                We sent a verification code to your WhatsApp at
+                We sent a verification code to
               </p>
-              <p className="font-semibold text-emerald-400 text-sm tracking-wide">
+              <p className="font-semibold text-amber-300 text-sm tracking-wide">
                 {getMaskedMobileNumber()}
               </p>
             </div>
-
 
             {/* 6 OTP Input Boxes */}
             <div className="flex justify-center gap-2.5 my-4">
@@ -310,12 +426,11 @@ export default function LoginPage() {
               ))}
             </div>
 
-
             <div className="text-center">
               {isSubmitting && (
                 <span className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                  <span>Verifying...</span>
+                  <span>Verifying Code...</span>
                 </span>
               )}
             </div>
@@ -323,7 +438,7 @@ export default function LoginPage() {
             {/* Countdown / Resend */}
             <div className="flex items-center justify-between text-xs pt-1 text-slate-400 border-t border-slate-800/80 mt-2">
               {countdown > 0 ? (
-                <span>Resend code in <strong className="text-amber-400 font-mono">{countdown}s</strong></span>
+                <span>Resend OTP in <strong className="text-amber-400 font-mono">{countdown}s</strong></span>
               ) : (
                 <span>Didn't receive the code?</span>
               )}
@@ -335,7 +450,7 @@ export default function LoginPage() {
                 className="text-amber-400 hover:text-amber-300 font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 underline"
               >
                 <RefreshCw className={`w-3 h-3 ${isSubmitting ? 'animate-spin' : ''}`} />
-                <span>Resend code</span>
+                <span>Resend OTP</span>
               </button>
             </div>
           </div>

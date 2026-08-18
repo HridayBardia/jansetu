@@ -22,10 +22,13 @@ class Settings(BaseModel):
     OTP_PROVIDER: str = os.getenv("OTP_PROVIDER", "dev") # dev, msg91, twilio
     DEV_OTP_MODE: bool = os.getenv("DEV_OTP_MODE", "true").lower() in ("true", "1", "yes")
     
-    # MSG91 Provider
+    # MSG91 Provider & OTP Widget Config
+    MSG91_WIDGET_ID: str = os.getenv("MSG91_WIDGET_ID", "366872725377313536323534")
     MSG91_AUTH_KEY: str = os.getenv("MSG91_AUTH_KEY", "")
+    MSG91_TOKEN_AUTH: str = os.getenv("MSG91_TOKEN_AUTH", "")
     MSG91_TEMPLATE_ID: str = os.getenv("MSG91_TEMPLATE_ID", "")
     MSG91_SENDER_ID: str = os.getenv("MSG91_SENDER_ID", "CITIZN")
+
     
     # Twilio Provider & WhatsApp Verify Config
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")

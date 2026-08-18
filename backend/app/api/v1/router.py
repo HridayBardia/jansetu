@@ -146,6 +146,24 @@ def get_whatsapp_health(request: Request):
         "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
     }, request)
 
+@api_v1_router.get("/health/msg91")
+def get_msg91_health(request: Request):
+    provider_name = (settings.OTP_PROVIDER or "dev").lower()
+    widget_id = settings.MSG91_WIDGET_ID
+    widget_configured = bool(widget_id)
+    auth_key_configured = bool(settings.MSG91_AUTH_KEY)
+    token_auth_configured = bool(settings.MSG91_TOKEN_AUTH)
+
+    return success_response({
+        "provider": provider_name,
+        "widget_id": widget_id,
+        "widget_configured": widget_configured,
+        "auth_key_configured": auth_key_configured,
+        "token_auth_configured": token_auth_configured,
+        "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
+    }, request)
+
+
 
 
 # --- AUTH ENDPOINTS ---
