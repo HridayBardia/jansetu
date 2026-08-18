@@ -150,11 +150,18 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     user.failed_login_attempts = 0
     user.locked_until = None
     user.last_login_at = now
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[WARN] Failed to commit login updates: {e}")
     _failed_attempts.pop(username, None)
 
     # Seed documents if not already done
-    DemoVaultService.seed_user_vault(db, user)
+    try:
+        DemoVaultService.seed_user_vault(db, user)
+    except Exception as e:
+        print(f"[WARN] Failed to seed demo vault: {e}")
 
     token = create_access_token({"sub": user.id, "username": user.username, "name": user.full_name})
 
@@ -174,8 +181,8 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
             "username": user.username,
             "full_name": user.full_name,
             "mobile_number": user.mobile_number,
-            "created_at": user.created_at,
-            "last_login_at": user.last_login_at
+            "created_at": (user.created_at or datetime.utcnow()).isoformat(),
+            "last_login_at": (user.last_login_at or datetime.utcnow()).isoformat()
         }
     }, request)
 

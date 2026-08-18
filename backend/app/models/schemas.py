@@ -26,7 +26,7 @@ class UserSchema(BaseModel):
     mobile_number: Optional[str] = None
     email: Optional[str] = None
     role: str = "citizen"
-    created_at: datetime
+    created_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
 
 class LoginResponse(BaseModel):
