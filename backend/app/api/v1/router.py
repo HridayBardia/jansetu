@@ -95,9 +95,6 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
             user = db.query(UserDB).filter(UserDB.id == demo_param).first()
             if user:
                 return user
-        default_user = db.query(UserDB).filter(UserDB.mobile_number == "+917016918865").first() or db.query(UserDB).first()
-        if default_user:
-            return default_user
         raise HTTPException(status_code=401, detail="Authentication required. Please log in with your mobile number.")
         
     payload = decode_access_token(token)
@@ -344,17 +341,12 @@ async def generate_journey(
     req: JourneyCreateRequest,
     request: Request,
     background_tasks: BackgroundTasks,
+    current_user: UserDB = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     req_id = get_request_id(request)
-    user_id = "demo_user_1"
-    
-    # Verify user exists or seed
-    user = db.query(UserDB).filter(UserDB.id == user_id).first()
-    if not user:
-        user = UserDB(id=user_id, email="demo@citizenjourney.app", full_name="Demo Citizen", hashed_password="mock")
-        db.add(user)
-        db.commit()
+    user_id = current_user.id
+
 
     # Generate Journey DB entry
     journey = JourneyDB(
@@ -439,8 +431,14 @@ async def generate_journey(
     return success_response({"journey_id": journey.id, "message": "Journey generated successfully!"}, request)
 
 @api_v1_router.get("/journeys")
-def list_journeys(request: Request, user_id: str = "demo_user_1", db: Session = Depends(get_db)):
+def list_journeys(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = current_user.id
     journeys_db = db.query(JourneyDB).filter(JourneyDB.user_id == user_id).all()
+
     results = []
     for j in journeys_db:
         # Load steps and dependencies to resolve states
@@ -704,9 +702,10 @@ async def upload_document(
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    user_id: str = "demo_user_1",
+    current_user: UserDB = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    user_id = current_user.id
     allowed_mimes = ["application/pdf", "image/jpeg", "image/png", "image/webp"]
     if file.content_type not in allowed_mimes:
         raise HTTPException(status_code=400, detail="Invalid file type. Only PDF, JPG, PNG, WEBP allowed.")
@@ -767,8 +766,14 @@ async def upload_document(
     )
 
 @api_v1_router.post("/documents/digilocker/import")
-def import_digilocker_documents(request: Request, user_id: str = "demo_user_1", db: Session = Depends(get_db)):
+def import_digilocker_documents(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = current_user.id
     digilocker_docs = DigiLockerMockConnector.fetch_user_documents()
+
     imported = []
     for d in digilocker_docs:
         doc_db = UserDocumentDB(

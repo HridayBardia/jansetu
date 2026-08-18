@@ -7,9 +7,35 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/LoginForm';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { usePathname, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 function AppContent({ children, sandboxMode, setSandboxMode }: { children: React.ReactNode; sandboxMode: boolean; setSandboxMode: (val: boolean) => void }) {
-  const { isAuthModalOpen, closeAuthModal } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, isAuthenticated, isLoading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      const protectedRoutes = ['/dashboard', '/journeys', '/alerts', '/help', '/privacy', '/admin'];
+      const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
+      if (isProtected && !isAuthenticated) {
+        router.replace('/login');
+      }
+      if (pathname === '/login' && isAuthenticated) {
+        router.replace('/dashboard');
+      }
+    }
+  }, [isLoading, isAuthenticated, pathname, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
 
   return (
     <>

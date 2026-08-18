@@ -40,6 +40,13 @@ class MSG91Provider(BaseOTPProvider):
     """
     async def send_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
         if not settings.MSG91_AUTH_KEY or not settings.MSG91_TEMPLATE_ID:
+            if not settings.DEV_OTP_MODE:
+                logger.error("MSG91 credentials missing in production!")
+                return {
+                    "success": False,
+                    "provider": "msg91",
+                    "error": "SMS provider credentials missing in production configuration."
+                }
             logger.warning("MSG91 credentials missing. Falling back to development provider.")
             return await DevelopmentOTPProvider().send_otp(mobile_number, otp)
 
@@ -82,6 +89,13 @@ class TwilioProvider(BaseOTPProvider):
     """
     async def send_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
         if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
+            if not settings.DEV_OTP_MODE:
+                logger.error("Twilio credentials missing in production!")
+                return {
+                    "success": False,
+                    "provider": "twilio",
+                    "error": "Twilio credentials missing in production configuration."
+                }
             logger.warning("Twilio credentials missing. Falling back to development provider.")
             return await DevelopmentOTPProvider().send_otp(mobile_number, otp)
 
@@ -120,8 +134,12 @@ class TwilioProvider(BaseOTPProvider):
 def get_otp_provider() -> BaseOTPProvider:
     """Factory method to get the active OTP provider based on configuration."""
     provider_name = (settings.OTP_PROVIDER or "dev").lower()
+    if not settings.DEV_OTP_MODE and provider_name in ("dev", "development"):
+        raise RuntimeError("Development OTP provider is disallowed when DEV_OTP_MODE is False. Please configure a real SMS provider.")
+    
     if provider_name == "msg91":
         return MSG91Provider()
     elif provider_name == "twilio":
         return TwilioProvider()
     return DevelopmentOTPProvider()
+

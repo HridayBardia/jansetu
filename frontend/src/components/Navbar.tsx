@@ -7,7 +7,6 @@ import { LanguageSelector } from './LanguageSelector';
 import { JanSetuLogo } from './JanSetuLogo';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-import { DemoCitizenSelector } from './DemoCitizenSelector';
 
 import {
   Compass,
@@ -26,13 +25,12 @@ import {
 interface NavbarProps {
   sandboxMode?: boolean;
   setSandboxMode?: (val: boolean) => void;
-  onCitizenChange?: (key: string, data: any) => void;
 }
+
 
 export const Navbar: React.FC<NavbarProps> = ({
   sandboxMode = true,
-  setSandboxMode,
-  onCitizenChange
+  setSandboxMode
 }) => {
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -49,10 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      {/* Demo Mode Top Banner Switcher */}
-      <DemoCitizenSelector onCitizenChange={onCitizenChange} />
-
       {/* Top Header */}
+
       <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
