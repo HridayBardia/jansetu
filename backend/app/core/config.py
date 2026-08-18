@@ -1,0 +1,41 @@
+import os
+from pydantic import BaseModel
+
+class Settings(BaseModel):
+    PROJECT_NAME: str = "AI Citizen Journey Engine API"
+    VERSION: str = "1.0.0"
+    API_V1_STR: str = "/api/v1"
+    
+    # Database
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./citizen_journey.db")
+    
+    # AI Config
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "mock")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    
+    # Security & Auth
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "super-secret-citizen-journey-key-2026")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
+    
+    # OTP Provider Config
+    OTP_PROVIDER: str = os.getenv("OTP_PROVIDER", "dev") # dev, msg91, twilio
+    DEV_OTP_MODE: bool = os.getenv("DEV_OTP_MODE", "true").lower() in ("true", "1", "yes")
+    
+    # MSG91 Provider
+    MSG91_AUTH_KEY: str = os.getenv("MSG91_AUTH_KEY", "")
+    MSG91_TEMPLATE_ID: str = os.getenv("MSG91_TEMPLATE_ID", "")
+    MSG91_SENDER_ID: str = os.getenv("MSG91_SENDER_ID", "CITIZN")
+    
+    # Twilio Provider
+    TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
+    TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
+    TWILIO_SERVICE_SID: str = os.getenv("TWILIO_SERVICE_SID", "")
+    
+    # OTP Operational Security
+    OTP_EXPIRY_MINUTES: int = 5
+    OTP_MAX_ATTEMPTS: int = 5
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+
+settings = Settings()
+

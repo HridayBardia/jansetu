@@ -1,0 +1,106 @@
+import os
+import uuid
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.core.database import engine, Base, get_db
+from app.core.websocket import ws_manager
+from app.api.v1.router import api_v1_router
+
+# Ensure DB tables are created on startup
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description="Intelligent orchestration & guided workflow layer for Indian digital government services.",
+    version=settings.VERSION
+)
+
+# Enable CORS for local Next.js frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Middleware: Request ID tracing
+@app.middleware("http")
+async def add_request_id_header(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = req_id
+    response: Response = await call_next(request)
+    response.headers["X-Request-ID"] = req_id
+    return response
+
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "docs": "/docs",
+        "api_v1": settings.API_V1_STR
+    }
+
+@app.get("/health")
+@app.get("/api/v1/health")
+def health():
+    return {
+        "status": "healthy",
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "database": "connected",
+        "otp_provider": settings.OTP_PROVIDER,
+        "dev_otp_mode": settings.DEV_OTP_MODE,
+        "ai_provider": settings.AI_PROVIDER,
+        "websocket_active_rooms": len(ws_manager.active_connections)
+    }
+
+@app.get("/ready")
+def readiness(db: Session = Depends(get_db)):
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "ready",
+            "database": "connected",
+            "otp_provider": settings.OTP_PROVIDER,
+            "ai_provider": settings.AI_PROVIDER
+        }
+    except Exception as e:
+        return {
+            "status": "not_ready",
+            "error": str(e)
+        }
+
+
+
+# Mount versioned API router
+app.include_router(api_v1_router)
+
+# Real-time WebSocket Endpoints
+@app.websocket("/ws/journeys/{journey_id}")
+async def websocket_journey_endpoint(websocket: WebSocket, journey_id: str):
+    await ws_manager.connect(websocket, journey_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, journey_id)
+
+@app.websocket("/ws/conversations/{conversation_id}")
+async def websocket_conversation_endpoint(websocket: WebSocket, conversation_id: str):
+    await ws_manager.connect(websocket, conversation_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, conversation_id)

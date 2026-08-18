@@ -1,0 +1,46 @@
+# Virtual environment
+backend/venv/
+venv/
+ENV/
+env/
+.env
+.env.local
+*.env
+
+# Python / pytest
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Node / frontend
+frontend/node_modules/
+node_modules/
+frontend/.next/
+.next/
+frontend/out/
+out/
+.DS_Store
+.npm
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Databases / local state
+*.db
+*.sqlite3
+test_temp_citizen_journey.db
+citizen_journey.db
+
+# IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
