@@ -294,6 +294,7 @@ export default function LoginPage() {
                   ref={otpInputRefs[idx]}
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
@@ -303,6 +304,7 @@ export default function LoginPage() {
                 />
               ))}
             </div>
+
 
             <div className="text-center">
               {isSubmitting && (

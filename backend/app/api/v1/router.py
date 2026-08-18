@@ -106,6 +106,31 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
         raise HTTPException(status_code=401, detail="Citizen record not found.")
     return user
 
+@api_v1_router.get("/health/otp")
+def get_otp_health(request: Request):
+    provider_name = (settings.OTP_PROVIDER or "dev").lower()
+    
+    is_configured = False
+    service_configured = False
+    
+    if provider_name == "twilio":
+        is_configured = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
+        service_configured = bool(settings.TWILIO_SERVICE_SID)
+    elif provider_name == "msg91":
+        is_configured = bool(settings.MSG91_AUTH_KEY)
+        service_configured = bool(settings.MSG91_TEMPLATE_ID)
+    else:
+        is_configured = settings.DEV_OTP_MODE
+        service_configured = settings.DEV_OTP_MODE
+
+    return success_response({
+        "provider": provider_name,
+        "configured": is_configured,
+        "service_configured": service_configured,
+        "dev_otp_mode": settings.DEV_OTP_MODE,
+        "environment": "development" if settings.DEV_OTP_MODE else "production"
+    }, request)
+
 # --- AUTH ENDPOINTS ---
 @api_v1_router.post("/auth/request-otp")
 async def request_otp(req: OTPRequest, request: Request, db: Session = Depends(get_db)):
@@ -129,14 +154,12 @@ async def request_otp(req: OTPRequest, request: Request, db: Session = Depends(g
             wait_seconds = int((latest.resend_cooldown_until - now).total_seconds())
             raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds} seconds before requesting another code.")
 
-    otp = generate_secure_otp()
-    otp_hashed = hash_otp(normalized_mobile, otp)
     expires_at = now + timedelta(minutes=settings.OTP_EXPIRY_MINUTES)
     cooldown_until = now + timedelta(seconds=settings.OTP_RESEND_COOLDOWN_SECONDS)
 
     verification = OTPVerificationDB(
         mobile_number=normalized_mobile,
-        otp_hash=otp_hashed,
+        otp_hash="MANAGED_SERVICE",
         expires_at=expires_at,
         attempt_count=0,
         max_attempts=settings.OTP_MAX_ATTEMPTS,
@@ -146,7 +169,13 @@ async def request_otp(req: OTPRequest, request: Request, db: Session = Depends(g
     db.commit()
 
     provider = get_otp_provider()
-    provider_res = await provider.send_otp(normalized_mobile, otp)
+    provider_res = await provider.send_otp(normalized_mobile)
+
+    if not provider_res.get("success"):
+        raise HTTPException(
+            status_code=400,
+            detail=provider_res.get("error", "We couldn't send the verification code. Please check your mobile number and try again.")
+        )
 
     payload = {
         "mobile_number": normalized_mobile,
@@ -155,38 +184,23 @@ async def request_otp(req: OTPRequest, request: Request, db: Session = Depends(g
         "message": f"Verification code sent to {normalized_mobile}"
     }
     if settings.DEV_OTP_MODE or provider_res.get("dev_otp"):
-        payload["dev_otp"] = otp
+        payload["dev_otp"] = provider_res.get("dev_otp")
 
     return success_response(payload, request)
 
 @api_v1_router.post("/auth/verify-otp")
-def verify_otp(req: OTPVerifyRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+async def verify_otp(req: OTPVerifyRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     normalized_mobile = normalize_mobile_number(req.mobile_number)
     now = datetime.utcnow()
 
-    verification = db.query(OTPVerificationDB).filter(
-        OTPVerificationDB.mobile_number == normalized_mobile,
-        OTPVerificationDB.verified_at == None
-    ).order_by(OTPVerificationDB.created_at.desc()).first()
+    provider = get_otp_provider()
+    verify_res = await provider.verify_otp(normalized_mobile, req.otp)
 
-    if not verification:
-        raise HTTPException(status_code=400, detail="No active verification code found. Please request a new OTP.")
+    if not verify_res.get("success"):
+        raise HTTPException(status_code=400, detail=verify_res.get("error", "Invalid or expired verification code."))
 
-    if verification.expires_at < now:
-        raise HTTPException(status_code=400, detail="Verification code has expired. Please request a new OTP.")
+    # Verification successful - create or fetch user
 
-    if verification.attempt_count >= verification.max_attempts:
-        raise HTTPException(status_code=400, detail="Maximum verification attempts exceeded. Please request a new OTP.")
-
-    verification.attempt_count += 1
-    db.commit()
-
-    if not verify_otp_hash(normalized_mobile, req.otp.strip(), verification.otp_hash):
-        remaining = verification.max_attempts - verification.attempt_count
-        raise HTTPException(status_code=400, detail=f"Incorrect OTP code. {remaining} attempt(s) remaining.")
-
-    verification.verified_at = now
-    db.commit()
 
     user = db.query(UserDB).filter(UserDB.mobile_number == normalized_mobile).first()
     is_new_user = False

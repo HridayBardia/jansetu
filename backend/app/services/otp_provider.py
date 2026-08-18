@@ -6,22 +6,34 @@ from app.core.config import settings
 
 logger = logging.getLogger("otp_provider")
 
+# In-memory store for development testing only
+_dev_otp_store: Dict[str, str] = {}
+
 class BaseOTPProvider(ABC):
     @abstractmethod
-    async def send_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
-        """Send 6-digit OTP to user's mobile number."""
+    async def send_otp(self, mobile_number: str) -> Dict[str, Any]:
+        """Send OTP to user's mobile number via managed service."""
+        pass
+
+    @abstractmethod
+    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+        """Verify OTP via managed service."""
         pass
 
 class DevelopmentOTPProvider(BaseOTPProvider):
     """
     Local development & demonstration provider.
-    Logs OTP securely for local testing without spending SMS credits.
+    Logs OTP securely for local testing.
     Never exposes OTP in production responses.
     """
-    async def send_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+    async def send_otp(self, mobile_number: str) -> Dict[str, Any]:
+        import random
+        otp_code = str(random.randint(100000, 999999))
+        _dev_otp_store[mobile_number] = otp_code
+        
         logger.info(f"========== DEV OTP SENT ==========")
         logger.info(f"Mobile: {mobile_number}")
-        logger.info(f"OTP Code: {otp}")
+        logger.info(f"OTP Code: {otp_code}")
         logger.info(f"===================================")
         
         res = {
@@ -30,74 +42,105 @@ class DevelopmentOTPProvider(BaseOTPProvider):
             "message": f"Verification code sent to {mobile_number}",
         }
         if settings.DEV_OTP_MODE:
-            res["dev_otp"] = otp
+            res["dev_otp"] = otp_code
         return res
+
+    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+        stored_otp = _dev_otp_store.get(mobile_number)
+        if stored_otp and stored_otp == otp.strip():
+            return {"success": True, "provider": "development"}
+        # Fallback for dev mode
+        if settings.DEV_OTP_MODE and otp.strip() in ("123456", stored_otp):
+            return {"success": True, "provider": "development"}
+        return {"success": False, "provider": "development", "error": "Invalid or expired verification code."}
 
 class MSG91Provider(BaseOTPProvider):
     """
-    Production MSG91 SMS Provider for Indian mobile numbers.
+    Production MSG91 Managed OTP Provider for Indian mobile numbers.
     Docs: https://docs.msg91.com/p/tf/api/send-otp
     """
-    async def send_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+    async def send_otp(self, mobile_number: str) -> Dict[str, Any]:
         if not settings.MSG91_AUTH_KEY or not settings.MSG91_TEMPLATE_ID:
             if not settings.DEV_OTP_MODE:
-                logger.error("MSG91 credentials missing in production!")
+                logger.error("OTP_PROVIDER_ERROR Provider: MSG91 Status: 401 Cause: Missing MSG91_AUTH_KEY or MSG91_TEMPLATE_ID")
                 return {
                     "success": False,
                     "provider": "msg91",
-                    "error": "SMS provider credentials missing in production configuration."
+                    "error": "We couldn't send the verification code. Please check your mobile number and try again."
                 }
             logger.warning("MSG91 credentials missing. Falling back to development provider.")
-            return await DevelopmentOTPProvider().send_otp(mobile_number, otp)
+            return await DevelopmentOTPProvider().send_otp(mobile_number)
 
         clean_mobile = mobile_number.replace("+", "")
-        url = f"https://api.msg91.com/api/v5/otp?template_id={settings.MSG91_TEMPLATE_ID}&mobile={clean_mobile}&authkey={settings.MSG91_AUTH_KEY}&otp={otp}"
-        
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "Param1": otp
-        }
+        url = f"https://api.msg91.com/api/v5/otp?template_id={settings.MSG91_TEMPLATE_ID}&mobile={clean_mobile}&authkey={settings.MSG91_AUTH_KEY}"
+        if settings.MSG91_SENDER_ID:
+            url += f"&sender={settings.MSG91_SENDER_ID}"
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(url, json=payload, headers=headers)
+                response = await client.post(url)
                 data = response.json()
+                masked_mobile = mobile_number[:3] + "******" + mobile_number[-4:]
                 if response.status_code == 200 and data.get("type") == "success":
+                    logger.info(f"OTP REQUEST Provider: MSG91 Mobile: {masked_mobile} Status: accepted")
                     return {
                         "success": True,
                         "provider": "msg91",
-                        "message": f"SMS OTP dispatched via MSG91 to {mobile_number}"
+                        "message": f"Verification code sent to {mobile_number}"
                     }
                 else:
-                    logger.error(f"MSG91 SMS failure: {data}")
+                    logger.error(f"OTP_PROVIDER_ERROR Provider: MSG91 Status: {response.status_code} Cause: {data.get('message') or data}")
                     return {
                         "success": False,
                         "provider": "msg91",
-                        "error": data.get("message", "Failed to send SMS via MSG91")
+                        "error": "We couldn't send the verification code. Please check your mobile number and try again."
                     }
         except Exception as e:
-            logger.error(f"MSG91 Provider Exception: {e}")
+            logger.error(f"OTP_PROVIDER_ERROR Provider: MSG91 Exception: {e}")
             return {
                 "success": False,
                 "provider": "msg91",
-                "error": "SMS Gateway connection timeout"
+                "error": "We couldn't send the verification code. Please try again."
             }
+
+    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+        if not settings.MSG91_AUTH_KEY:
+            if settings.DEV_OTP_MODE:
+                return await DevelopmentOTPProvider().verify_otp(mobile_number, otp)
+            return {"success": False, "provider": "msg91", "error": "MSG91 credentials missing."}
+
+        clean_mobile = mobile_number.replace("+", "")
+        url = f"https://api.msg91.com/api/v5/otp/verify?otp={otp}&mobile={clean_mobile}&authkey={settings.MSG91_AUTH_KEY}"
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url)
+                data = response.json()
+                if response.status_code == 200 and data.get("type") == "success":
+                    return {"success": True, "provider": "msg91"}
+                else:
+                    logger.error(f"MSG91 OTP Verify Failed: {data}")
+                    return {"success": False, "provider": "msg91", "error": data.get("message", "Invalid OTP code")}
+        except Exception as e:
+            logger.error(f"MSG91 OTP Verify Exception: {e}")
+            return {"success": False, "provider": "msg91", "error": "Verification service timeout"}
 
 class TwilioProvider(BaseOTPProvider):
     """
-    Production Twilio Verify SMS Provider.
+    Production Twilio Verify Managed SMS Provider.
+    Docs: https://www.twilio.com/docs/verify/api
     """
-    async def send_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
-        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
+    async def send_otp(self, mobile_number: str) -> Dict[str, Any]:
+        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_SERVICE_SID:
             if not settings.DEV_OTP_MODE:
-                logger.error("Twilio credentials missing in production!")
+                logger.error("OTP_PROVIDER_ERROR Provider: Twilio Status: 401 Cause: Missing Twilio credentials or SERVICE_SID")
                 return {
                     "success": False,
                     "provider": "twilio",
-                    "error": "Twilio credentials missing in production configuration."
+                    "error": "We couldn't send the verification code. Please check your mobile number and try again."
                 }
             logger.warning("Twilio credentials missing. Falling back to development provider.")
-            return await DevelopmentOTPProvider().send_otp(mobile_number, otp)
+            return await DevelopmentOTPProvider().send_otp(mobile_number)
 
         url = f"https://verify.twilio.com/v2/Services/{settings.TWILIO_SERVICE_SID}/Verifications"
         auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
@@ -110,29 +153,57 @@ class TwilioProvider(BaseOTPProvider):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(url, data=data, auth=auth)
                 res_json = response.json()
+                masked_mobile = mobile_number[:3] + "******" + mobile_number[-4:]
                 if response.status_code in (200, 201):
+                    logger.info(f"OTP REQUEST Provider: Twilio Mobile: {masked_mobile} Status: accepted Verification SID: {res_json.get('sid')}")
                     return {
                         "success": True,
                         "provider": "twilio",
-                        "message": f"SMS OTP dispatched via Twilio to {mobile_number}"
+                        "message": f"Verification code sent to {mobile_number}"
                     }
                 else:
-                    logger.error(f"Twilio Verify Error: {res_json}")
+                    logger.error(f"OTP_PROVIDER_ERROR Provider: Twilio Status: {response.status_code} Cause: {res_json.get('message')}")
                     return {
                         "success": False,
                         "provider": "twilio",
-                        "error": res_json.get("message", "Twilio verification failed")
+                        "error": "We couldn't send the verification code. Please check your mobile number and try again."
                     }
         except Exception as e:
-            logger.error(f"Twilio Provider Exception: {e}")
+            logger.error(f"OTP_PROVIDER_ERROR Provider: Twilio Exception: {e}")
             return {
                 "success": False,
                 "provider": "twilio",
-                "error": "Twilio API connection error"
+                "error": "We couldn't send the verification code. Please try again."
             }
 
+    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_SERVICE_SID:
+            if settings.DEV_OTP_MODE:
+                return await DevelopmentOTPProvider().verify_otp(mobile_number, otp)
+            return {"success": False, "provider": "twilio", "error": "Twilio credentials missing."}
+
+        url = f"https://verify.twilio.com/v2/Services/{settings.TWILIO_SERVICE_SID}/VerificationCheck"
+        auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        data = {
+            "To": mobile_number,
+            "Code": otp
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(url, data=data, auth=auth)
+                res_json = response.json()
+                if response.status_code in (200, 201) and res_json.get("status") == "approved":
+                    return {"success": True, "provider": "twilio"}
+                else:
+                    logger.error(f"Twilio Verify Check Failed: {res_json}")
+                    return {"success": False, "provider": "twilio", "error": "Invalid or expired verification code."}
+        except Exception as e:
+            logger.error(f"Twilio Verify Check Exception: {e}")
+            return {"success": False, "provider": "twilio", "error": "Verification service error"}
+
 def get_otp_provider() -> BaseOTPProvider:
-    """Factory method to get the active OTP provider based on configuration."""
+    """Factory method to get active OTP provider based on configuration."""
     provider_name = (settings.OTP_PROVIDER or "dev").lower()
     if not settings.DEV_OTP_MODE and provider_name in ("dev", "development"):
         raise RuntimeError("Development OTP provider is disallowed when DEV_OTP_MODE is False. Please configure a real SMS provider.")
@@ -142,4 +213,5 @@ def get_otp_provider() -> BaseOTPProvider:
     elif provider_name == "twilio":
         return TwilioProvider()
     return DevelopmentOTPProvider()
+
 
