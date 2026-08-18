@@ -244,7 +244,7 @@ export default function LoginPage() {
               <span>{showPin ? 'Hide' : 'Show'}</span>
             </button>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
             {pinDigits.map((digit, i) => (
               <input
                 key={i}
@@ -258,7 +258,9 @@ export default function LoginPage() {
                 onKeyDown={e => handlePinKeyDown(i, e)}
                 onPaste={handlePinPaste}
                 style={{
-                  flex: 1,
+                  width: '100%',
+                  minWidth: '0px',
+                  maxWidth: '46px',
                   height: '52px',
                   textAlign: 'center',
                   fontSize: '20px',

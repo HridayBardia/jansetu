@@ -114,7 +114,6 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "extracted_fields": {
                     "full_name": "Hriday Bardia",
                     "degree": "B.Tech Computer Science & Engineering",
-                    "cgpa": "8.9 / 10",
                     "passing_year": "2023"
                 },
                 "field_confidence": {"full_name": 0.99, "degree": 0.98},
@@ -151,8 +150,8 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
     },
     "varad": {
         "key": "varad",
-        "user_id": "user_varad",
-        "full_name": "Varad",
+        "user_id": "user_varad_kanade",
+        "full_name": "Varad Kanade",
         "mobile_number": "+918830482422",
         "email": "varad@demo.citizen",
         "age": 25,
@@ -180,7 +179,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "UIDAI",
                 "extracted_fields": {
-                    "full_name": "Varad",
+                    "full_name": "Varad Kanade",
                     "date_of_birth": "10/05/2000",
                     "gender": "Male",
                     "aadhaar_number": "DEMO-AADHAAR-8830482422",
@@ -206,7 +205,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Income Tax Department",
                 "extracted_fields": {
-                    "full_name": "Varad",
+                    "full_name": "Varad Kanade",
                     "pan_number": "DEMO-PAN-00002"
                 },
                 "field_confidence": {"full_name": 0.99, "pan_number": 0.99},
@@ -229,7 +228,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "RTO Pune, Maharashtra",
                 "extracted_fields": {
-                    "full_name": "Varad",
+                    "full_name": "Varad Kanade",
                     "dl_number": "DEMO-DL-MH12-0002",
                     "valid_until": "2036-05-09"
                 },
@@ -253,7 +252,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": False,
                 "issued_by": "State Bank of India (SBI)",
                 "extracted_fields": {
-                    "account_holder": "Varad",
+                    "account_holder": "Varad Kanade",
                     "bank_name": "State Bank of India",
                     "ifsc_code": "SBIN0001234"
                 },
@@ -277,7 +276,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Savitribai Phule Pune University",
                 "extracted_fields": {
-                    "full_name": "Varad",
+                    "full_name": "Varad Kanade",
                     "degree": "M.Sc Information Technology",
                     "passing_year": "2022"
                 },
@@ -301,7 +300,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Revenue Department, Govt of Maharashtra",
                 "extracted_fields": {
-                    "full_name": "Varad",
+                    "full_name": "Varad Kanade",
                     "annual_income": "420000",
                     "valid_until": "2027-03-31"
                 },
@@ -312,27 +311,27 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             }
         ]
     },
-    "narayan": {
-        "key": "narayan",
-        "user_id": "user_narayan",
-        "full_name": "Narayan",
+    "ayush": {
+        "key": "ayush",
+        "user_id": "user_ayush_chauhan",
+        "full_name": "Ayush Chauhan",
         "mobile_number": "+918969707785",
-        "email": "narayan@demo.citizen",
-        "age": 28,
-        "annual_income": 650000.0,
-        "income_category": "MIG",
-        "location_city": "Patna",
-        "location_district": "Patna",
-        "location_state": "Bihar",
+        "email": "ayush@demo.citizen",
+        "age": 22,
+        "annual_income": 180000.0,
+        "income_category": "EWS",
+        "location_city": "Jaipur",
+        "location_district": "Jaipur",
+        "location_state": "Rajasthan",
         "category": "General",
-        "occupation": "Senior Analyst",
-        "education": "Post Graduate Diploma",
+        "occupation": "College Student",
+        "education": "B.Sc Physics",
         "documents": [
             {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
                 "document_number_masked": "XXXX XXXX 7785",
-                "file_name": "demo_aadhaar_narayan.pdf",
+                "file_name": "demo_aadhaar_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 182000,
                 "status": "AVAILABLE",
@@ -343,11 +342,11 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "UIDAI",
                 "extracted_fields": {
-                    "full_name": "Narayan",
-                    "date_of_birth": "20/12/1997",
+                    "full_name": "Ayush Chauhan",
+                    "date_of_birth": "20/12/2004",
                     "gender": "Male",
                     "aadhaar_number": "DEMO-AADHAAR-8969707785",
-                    "address": "88, Boring Road, Patna, Bihar - 800001"
+                    "address": "88, Boring Road, Jaipur, Rajasthan - 302001"
                 },
                 "field_confidence": {"full_name": 0.99, "aadhaar_number": 0.99},
                 "overall_confidence": 0.99,
@@ -358,7 +357,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "PAN",
                 "document_name": "PAN Card",
                 "document_number_masked": "XXXXX9101N",
-                "file_name": "demo_pan_narayan.pdf",
+                "file_name": "demo_pan_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 148000,
                 "status": "AVAILABLE",
@@ -369,7 +368,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Income Tax Department",
                 "extracted_fields": {
-                    "full_name": "Narayan",
+                    "full_name": "Ayush Chauhan",
                     "pan_number": "DEMO-PAN-00003"
                 },
                 "field_confidence": {"full_name": 0.99},
@@ -381,7 +380,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "PASSPORT",
                 "document_name": "Indian Republic Passport",
                 "document_number_masked": "ZXXXXXX1",
-                "file_name": "demo_passport_narayan.pdf",
+                "file_name": "demo_passport_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 320000,
                 "status": "AVAILABLE",
@@ -392,7 +391,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Ministry of External Affairs, India",
                 "extracted_fields": {
-                    "full_name": "Narayan",
+                    "full_name": "Ayush Chauhan",
                     "passport_number": "DEMO-PASS-0003",
                     "valid_until": "2032-11-20"
                 },
@@ -404,8 +403,8 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             {
                 "document_type": "DRIVING_LICENCE",
                 "document_name": "Driving Licence",
-                "document_number_masked": "BR-01-2020-XXXXXXX",
-                "file_name": "demo_dl_narayan.pdf",
+                "document_number_masked": "RJ-14-2020-XXXXXXX",
+                "file_name": "demo_dl_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 205000,
                 "status": "AVAILABLE",
@@ -414,15 +413,131 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_demo": True,
                 "synthetic_notice": SYNTHETIC_WATERMARK,
                 "is_digilocker": True,
-                "issued_by": "Transport Dept, Patna, Bihar",
+                "issued_by": "Transport Dept, Jaipur, Rajasthan",
                 "extracted_fields": {
-                    "full_name": "Narayan",
-                    "dl_number": "DEMO-DL-BR01-0003",
+                    "full_name": "Ayush Chauhan",
+                    "dl_number": "DEMO-DL-RJ14-0003",
                     "valid_until": "2035-12-19"
                 },
                 "field_confidence": {"full_name": 0.98},
                 "overall_confidence": 0.98,
                 "expiry_status": "VALID",
+                "language_code": "en"
+            }
+        ]
+    },
+    "satwik": {
+        "key": "satwik",
+        "user_id": "user_satwik_guru",
+        "full_name": "Satwik Guru",
+        "mobile_number": "+919988776655",
+        "email": "satwik@demo.citizen",
+        "age": 21,
+        "annual_income": 280000.0,
+        "income_category": "LIG",
+        "location_city": "Bengaluru",
+        "location_district": "Bengaluru",
+        "location_state": "Karnataka",
+        "category": "General",
+        "occupation": "College Student",
+        "education": "B.E. Computer Science",
+        "documents": [
+            {
+                "document_type": "AADHAAR",
+                "document_name": "Aadhaar Card",
+                "document_number_masked": "XXXX XXXX 4455",
+                "file_name": "demo_aadhaar_satwik.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 182000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": True,
+                "issued_by": "UIDAI",
+                "extracted_fields": {
+                    "full_name": "Satwik Guru",
+                    "date_of_birth": "12/04/2005",
+                    "gender": "Male",
+                    "aadhaar_number": "DEMO-AADHAAR-9988776655",
+                    "address": "15, MG Road, Bengaluru, Karnataka - 560001"
+                },
+                "field_confidence": {"full_name": 0.99, "aadhaar_number": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "NO_EXPIRY",
+                "language_code": "en"
+            },
+            {
+                "document_type": "PAN",
+                "document_name": "PAN Card",
+                "document_number_masked": "XXXXX5566G",
+                "file_name": "demo_pan_satwik.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 148000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": True,
+                "issued_by": "Income Tax Department",
+                "extracted_fields": {
+                    "full_name": "Satwik Guru",
+                    "pan_number": "DEMO-PAN-00004"
+                },
+                "field_confidence": {"full_name": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "NO_EXPIRY",
+                "language_code": "en"
+            },
+            {
+                "document_type": "MARKSHEET",
+                "document_name": "12th Marksheet",
+                "document_number_masked": "CBSE-12-XXXX",
+                "file_name": "demo_12th_marksheet_satwik.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 240000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": True,
+                "issued_by": "Central Board of Secondary Education (CBSE)",
+                "extracted_fields": {
+                    "full_name": "Satwik Guru",
+                    "marks_obtained": "475 / 500",
+                    "passing_year": "2023"
+                },
+                "field_confidence": {"full_name": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "NO_EXPIRY",
+                "language_code": "en"
+            },
+            {
+                "document_type": "DOMICILE_CERTIFICATE",
+                "document_name": "Domicile Certificate",
+                "document_number_masked": "KA-BLR-DOM-XXXX",
+                "file_name": "demo_domicile_satwik.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 180000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": False,
+                "issued_by": "Revenue Department, Govt of Karnataka",
+                "extracted_fields": {
+                    "full_name": "Satwik Guru",
+                    "district": "Bengaluru",
+                    "state": "Karnataka",
+                    "certificate_number": "DEMO-DOM-KA-004"
+                },
+                "field_confidence": {"full_name": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "NO_EXPIRY",
                 "language_code": "en"
             }
         ]
@@ -434,15 +549,8 @@ class DemoVaultService:
     def list_demo_citizens() -> List[Dict[str, Any]]:
         results = []
         for key, data in DEMO_CITIZENS.items():
-            alias_key = key
-            if key == "hriday":
-                alias_key = "aarav"
-            elif key == "varad":
-                alias_key = "priya"
-            elif key == "narayan":
-                alias_key = "arjun"
             results.append({
-                "key": alias_key,
+                "key": key,
                 "user_id": data["user_id"],
                 "full_name": data["full_name"],
                 "mobile_number": data["mobile_number"],
@@ -463,7 +571,7 @@ class DemoVaultService:
         elif query == "priya":
             query = "varad"
         elif query == "arjun":
-            query = "narayan"
+            query = "satwik"  # maps arjun to satwik for test compatibility
 
         # Match by key or full_name (case-insensitive)
         for key, data in DEMO_CITIZENS.items():
@@ -479,7 +587,7 @@ class DemoVaultService:
         elif alias_key == "priya":
             alias_key = "varad"
         elif alias_key == "arjun":
-            alias_key = "narayan"
+            alias_key = "satwik"
             
         demo_info = DemoVaultService.get_demo_citizen(alias_key)
         if not demo_info:
@@ -511,7 +619,7 @@ class DemoVaultService:
             user = UserDB(
                 id=user_id_expected,
                 username=alias_key,
-                pin_hash=hash_pin("000000"),  # default demo PIN; overridden by seed_synthetic_users
+                pin_hash=hash_pin("123456"),  # default demo PIN
                 full_name=expected_name,
                 mobile_number=demo_info["mobile_number"],
             )
@@ -536,12 +644,12 @@ class DemoVaultService:
                 profile.full_name = expected_name
                 db.commit()
         
-        # Clear existing docs and re-seed to ensure all expected documents are present
+        # Clear existing docs and re-seed
         db.query(UserDocumentDB).filter(UserDocumentDB.user_id == user.id).delete()
         db.commit()
         DemoVaultService.seed_user_vault(db, user)
 
-        # Return matched record with requested key
+        # Return matched record
         ret_val = demo_info.copy()
         ret_val["key"] = key
         ret_val["full_name"] = expected_name

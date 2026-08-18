@@ -190,13 +190,14 @@ def test_legal_trust_rule_and_demo_citizens():
         assert d["is_synthetic"] is True
         assert "DEMO / SYNTHETIC DOCUMENT" in d["synthetic_notice"]
 
-    # Verify 3 Demo Citizens exist
+    # Verify 4 Demo Citizens exist
     citizens = DemoVaultService.list_demo_citizens()
-    assert len(citizens) == 3
+    assert len(citizens) == 4
     keys = [c["key"] for c in citizens]
-    assert "aarav" in keys
-    assert "priya" in keys
-    assert "arjun" in keys
+    assert "hriday" in keys
+    assert "varad" in keys
+    assert "ayush" in keys
+    assert "satwik" in keys
 
 
 # ==============================================================================

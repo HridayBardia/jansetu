@@ -147,7 +147,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
             <span>{showPin ? 'Hide' : 'Show'}</span>
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center">
           {pinDigits.map((digit, i) => (
             <input
               key={i}
@@ -160,7 +160,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
               onChange={e => handlePinInput(i, e.target.value)}
               onKeyDown={e => handlePinKeyDown(i, e)}
               onPaste={handlePinPaste}
-              className={`flex-1 h-11 text-center text-lg font-bold bg-slate-800 border rounded-lg text-slate-100 outline-none transition ${
+              className={`w-full max-w-[40px] min-w-0 h-11 text-center text-lg font-bold bg-slate-800 border rounded-lg text-slate-100 outline-none transition ${
                 digit ? 'border-blue-500/60' : 'border-slate-700'
               } focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`}
             />

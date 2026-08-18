@@ -24,7 +24,7 @@ def seed_synthetic_users():
     from app.services.demo_vault_service import DEMO_CITIZENS
 
     # Per-user PIN config: env var CITIZEN_PIN_<USERNAME> or fallback to CITIZEN_DEFAULT_PIN
-    default_pin = os.getenv("CITIZEN_DEFAULT_PIN", "000000")
+    default_pin = os.getenv("CITIZEN_DEFAULT_PIN", "123456")
 
     db = SessionLocal()
     try:
