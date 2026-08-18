@@ -7,7 +7,9 @@ class Settings(BaseModel):
     API_V1_STR: str = "/api/v1"
 
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./citizen_journey.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", 
+        "sqlite:////tmp/citizen_journey.db" if os.getenv("VERCEL") else "sqlite:///./citizen_journey.db"
+    )
 
     # AI Config
     AI_PROVIDER: str = os.getenv("AI_PROVIDER", "mock")

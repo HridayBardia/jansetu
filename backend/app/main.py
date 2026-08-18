@@ -30,11 +30,12 @@ def seed_synthetic_users():
     try:
         for key, data in DEMO_CITIZENS.items():
             existing = db.query(UserDB).filter(UserDB.username == key).first()
-            if existing:
-                continue  # Already seeded
-
             pin_env_var = f"CITIZEN_PIN_{key.upper()}"
             pin = os.getenv(pin_env_var, default_pin)
+
+            if existing:
+                existing.pin_hash = hash_pin(pin)
+                continue  # Already seeded, but PIN updated
 
             user = UserDB(
                 id=data["user_id"],

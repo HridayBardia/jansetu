@@ -1,6 +1,6 @@
 import { RAGAnswer, Citation, SourceProvenance } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.host}/api/v1` : 'http://localhost:8000/api/v1');
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? `${window.location.protocol}//${window.location.host}/api/backend` : 'http://localhost:8000/api/v1');
 
 
 
@@ -106,18 +106,23 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       headers
     });
     if (!res.ok) {
-      const errJson = await res.json().catch(() => null);
-      if (errJson && errJson.detail) {
-        throw new Error(errJson.detail);
+      let errMessage = `HTTP Error ${res.status}: ${res.statusText}`;
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.detail) {
+          errMessage = errJson.detail;
+        }
+      } catch (e) {
+        // Not JSON
       }
-      return null;
+      throw new Error(errMessage);
     }
     const json = await res.json();
     return json.success ? json.data : null;
   } catch (e: any) {
     console.warn(`API fetch error [${endpoint}]:`, e);
     if (e.message && (e.message.includes('fetch') || e.message.includes('Network'))) {
-      throw new Error("Backend server is unreachable. Please ensure the Python backend is running on port 8000.");
+      throw new Error("Backend server is unreachable. Please ensure the Python backend is running.");
     }
     throw e;
   }
