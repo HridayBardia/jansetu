@@ -116,10 +116,10 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     return json.success ? json.data : null;
   } catch (e: any) {
     console.warn(`API fetch error [${endpoint}]:`, e);
-    if (e.message && !e.message.includes('fetch')) {
-      throw e;
+    if (e.message && (e.message.includes('fetch') || e.message.includes('Network'))) {
+      throw new Error("Backend server is unreachable. Please ensure the Python backend is running on port 8000.");
     }
-    return null;
+    throw e;
   }
 }
 
