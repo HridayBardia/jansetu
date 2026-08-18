@@ -82,7 +82,7 @@ export default function LoginPage() {
       setCanResend(false);
       setTimeout(() => otpInputRefs[0].current?.focus(), 100);
     } catch (err: any) {
-      setErrorMsg("We couldn't send the verification code. Please check your mobile number and try again.");
+      setErrorMsg("We couldn't send your WhatsApp verification code. Please check that the number is correct and has WhatsApp enabled.");
     } finally {
       setIsSubmitting(false);
     }
@@ -157,7 +157,7 @@ export default function LoginPage() {
       setOtpDigits(['', '', '', '', '', '']);
       otpInputRefs[0].current?.focus();
     } catch (err: any) {
-      setErrorMsg("We couldn't send the verification code. Please check your mobile number and try again.");
+      setErrorMsg("We couldn't send your WhatsApp verification code. Please check that the number is correct and has WhatsApp enabled.");
     } finally {
       setIsSubmitting(false);
     }
@@ -276,15 +276,20 @@ export default function LoginPage() {
           </form>
         ) : (
           <div className="space-y-5">
-            <div className="text-center space-y-1">
-              <h3 className="text-sm font-bold text-white">Verify Your Number</h3>
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>WhatsApp Verification</span>
+              </div>
+              <h3 className="text-sm font-bold text-white">Verify your WhatsApp</h3>
               <p className="text-xs text-slate-400">
-                Enter the 6-digit verification code sent to
+                We sent a verification code to your WhatsApp at
               </p>
-              <p className="font-semibold text-amber-300 text-sm tracking-wide">
+              <p className="font-semibold text-emerald-400 text-sm tracking-wide">
                 {getMaskedMobileNumber()}
               </p>
             </div>
+
 
             {/* 6 OTP Input Boxes */}
             <div className="flex justify-center gap-2.5 my-4">

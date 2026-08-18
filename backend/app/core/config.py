@@ -27,10 +27,16 @@ class Settings(BaseModel):
     MSG91_TEMPLATE_ID: str = os.getenv("MSG91_TEMPLATE_ID", "")
     MSG91_SENDER_ID: str = os.getenv("MSG91_SENDER_ID", "CITIZN")
     
-    # Twilio Provider
+    # Twilio Provider & WhatsApp Verify Config
     TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
     TWILIO_SERVICE_SID: str = os.getenv("TWILIO_SERVICE_SID", "")
+    TWILIO_VERIFY_SERVICE_SID: str = os.getenv("TWILIO_VERIFY_SERVICE_SID", os.getenv("TWILIO_SERVICE_SID", ""))
+    TWILIO_WHATSAPP_SENDER: str = os.getenv("TWILIO_WHATSAPP_SENDER", "")
+    
+    DEV_OTP_MODE: bool = os.getenv("DEV_OTP_MODE", "true").lower() in ("true", "1", "yes")
+    DEV_AUTH_MODE: bool = os.getenv("DEV_AUTH_MODE", os.getenv("DEV_OTP_MODE", "true")).lower() in ("true", "1", "yes")
+    OTP_CHANNEL: str = os.getenv("OTP_CHANNEL", "whatsapp") # whatsapp, sms
     
     # OTP Operational Security
     OTP_EXPIRY_MINUTES: int = 5
@@ -38,4 +44,5 @@ class Settings(BaseModel):
     OTP_RESEND_COOLDOWN_SECONDS: int = 60
 
 settings = Settings()
+
 

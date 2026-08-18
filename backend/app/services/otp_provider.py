@@ -127,26 +127,29 @@ class MSG91Provider(BaseOTPProvider):
 
 class TwilioProvider(BaseOTPProvider):
     """
-    Production Twilio Verify Managed SMS Provider.
+    Production Twilio Verify Managed WhatsApp/SMS Provider.
     Docs: https://www.twilio.com/docs/verify/api
     """
     async def send_otp(self, mobile_number: str) -> Dict[str, Any]:
-        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_SERVICE_SID:
-            if not settings.DEV_OTP_MODE:
-                logger.error("OTP_PROVIDER_ERROR Provider: Twilio Status: 401 Cause: Missing Twilio credentials or SERVICE_SID")
+        service_sid = settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID
+        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not service_sid:
+            if not settings.DEV_OTP_MODE and not settings.DEV_AUTH_MODE:
+                logger.error("WHATSAPP_PROVIDER_NOT_CONFIGURED Provider: Twilio Status: 401 Cause: Missing Twilio credentials or TWILIO_VERIFY_SERVICE_SID")
                 return {
                     "success": False,
                     "provider": "twilio",
-                    "error": "We couldn't send the verification code. Please check your mobile number and try again."
+                    "channel": "whatsapp",
+                    "error": "We couldn't send your WhatsApp verification code. Please check that the number is correct and has WhatsApp enabled."
                 }
             logger.warning("Twilio credentials missing. Falling back to development provider.")
             return await DevelopmentOTPProvider().send_otp(mobile_number)
 
-        url = f"https://verify.twilio.com/v2/Services/{settings.TWILIO_SERVICE_SID}/Verifications"
+        channel = settings.OTP_CHANNEL or "whatsapp"
+        url = f"https://verify.twilio.com/v2/Services/{service_sid}/Verifications"
         auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         data = {
             "To": mobile_number,
-            "Channel": "sms"
+            "Channel": channel
         }
 
         try:
@@ -154,35 +157,52 @@ class TwilioProvider(BaseOTPProvider):
                 response = await client.post(url, data=data, auth=auth)
                 res_json = response.json()
                 masked_mobile = mobile_number[:3] + "******" + mobile_number[-4:]
+                
                 if response.status_code in (200, 201):
-                    logger.info(f"OTP REQUEST Provider: Twilio Mobile: {masked_mobile} Status: accepted Verification SID: {res_json.get('sid')}")
+                    logger.info(f"WHATSAPP OTP REQUEST Provider: Twilio Channel: {channel} Mobile: {masked_mobile} Status: accepted Verification SID: {res_json.get('sid')}")
                     return {
                         "success": True,
                         "provider": "twilio",
+                        "channel": channel,
                         "message": f"Verification code sent to {mobile_number}"
                     }
                 else:
-                    logger.error(f"OTP_PROVIDER_ERROR Provider: Twilio Status: {response.status_code} Cause: {res_json.get('message')}")
+                    err_code = res_json.get("code")
+                    err_msg = res_json.get("message")
+                    if err_code == 68008:
+                        logger.error(
+                            f"WHATSAPP OTP FAILURE\n"
+                            f"Provider: Twilio\n"
+                            f"Error: 68008\n"
+                            f"Meaning: WhatsApp verification channel is not configured.\n"
+                            f"Action: Configure WhatsApp Sender / WABA / authentication template."
+                        )
+                    else:
+                        logger.error(f"WHATSAPP OTP FAILURE Provider: Twilio Code: {err_code} Status: {response.status_code} Cause: {err_msg}")
+
                     return {
                         "success": False,
                         "provider": "twilio",
-                        "error": "We couldn't send the verification code. Please check your mobile number and try again."
+                        "channel": channel,
+                        "error": "We couldn't send your WhatsApp verification code. Please check that the number is correct and has WhatsApp enabled."
                     }
         except Exception as e:
-            logger.error(f"OTP_PROVIDER_ERROR Provider: Twilio Exception: {e}")
+            logger.error(f"WHATSAPP OTP FAILURE Provider: Twilio Exception: {e}")
             return {
                 "success": False,
                 "provider": "twilio",
-                "error": "We couldn't send the verification code. Please try again."
+                "channel": channel,
+                "error": "We couldn't send your WhatsApp verification code. Please try again."
             }
 
     async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
-        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_SERVICE_SID:
-            if settings.DEV_OTP_MODE:
+        service_sid = settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID
+        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not service_sid:
+            if settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE:
                 return await DevelopmentOTPProvider().verify_otp(mobile_number, otp)
             return {"success": False, "provider": "twilio", "error": "Twilio credentials missing."}
 
-        url = f"https://verify.twilio.com/v2/Services/{settings.TWILIO_SERVICE_SID}/VerificationCheck"
+        url = f"https://verify.twilio.com/v2/Services/{service_sid}/VerificationCheck"
         auth = (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         data = {
             "To": mobile_number,
@@ -201,6 +221,7 @@ class TwilioProvider(BaseOTPProvider):
         except Exception as e:
             logger.error(f"Twilio Verify Check Exception: {e}")
             return {"success": False, "provider": "twilio", "error": "Verification service error"}
+
 
 def get_otp_provider() -> BaseOTPProvider:
     """Factory method to get active OTP provider based on configuration."""

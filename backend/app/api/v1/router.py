@@ -115,21 +115,36 @@ def get_otp_health(request: Request):
     
     if provider_name == "twilio":
         is_configured = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN)
-        service_configured = bool(settings.TWILIO_SERVICE_SID)
+        service_configured = bool(settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID)
     elif provider_name == "msg91":
         is_configured = bool(settings.MSG91_AUTH_KEY)
         service_configured = bool(settings.MSG91_TEMPLATE_ID)
     else:
-        is_configured = settings.DEV_OTP_MODE
-        service_configured = settings.DEV_OTP_MODE
+        is_configured = settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE
+        service_configured = settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE
 
     return success_response({
         "provider": provider_name,
         "configured": is_configured,
         "service_configured": service_configured,
-        "dev_otp_mode": settings.DEV_OTP_MODE,
-        "environment": "development" if settings.DEV_OTP_MODE else "production"
+        "dev_otp_mode": settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE,
+        "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
     }, request)
+
+@api_v1_router.get("/health/whatsapp")
+def get_whatsapp_health(request: Request):
+    provider_name = (settings.OTP_PROVIDER or "dev").lower()
+    verify_configured = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and (settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID))
+    whatsapp_sender_configured = bool(settings.TWILIO_WHATSAPP_SENDER)
+
+    return success_response({
+        "provider": provider_name,
+        "channel": settings.OTP_CHANNEL or "whatsapp",
+        "verify_configured": verify_configured,
+        "whatsapp_sender_configured": whatsapp_sender_configured,
+        "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
+    }, request)
+
 
 # --- AUTH ENDPOINTS ---
 @api_v1_router.post("/auth/request-otp")
