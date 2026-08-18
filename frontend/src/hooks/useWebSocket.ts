@@ -22,11 +22,14 @@ export function useWebSocket(roomId: string | null) {
 
   const connect = useCallback(() => {
     if (!roomId) return;
-    
-    const wsUrl = `ws://localhost:8000/ws/journeys/${roomId}`;
+    const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = typeof window !== 'undefined' ? window.location.host : 'localhost:8000';
+
+    const wsUrl = process.env.NEXT_PUBLIC_WS_BASE_URL || `${protocol}//${host}/ws/journeys/${roomId}`;
     setConnectionStatus('reconnecting');
     
     const socket = new WebSocket(wsUrl);
+
 
     socket.onopen = () => {
       setConnectionStatus('connected');
