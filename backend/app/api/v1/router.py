@@ -122,7 +122,11 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         )
 
     # --- DB-level account lock check ---
-    user = db.query(UserDB).filter(UserDB.username == username).first()
+    from sqlalchemy import func
+    user = db.query(UserDB).filter(
+        (UserDB.username == username) | 
+        (func.lower(UserDB.full_name) == username)
+    ).first()
     if user and user.locked_until and user.locked_until > now:
         wait = int((user.locked_until - now).total_seconds())
         raise HTTPException(

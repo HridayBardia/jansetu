@@ -26,12 +26,15 @@ def seed_database():
         from app.services.demo_vault_service import DemoVaultService, DEMO_CITIZENS
         from app.models.db_models import CitizenProfileDB
 
+        from app.core.security import hash_pin
+
         for key, info in DEMO_CITIZENS.items():
             user = UserDB(
                 id=info["user_id"],
+                username=key,
+                pin_hash=hash_pin("123456"),
                 full_name=info["full_name"],
                 mobile_number=info["mobile_number"],
-                mobile_verified=True,
                 email=info.get("email"),
                 role="citizen"
             )
@@ -58,21 +61,6 @@ def seed_database():
 
             # Seed user vault
             DemoVaultService.seed_user_vault(db, user)
-
-        # Ensure user_hriday_bardia is primary
-        hriday_user = db.query(UserDB).filter(UserDB.mobile_number == "+917016918865").first()
-        if not hriday_user:
-            demo_user = UserDB(
-                id="demo_user_1",
-                full_name="Hriday Bardia",
-                mobile_number="+917016918865",
-                mobile_verified=True,
-                email="demo@citizenjourney.app",
-                role="citizen"
-            )
-            db.add(demo_user)
-            db.commit()
-
 
 
         logger.info("Seeding Government Sources...")
