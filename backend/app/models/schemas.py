@@ -23,6 +23,7 @@ class OTPVerifyRequest(BaseModel):
     full_name: str
     mobile_number: str
     otp: str
+    msg91_token: Optional[str] = None
 
 class UserSchema(BaseModel):
     id: str

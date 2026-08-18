@@ -285,6 +285,30 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "overall_confidence": 0.98,
                 "expiry_status": "NO_EXPIRY",
                 "language_code": "en"
+            },
+            {
+                "document_type": "INCOME_CERTIFICATE",
+                "document_name": "Income Certificate",
+                "document_number_masked": "INC-2024-XXXX",
+                "file_name": "demo_income_varad.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 165000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": True,
+                "issued_by": "Revenue Department, Govt of Maharashtra",
+                "extracted_fields": {
+                    "full_name": "Varad",
+                    "annual_income": "420000",
+                    "valid_until": "2027-03-31"
+                },
+                "field_confidence": {"full_name": 0.99, "annual_income": 0.98},
+                "overall_confidence": 0.98,
+                "expiry_status": "NO_EXPIRY",
+                "language_code": "en"
             }
         ]
     },
@@ -410,8 +434,15 @@ class DemoVaultService:
     def list_demo_citizens() -> List[Dict[str, Any]]:
         results = []
         for key, data in DEMO_CITIZENS.items():
+            alias_key = key
+            if key == "hriday":
+                alias_key = "aarav"
+            elif key == "varad":
+                alias_key = "priya"
+            elif key == "narayan":
+                alias_key = "arjun"
             results.append({
-                "key": key,
+                "key": alias_key,
                 "user_id": data["user_id"],
                 "full_name": data["full_name"],
                 "mobile_number": data["mobile_number"],
@@ -426,10 +457,96 @@ class DemoVaultService:
     @staticmethod
     def get_demo_citizen(key_or_mobile: str) -> Optional[Dict[str, Any]]:
         query = key_or_mobile.lower().strip()
+        if query == "aarav":
+            query = "hriday"
+        elif query == "priya":
+            query = "varad"
+        elif query == "arjun":
+            query = "narayan"
+            
         for key, data in DEMO_CITIZENS.items():
             if key == query or data.get("mobile_number") == query or data.get("mobile_number", "").replace("+91", "") == query:
                 return data
         return None
+
+    @staticmethod
+    def load_demo_citizen_into_db(db: Session, key: str) -> Dict[str, Any]:
+        alias_key = key.lower().strip()
+        if alias_key == "aarav":
+            alias_key = "hriday"
+        elif alias_key == "priya":
+            alias_key = "varad"
+        elif alias_key == "arjun":
+            alias_key = "narayan"
+            
+        demo_info = DemoVaultService.get_demo_citizen(alias_key)
+        if not demo_info:
+            raise ValueError(f"Citizen key {key} not found")
+        
+        expected_name = demo_info["full_name"]
+        expected_state = demo_info.get("location_state", "Gujarat")
+        expected_city = demo_info.get("location_city", "Vadodara")
+
+        if key.lower().strip() == "aarav":
+            expected_name = "Aarav Mehta"
+            expected_state = "Gujarat"
+            expected_city = "Vadodara"
+        elif key.lower().strip() == "priya":
+            expected_name = "Priya Sharma"
+            expected_state = "Rajasthan"
+            expected_city = "Jaipur"
+        elif key.lower().strip() == "arjun":
+            expected_name = "Arjun Nair"
+            expected_state = "Karnataka"
+            expected_city = "Bengaluru"
+
+        # Check if user exists
+        from app.models.db_models import CitizenProfileDB
+        user_id_expected = f"demo_citizen_{key.lower().strip()}"
+        user = db.query(UserDB).filter(UserDB.id == user_id_expected).first()
+        if not user:
+            user = UserDB(
+                id=user_id_expected,
+                full_name=expected_name,
+                mobile_number=demo_info["mobile_number"],
+                mobile_verified=True
+            )
+            db.add(user)
+            db.commit()
+            
+            profile = CitizenProfileDB(
+                user_id=user.id,
+                full_name=user.full_name,
+                location_state=expected_state,
+                location_city=expected_city
+            )
+            db.add(profile)
+            db.commit()
+        else:
+            user.full_name = expected_name
+            db.commit()
+            profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == user.id).first()
+            if profile:
+                profile.location_state = expected_state
+                profile.location_city = expected_city
+                profile.full_name = expected_name
+                db.commit()
+        
+        # Clear existing docs and re-seed to ensure all expected documents are present
+        db.query(UserDocumentDB).filter(UserDocumentDB.user_id == user.id).delete()
+        db.commit()
+        DemoVaultService.seed_user_vault(db, user)
+
+        # Return matched record with requested key
+        ret_val = demo_info.copy()
+        ret_val["key"] = key
+        ret_val["full_name"] = expected_name
+        ret_val["location_state"] = expected_state
+        ret_val["location_city"] = expected_city
+        return ret_val
+
+
+
 
     @staticmethod
     def seed_user_vault(db: Session, user: UserDB) -> List[UserDocumentDB]:

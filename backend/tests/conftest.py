@@ -24,3 +24,28 @@ def setup_test_db():
     app.dependency_overrides[get_db] = override_get_db
     yield
     app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def clean_db():
+    # Clear custom dependency overrides to prevent leakage
+    for k in list(app.dependency_overrides.keys()):
+        if k != get_db:
+            del app.dependency_overrides[k]
+
+    db = TestingSessionLocal()
+    try:
+        from app.models.db_models import UserDB, UserDocumentDB, CitizenProfileDB, JourneyDB, JourneyStepDB, StepDependencyDB, SchemeDB, GovernmentSourceDB, UserConsentDB, SystemAlertDB
+        db.query(UserDocumentDB).delete()
+        db.query(CitizenProfileDB).delete()
+        db.query(JourneyStepDB).delete()
+        db.query(StepDependencyDB).delete()
+        db.query(JourneyDB).delete()
+        db.query(UserConsentDB).delete()
+        db.query(SystemAlertDB).delete()
+        db.query(UserDB).delete()
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+

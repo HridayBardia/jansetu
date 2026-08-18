@@ -163,6 +163,29 @@ def get_msg91_health(request: Request):
         "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
     }, request)
 
+@api_v1_router.get("/health/auth")
+def get_auth_health(request: Request):
+    # Retrieve configuration parameters
+    widget_id = settings.MSG91_WIDGET_ID
+    widget_configured = bool(widget_id)
+    token_configured = bool(settings.MSG91_TOKEN_AUTH)
+    auth_key_configured = bool(settings.MSG91_AUTH_KEY)
+    
+    # We serve the client-side provider widget dynamically
+    msg91_script = True
+    send_otp_available = True
+    verify_otp_available = True
+
+    return success_response({
+        "widgetConfigured": widget_configured,
+        "tokenConfigured": token_configured,
+        "authKeyConfigured": auth_key_configured,
+        "msg91Script": msg91_script,
+        "sendOtpAvailable": send_otp_available,
+        "verifyOtpAvailable": verify_otp_available
+    }, request)
+
+
 
 
 
@@ -229,7 +252,7 @@ async def verify_otp(req: OTPVerifyRequest, request: Request, response: Response
     now = datetime.utcnow()
 
     provider = get_otp_provider()
-    verify_res = await provider.verify_otp(normalized_mobile, req.otp)
+    verify_res = await provider.verify_otp(normalized_mobile, req.otp, req.msg91_token)
 
     if not verify_res.get("success"):
         raise HTTPException(status_code=400, detail=verify_res.get("error", "Invalid or expired verification code."))

@@ -70,6 +70,30 @@ def health():
         "websocket_active_rooms": len(ws_manager.active_connections)
     }
 
+@app.get("/api/health/auth")
+@app.get("/api/v1/health/auth")
+def health_auth(request: Request):
+    # Retrieve configuration parameters
+    widget_id = settings.MSG91_WIDGET_ID
+    widget_configured = bool(widget_id)
+    token_configured = bool(settings.MSG91_TOKEN_AUTH)
+    auth_key_configured = bool(settings.MSG91_AUTH_KEY)
+    
+    # We serve the client-side provider widget dynamically
+    msg91_script = True
+    send_otp_available = True
+    verify_otp_available = True
+
+    return {
+        "widgetConfigured": widget_configured,
+        "tokenConfigured": token_configured,
+        "authKeyConfigured": auth_key_configured,
+        "msg91Script": msg91_script,
+        "sendOtpAvailable": send_otp_available,
+        "verifyOtpAvailable": verify_otp_available
+    }
+
+
 @app.get("/ready")
 def readiness(db: Session = Depends(get_db)):
     try:

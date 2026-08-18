@@ -40,7 +40,7 @@ interface AuthContextType {
   closeAuthModal: () => void;
   closeOnboardingModal: () => void;
   requestOtp: (fullName: string, mobileNumber: string) => Promise<any>;
-  verifyOtp: (fullName: string, mobileNumber: string, otp: string) => Promise<any>;
+  verifyOtp: (fullName: string, mobileNumber: string, otp: string, msg91Token?: string) => Promise<any>;
   logout: () => Promise<void>;
   updateProfile: (profileData: Partial<CitizenProfile>) => Promise<any>;
   refreshUser: () => Promise<void>;
@@ -108,8 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res;
   };
 
-  const verifyOtp = async (fullName: string, mobileNumber: string, otp: string) => {
-    const res = await verifyOtpAPI(fullName, mobileNumber, otp);
+  const verifyOtp = async (fullName: string, mobileNumber: string, otp: string, msg91Token?: string) => {
+    const res = await verifyOtpAPI(fullName, mobileNumber, otp, msg91Token);
     if (res && res.user) {
       setUser(res.user);
       setProfile(res.profile || null);

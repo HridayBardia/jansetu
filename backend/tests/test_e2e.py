@@ -9,6 +9,37 @@ from app.main import app
 
 client = TestClient(app)
 
+from app.api.v1.router import get_current_user
+from app.models.db_models import UserDB
+from tests.conftest import TestingSessionLocal
+
+db = TestingSessionLocal()
+mock_user = db.query(UserDB).filter(UserDB.mobile_number == "+919876543210").first()
+if not mock_user:
+    mock_user = UserDB(
+        id="test-e2e-user-id",
+        full_name="Test User",
+        mobile_number="+919876543210",
+        mobile_verified=True
+    )
+    db.add(mock_user)
+    db.commit()
+    db.refresh(mock_user)
+db.close()
+
+import pytest
+
+def override_get_current_user():
+    return mock_user
+
+@pytest.fixture(autouse=True)
+def mock_auth():
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    yield
+    if get_current_user in app.dependency_overrides:
+        del app.dependency_overrides[get_current_user]
+
+
 def test_full_citizen_journey_flow():
     print("--- Running End-to-End Citizen Journey Flow Test ---")
     

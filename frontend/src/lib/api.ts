@@ -131,10 +131,10 @@ export async function requestOtpAPI(full_name: string, mobile_number: string): P
   });
 }
 
-export async function verifyOtpAPI(full_name: string, mobile_number: string, otp: string): Promise<any> {
+export async function verifyOtpAPI(full_name: string, mobile_number: string, otp: string, msg91_token?: string): Promise<any> {
   const data = await apiFetch<any>('/auth/verify-otp', {
     method: 'POST',
-    body: JSON.stringify({ full_name, mobile_number, otp })
+    body: JSON.stringify({ full_name, mobile_number, otp, msg91_token })
   });
   if (data && data.access_token && typeof window !== 'undefined') {
     localStorage.setItem('citizen_token', data.access_token);

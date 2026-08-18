@@ -16,7 +16,7 @@ class BaseOTPProvider(ABC):
         pass
 
     @abstractmethod
-    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+    async def verify_otp(self, mobile_number: str, otp: str, msg91_token: str = None) -> Dict[str, Any]:
         """Verify OTP via managed service."""
         pass
 
@@ -46,7 +46,7 @@ class DevelopmentOTPProvider(BaseOTPProvider):
             res["dev_otp"] = otp_code
         return res
 
-    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+    async def verify_otp(self, mobile_number: str, otp: str, msg91_token: str = None) -> Dict[str, Any]:
         stored_otp = _dev_otp_store.get(mobile_number)
         if stored_otp and stored_otp == otp.strip():
             return {"success": True, "provider": "development"}
@@ -102,11 +102,42 @@ class MSG91Provider(BaseOTPProvider):
                 "error": "We couldn't send the verification code. Please try again."
             }
 
-    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+    async def verify_otp(self, mobile_number: str, otp: str, msg91_token: str = None) -> Dict[str, Any]:
         if not settings.MSG91_AUTH_KEY:
-            if settings.DEV_OTP_MODE:
-                return await DevelopmentOTPProvider().verify_otp(mobile_number, otp)
+            if settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE:
+                return await DevelopmentOTPProvider().verify_otp(mobile_number, otp, msg91_token)
             return {"success": False, "provider": "msg91", "error": "MSG91 credentials missing."}
+
+        # If a MSG91 token is provided, perform token validation via verifyAccessToken
+        if msg91_token:
+            url = "https://api.msg91.com/api/v5/widget/verifyAccessToken"
+            headers = {
+                "authkey": settings.MSG91_AUTH_KEY,
+                "content-type": "application/json"
+            }
+            payload = {
+                "access-token": msg91_token
+            }
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.post(url, json=payload, headers=headers)
+                    data = response.json()
+                    if response.status_code == 200 and data.get("type") == "success":
+                        # Verify the identity inside payload corresponds to our expected mobile number
+                        verified_mobile = data.get("mobile") or data.get("mobile_number")
+                        if verified_mobile:
+                            clean_expected = mobile_number.replace("+", "")
+                            clean_verified = str(verified_mobile).replace("+", "")
+                            if clean_expected not in clean_verified and clean_verified not in clean_expected:
+                                logger.error(f"MSG91 token verification identity mismatch. Expected {clean_expected}, got {clean_verified}")
+                                return {"success": False, "provider": "msg91", "error": "Verified phone number mismatch."}
+                        return {"success": True, "provider": "msg91"}
+                    else:
+                        logger.error(f"MSG91 verifyAccessToken Failed: {data}")
+                        return {"success": False, "provider": "msg91", "error": "Invalid verification token."}
+            except Exception as e:
+                logger.error(f"MSG91 verifyAccessToken Exception: {e}")
+                return {"success": False, "provider": "msg91", "error": "Token verification service error."}
 
         clean_mobile = mobile_number.replace("+", "")
         url = f"https://api.msg91.com/api/v5/otp/verify?otp={otp}&mobile={clean_mobile}&authkey={settings.MSG91_AUTH_KEY}"
@@ -195,11 +226,11 @@ class TwilioProvider(BaseOTPProvider):
                 "error": "We couldn't send your WhatsApp verification code. Please try again."
             }
 
-    async def verify_otp(self, mobile_number: str, otp: str) -> Dict[str, Any]:
+    async def verify_otp(self, mobile_number: str, otp: str, msg91_token: str = None) -> Dict[str, Any]:
         service_sid = settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID
         if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not service_sid:
             if settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE:
-                return await DevelopmentOTPProvider().verify_otp(mobile_number, otp)
+                return await DevelopmentOTPProvider().verify_otp(mobile_number, otp, msg91_token)
             return {"success": False, "provider": "twilio", "error": "Twilio credentials missing."}
 
         url = f"https://verify.twilio.com/v2/Services/{service_sid}/VerificationCheck"

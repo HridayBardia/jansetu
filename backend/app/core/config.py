@@ -19,7 +19,7 @@ class Settings(BaseModel):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
     
     # OTP Provider Config
-    OTP_PROVIDER: str = os.getenv("OTP_PROVIDER", "dev") # dev, msg91, twilio
+    OTP_PROVIDER: str = os.getenv("OTP_PROVIDER", "msg91") # dev, msg91, twilio
     DEV_OTP_MODE: bool = os.getenv("DEV_OTP_MODE", "true").lower() in ("true", "1", "yes")
     
     # MSG91 Provider & OTP Widget Config

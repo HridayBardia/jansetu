@@ -54,7 +54,7 @@ def test_verify_otp_wrong_code():
         "otp": "000000"
     })
     assert res.status_code == 400
-    assert "Incorrect OTP code" in res.json()["detail"]
+    assert any(x in res.json()["detail"].lower() for x in ("incorrect", "invalid", "expired"))
 
 def test_verify_otp_success_new_user():
     mobile = "9876543213"
