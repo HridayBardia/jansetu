@@ -135,15 +135,17 @@ def get_otp_health(request: Request):
 def get_whatsapp_health(request: Request):
     provider_name = (settings.OTP_PROVIDER or "dev").lower()
     verify_configured = bool(settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and (settings.TWILIO_VERIFY_SERVICE_SID or settings.TWILIO_SERVICE_SID))
-    whatsapp_sender_configured = bool(settings.TWILIO_WHATSAPP_SENDER)
+    whatsapp_sender_configured = bool(settings.TWILIO_WHATSAPP_SENDER or settings.WHATSAPP_BUSINESS_PHONE_NUMBER)
 
     return success_response({
         "provider": provider_name,
         "channel": settings.OTP_CHANNEL or "whatsapp",
+        "whatsapp_business_sender": settings.WHATSAPP_BUSINESS_PHONE_NUMBER,
         "verify_configured": verify_configured,
         "whatsapp_sender_configured": whatsapp_sender_configured,
         "environment": "development" if (settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE) else "production"
     }, request)
+
 
 
 # --- AUTH ENDPOINTS ---

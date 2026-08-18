@@ -27,12 +27,13 @@ class DevelopmentOTPProvider(BaseOTPProvider):
     Never exposes OTP in production responses.
     """
     async def send_otp(self, mobile_number: str) -> Dict[str, Any]:
-        import random
-        otp_code = str(random.randint(100000, 999999))
+        import secrets
+        otp_code = f"{secrets.randbelow(1000000):06d}"
         _dev_otp_store[mobile_number] = otp_code
         
         logger.info(f"========== DEV OTP SENT ==========")
-        logger.info(f"Mobile: {mobile_number}")
+        logger.info(f"Sender (Business): {settings.WHATSAPP_BUSINESS_PHONE_NUMBER}")
+        logger.info(f"Recipient (User): {mobile_number}")
         logger.info(f"OTP Code: {otp_code}")
         logger.info(f"===================================")
         
@@ -41,7 +42,7 @@ class DevelopmentOTPProvider(BaseOTPProvider):
             "provider": "development",
             "message": f"Verification code sent to {mobile_number}",
         }
-        if settings.DEV_OTP_MODE:
+        if settings.DEV_OTP_MODE or settings.DEV_AUTH_MODE:
             res["dev_otp"] = otp_code
         return res
 
@@ -49,10 +50,8 @@ class DevelopmentOTPProvider(BaseOTPProvider):
         stored_otp = _dev_otp_store.get(mobile_number)
         if stored_otp and stored_otp == otp.strip():
             return {"success": True, "provider": "development"}
-        # Fallback for dev mode
-        if settings.DEV_OTP_MODE and otp.strip() in ("123456", stored_otp):
-            return {"success": True, "provider": "development"}
         return {"success": False, "provider": "development", "error": "Invalid or expired verification code."}
+
 
 class MSG91Provider(BaseOTPProvider):
     """
@@ -159,8 +158,9 @@ class TwilioProvider(BaseOTPProvider):
                 masked_mobile = mobile_number[:3] + "******" + mobile_number[-4:]
                 
                 if response.status_code in (200, 201):
-                    logger.info(f"WHATSAPP OTP REQUEST Provider: Twilio Channel: {channel} Mobile: {masked_mobile} Status: accepted Verification SID: {res_json.get('sid')}")
+                    logger.info(f"WHATSAPP OTP REQUEST Provider: Twilio Sender: {settings.WHATSAPP_BUSINESS_PHONE_NUMBER} Recipient: {masked_mobile} Status: accepted Verification SID: {res_json.get('sid')}")
                     return {
+
                         "success": True,
                         "provider": "twilio",
                         "channel": channel,

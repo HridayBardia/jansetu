@@ -32,11 +32,13 @@ class Settings(BaseModel):
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
     TWILIO_SERVICE_SID: str = os.getenv("TWILIO_SERVICE_SID", "")
     TWILIO_VERIFY_SERVICE_SID: str = os.getenv("TWILIO_VERIFY_SERVICE_SID", os.getenv("TWILIO_SERVICE_SID", ""))
-    TWILIO_WHATSAPP_SENDER: str = os.getenv("TWILIO_WHATSAPP_SENDER", "")
+    TWILIO_WHATSAPP_SENDER: str = os.getenv("TWILIO_WHATSAPP_SENDER", "+917016918865")
+    WHATSAPP_BUSINESS_PHONE_NUMBER: str = os.getenv("WHATSAPP_BUSINESS_PHONE_NUMBER", "+917016918865")
     
     DEV_OTP_MODE: bool = os.getenv("DEV_OTP_MODE", "true").lower() in ("true", "1", "yes")
     DEV_AUTH_MODE: bool = os.getenv("DEV_AUTH_MODE", os.getenv("DEV_OTP_MODE", "true")).lower() in ("true", "1", "yes")
     OTP_CHANNEL: str = os.getenv("OTP_CHANNEL", "whatsapp") # whatsapp, sms
+
     
     # OTP Operational Security
     OTP_EXPIRY_MINUTES: int = 5
