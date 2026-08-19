@@ -105,7 +105,9 @@ export default function JourneyResultPage() {
   
   const haveDocs = documents.have || [];
   const missingDocs = documents.missing || [];
-  const conditionalDocs = documents.need || []; // maps to documents.need
+  const conditionalDocs = (documents.conditional || documents.need || []).filter(
+    (d: any) => !missingDocs.some((m: any) => m.type === d.type)
+  );
 
   const centralSchemes = schemes.central || [];
   const stateSchemes = schemes.state || [];

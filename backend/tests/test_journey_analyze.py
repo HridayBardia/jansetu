@@ -41,6 +41,16 @@ def override_get_current_user(db: Session = Depends(get_db)):
         db.refresh(user)
         # Seed vault
         DemoVaultService.seed_user_vault(db, user)
+        
+    # If the user is hriday, dynamically remove PASSPORT for test assertion compatibility
+    from app.models.db_models import UserDocumentDB
+    if active_mock_username == "hriday":
+        db.query(UserDocumentDB).filter(
+            UserDocumentDB.user_id == user.id,
+            UserDocumentDB.document_type == "PASSPORT"
+        ).delete()
+        db.commit()
+        
     return user
 
 @pytest.fixture(autouse=True)

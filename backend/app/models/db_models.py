@@ -36,6 +36,7 @@ class JourneyDB(Base):
     goal_category = Column(String, nullable=False) # business, education, etc.
     life_event = Column(String, nullable=False)
     state = Column(String, default="IN_PROGRESS") # DRAFT, IN_PROGRESS, COMPLETED, ARCHIVED
+    status = Column(String, default="ANALYZING") # ANALYZING, COMPLETE, PARTIAL
     location_state = Column(String, nullable=True, default=None)
     location_district = Column(String, nullable=True, default=None)
     location_city = Column(String, nullable=True, default=None)

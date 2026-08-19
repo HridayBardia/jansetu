@@ -107,19 +107,37 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     });
     if (!res.ok) {
       let errMessage = `HTTP Error ${res.status}: ${res.statusText}`;
+      let errCode = 'UNKNOWN_ERROR';
+      let errDetails = '';
       try {
         const errJson = await res.json();
-        if (errJson && errJson.detail) {
+        if (errJson && errJson.error) {
+          errMessage = errJson.error.message || errMessage;
+          errCode = errJson.error.code || errCode;
+          errDetails = errJson.error.details || '';
+        } else if (errJson && errJson.detail) {
           errMessage = errJson.detail;
         }
       } catch (e) {
         // Not JSON
       }
-      throw new Error(errMessage);
+
+      console.error(
+        `\n[JANSETU JOURNEY ERROR]\nRequest: ${options.method || 'GET'} ${endpoint}\nStatus: ${res.status}\nCode: ${errCode}\nMessage: ${errMessage}${errDetails ? `\nDetails: ${errDetails}` : ''}\n`
+      );
+
+      const errorObj = new Error(errMessage) as any;
+      errorObj.status = res.status;
+      errorObj.code = errCode;
+      errorObj.details = errDetails;
+      throw errorObj;
     }
     const json = await res.json();
     return json.success ? json.data : null;
   } catch (e: any) {
+    if (e.status) {
+      throw e;
+    }
     console.warn(`API fetch error [${endpoint}]:`, e);
     if (e.message && (e.message.includes('fetch') || e.message.includes('Network'))) {
       throw new Error("Backend server is unreachable. Please ensure the Python backend is running.");

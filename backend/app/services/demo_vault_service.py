@@ -191,8 +191,54 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 },
                 "field_confidence": {"full_name": 0.97, "certificate_number": 0.96},
                 "overall_confidence": 0.97,
-                "expiry_status": "NO_EXPIRY",
-                "language_code": "gu"
+            },
+            {
+                "document_type": "PASSPORT",
+                "document_name": "Indian Passport",
+                "document_number_masked": "PXXXXXX88",
+                "file_name": "demo_passport_hriday.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 220000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": False,
+                "issued_by": "Ministry of External Affairs, Passport Seva",
+                "extracted_fields": {
+                    "full_name": "Hriday Bardia",
+                    "passport_number": "DEMO-PASSPORT-01",
+                    "expiry_date": "2032-12-31"
+                },
+                "field_confidence": {"full_name": 0.99, "passport_number": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "VALID",
+                "language_code": "en"
+            },
+            {
+                "document_type": "INCOME_CERTIFICATE",
+                "document_name": "Income Certificate",
+                "document_number_masked": "INC/XXXX/8865",
+                "file_name": "demo_income_hriday.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 160000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": False,
+                "issued_by": "Revenue Department, Govt of Gujarat",
+                "extracted_fields": {
+                    "full_name": "Hriday Bardia",
+                    "annual_income": "350000.0",
+                    "valid_until": "2028-03-31"
+                },
+                "field_confidence": {"full_name": 0.99, "annual_income": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "VALID",
+                "language_code": "en"
             }
         ]
     },
