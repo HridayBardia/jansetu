@@ -74,8 +74,36 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
   );
 }
 
+import { CinematicIntro } from '@/components/CinematicIntro';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [sandboxMode, setSandboxMode] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
+
+  React.useEffect(() => {
+    const shown = sessionStorage.getItem('jansetu_intro_shown');
+    if (!shown) {
+      setShowIntro(true);
+    }
+  }, []);
+
+  if (showIntro) {
+    return (
+      <html lang="en" className="dark">
+        <head>
+          <title>AI Citizen Journey Engine | Government Made Simpler</title>
+          <meta name="description" content="AI-powered Citizen Journey Engine — navigate Indian government services with personalized workflows and secure access." />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+        </head>
+        <body className="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
+          <CinematicIntro onComplete={() => {
+            sessionStorage.setItem('jansetu_intro_shown', 'true');
+            setShowIntro(false);
+          }} />
+        </body>
+      </html>
+    );
+  }
 
   return (
     <html lang="en" className="dark">

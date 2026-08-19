@@ -115,6 +115,64 @@ SEED_SCHEMES = [
         "languages": ["en", "hi"],
         "source_confidence": "OFFICIAL_VERIFIED"
     },
+    {
+        "id": "sch_rj_rgs",
+        "name": "Rajiv Gandhi Scholarship for Academic Excellence (RGS)",
+        "official_name": "Rajiv Gandhi Scholarship for Academic Excellence Scheme Rajasthan",
+        "description": "Financial assistance for meritorious students of Rajasthan pursuing higher education (Master's, Ph.D.) in top 150 foreign universities.",
+        "level": "STATE",
+        "state_code": "RJ",
+        "state_name": "Rajasthan",
+        "department": "Higher Education Department, Government of Rajasthan",
+        "category": "education",
+        "benefits": {"tuition_fee": "100% actual tuition fee", "living_expense": "Up to ₹12,00,000 / year", "travel": "One-time economy return airfare"},
+        "eligibility_rules": {"state": "Rajasthan", "annual_family_income_max": 800000, "course": "study_abroad"},
+        "documents_required": [
+            {"name": "Aadhaar Card", "mandatory": True},
+            {"name": "Rajasthan Domicile Certificate", "mandatory": True},
+            {"name": "10th Marksheet", "mandatory": True},
+            {"name": "12th Marksheet", "mandatory": True},
+            {"name": "Foreign University Admission Offer Letter", "mandatory": True},
+            {"name": "Family Income Certificate", "mandatory": True}
+        ],
+        "application_process": "Apply online through Rajasthan SSO Portal (sso.rajasthan.gov.in) under the RGS Portal.",
+        "application_url": "https://sso.rajasthan.gov.in",
+        "official_source_url": "https://hte.rajasthan.gov.in/scholarship/rgs",
+        "start_date": datetime(2021, 10, 22),
+        "end_date": None,
+        "status": "ACTIVE",
+        "languages": ["en", "hi"],
+        "source_confidence": "OFFICIAL_VERIFIED"
+    },
+    {
+        "id": "sch_nos",
+        "name": "National Overseas Scholarship (NOS)",
+        "official_name": "National Overseas Scholarship Scheme for SC/ST/Low Income Candidates",
+        "description": "Central government scholarship providing financial support for low-income SC/ST students studying master's or Ph.D. abroad.",
+        "level": "CENTRAL",
+        "state_code": "CENTRAL",
+        "state_name": "Central",
+        "department": "Ministry of Social Justice and Empowerment, Government of India",
+        "category": "education",
+        "benefits": {"tuition_fee": "Actual tuition fees", "maintenance_allowance": "USD 15,400 / year", "contingency": "USD 1,500 / year"},
+        "eligibility_rules": {"annual_family_income_max": 800000, "course": "study_abroad"},
+        "documents_required": [
+            {"name": "Aadhaar Card", "mandatory": True},
+            {"name": "10th Marksheet", "mandatory": True},
+            {"name": "12th Marksheet", "mandatory": True},
+            {"name": "Caste Certificate", "mandatory": True},
+            {"name": "Income Certificate", "mandatory": True},
+            {"name": "Unconditional Admission Offer Letter", "mandatory": True}
+        ],
+        "application_process": "Apply online on the official NOS portal at nosmsje.gov.in.",
+        "application_url": "https://nosmsje.gov.in",
+        "official_source_url": "https://nosmsje.gov.in",
+        "start_date": datetime(2018, 4, 1),
+        "end_date": None,
+        "status": "ACTIVE",
+        "languages": ["en", "hi"],
+        "source_confidence": "OFFICIAL_VERIFIED"
+    },
 
     # --- STATE SCHEMES: GUJARAT (GJ) ---
     {

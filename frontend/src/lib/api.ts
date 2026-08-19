@@ -502,4 +502,70 @@ export async function buildDocumentPacketAPI(goalCategory: string = 'business'):
   return await apiFetch<any>(`/documents/packet?goal_category=${goalCategory}`, { method: 'POST' });
 }
 
+export interface JourneyAnalyzeResponse {
+  goal: {
+    title: string;
+    description: string;
+  };
+  location: {
+    current_location: string;
+    domicile_state: string;
+    destination: string | null;
+  };
+  intent: {
+    primary: string;
+    sub: string;
+  };
+  documents: {
+    available: {
+      name: string;
+      type: string;
+      status: string;
+      is_demo: boolean;
+      verification_status: string;
+      description: string;
+    }[];
+    needed: {
+      name: string;
+      type: string;
+      status: string;
+      reason: string;
+    }[];
+  };
+  schemes: {
+    id: string;
+    name: string;
+    official_name: string;
+    description: string;
+    level: string;
+    state_name: string;
+    department: string;
+    category: string;
+    benefits: Record<string, any>;
+    match_status: string;
+    why_matches: string[];
+    application_url?: string;
+    official_source_url: string;
+    last_verified_at: string;
+  }[];
+  next_steps: string[];
+  sources: {
+    name: string;
+    url: string;
+    last_verified: string;
+  }[];
+  confidence: {
+    intent_classification: number;
+    document_match: number;
+    scheme_retrieval: number;
+  };
+}
+
+export async function analyzeJourneyAPI(query: string, domicile_state: string): Promise<JourneyAnalyzeResponse | null> {
+  return await apiFetch<JourneyAnalyzeResponse>('/journey/analyze', {
+    method: 'POST',
+    body: JSON.stringify({ query, domicile_state })
+  });
+}
+
 

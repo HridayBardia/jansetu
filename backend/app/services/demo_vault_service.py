@@ -23,6 +23,54 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
         "education": "B.Tech Computer Science",
         "documents": [
             {
+                "document_type": "10TH_MARKSHEET",
+                "document_name": "10th Marksheet",
+                "document_number_masked": "10TH-2018-XXXX",
+                "file_name": "demo_10th_marksheet_hriday.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 240000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": True,
+                "issued_by": "Central Board of Secondary Education (CBSE)",
+                "extracted_fields": {
+                    "full_name": "Hriday Bardia",
+                    "marks_obtained": "480 / 500",
+                    "passing_year": "2018"
+                },
+                "field_confidence": {"full_name": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "NO_EXPIRY",
+                "language_code": "en"
+            },
+            {
+                "document_type": "12TH_MARKSHEET",
+                "document_name": "12th Marksheet",
+                "document_number_masked": "12TH-2020-XXXX",
+                "file_name": "demo_12th_marksheet_hriday.pdf",
+                "mime_type": "application/pdf",
+                "file_size": 240000,
+                "status": "AVAILABLE",
+                "verification_status": "DEMO_SYNTHETIC",
+                "is_synthetic": True,
+                "is_demo": True,
+                "synthetic_notice": SYNTHETIC_WATERMARK,
+                "is_digilocker": True,
+                "issued_by": "Central Board of Secondary Education (CBSE)",
+                "extracted_fields": {
+                    "full_name": "Hriday Bardia",
+                    "marks_obtained": "475 / 500",
+                    "passing_year": "2020"
+                },
+                "field_confidence": {"full_name": 0.99},
+                "overall_confidence": 0.99,
+                "expiry_status": "NO_EXPIRY",
+                "language_code": "en"
+            },
+            {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
                 "document_number_masked": "XXXX XXXX 8865",
