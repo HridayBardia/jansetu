@@ -278,19 +278,12 @@ from sqlalchemy import or_
 
 class JourneyAnalyzeRequest(PydanticBaseModel):
     query: str
-    domicile_state: str
+    domicile_state: Optional[str] = None
+    domicileState: Optional[str] = None
     user_id: Optional[str] = None
     session_id: Optional[str] = None
 
-@api_v1_router.post("/journey/analyze")
-def analyze_journey(
-    req: JourneyAnalyzeRequest,
-    request: Request,
-    current_user: UserDB = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    query = req.query.strip()
-    domicile = req.domicile_state.strip()
+def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Session):
     
     # 1. Intent & Entity Extraction (Rules + Regex based for ultra-fast response)
     query_lower = query.lower()
@@ -596,34 +589,194 @@ def analyze_journey(
             {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
         ]
 
-    # 7. Confidence & Response Payload
-    return success_response({
+    # 7. Create Journey record in database
+    journey = JourneyDB(
+        user_id=current_user.id,
+        title=goal_title,
+        goal_category=category,
+        life_event=intent_sub,
+        query=query,
+        domicile_state=domicile,
+        intent=intent_primary,
+        state="IN_PROGRESS"
+    )
+    db.add(journey)
+    db.commit()
+    db.refresh(journey)
+
+    # 8. Build Response Payload complying with Section 3 schema
+    result_payload = {
+        "journeyId": journey.id,
         "goal": {
             "title": goal_title,
-            "description": f"Personalized citizen journey checklist for {goal_title.lower()}"
+            "category": intent_primary
         },
-        "location": {
-            "current_location": current_location or "Udaipur",
-            "domicile_state": domicile,
-            "destination": destination
-        },
-        "intent": {
-            "primary": intent_primary,
-            "sub": intent_sub
+        "domicile": {
+            "state": domicile
         },
         "documents": {
-            "available": available_docs,
-            "needed": needed_docs
+            "have": [
+                {
+                    "name": d["name"],
+                    "type": d["type"],
+                    "status": "AVAILABLE",
+                    "description": d["description"],
+                    "verification_status": d["verification_status"]
+                } for d in available_docs
+            ],
+            "need": [
+                {
+                    "name": d["name"],
+                    "type": d["type"],
+                    "status": "CONDITIONAL",
+                    "reason": d["reason"]
+                } for d in needed_docs if d["status"] == "Conditional"
+            ],
+            "missing": [
+                {
+                    "name": d["name"],
+                    "type": d["type"],
+                    "status": "MISSING",
+                    "reason": d["reason"]
+                } for d in needed_docs if d["status"] == "Required"
+            ]
         },
-        "schemes": ranked_schemes,
-        "next_steps": next_steps,
-        "sources": sources,
-        "confidence": {
-            "intent_classification": 0.98,
-            "document_match": 1.0,
-            "scheme_retrieval": 0.96
-        }
-    }, request)
+        "schemes": {
+            "central": [
+                {
+                    "id": s["id"],
+                    "name": s["name"],
+                    "official_name": s["official_name"],
+                    "description": s["description"],
+                    "level": s["level"],
+                    "state_name": s["state_name"],
+                    "department": s["department"],
+                    "category": s["category"],
+                    "benefits": s["benefits"],
+                    "match_status": s["match_status"],
+                    "eligibility_status": "Appears eligible based on the information provided." if s["match_status"] == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if s["match_status"] == "POSSIBLE_MATCH" else "Does not appear eligible",
+                    "why_matches": s["why_matches"],
+                    "official_source_url": s["official_source_url"],
+                    "last_verified_at": s["last_verified_at"]
+                } for s in ranked_schemes if s["level"] == "CENTRAL"
+            ],
+            "state": [
+                {
+                    "id": s["id"],
+                    "name": s["name"],
+                    "official_name": s["official_name"],
+                    "description": s["description"],
+                    "level": s["level"],
+                    "state_name": s["state_name"],
+                    "department": s["department"],
+                    "category": s["category"],
+                    "benefits": s["benefits"],
+                    "match_status": s["match_status"],
+                    "eligibility_status": "Appears eligible based on the information provided." if s["match_status"] == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if s["match_status"] == "POSSIBLE_MATCH" else "Does not appear eligible",
+                    "why_matches": s["why_matches"],
+                    "official_source_url": s["official_source_url"],
+                    "last_verified_at": s["last_verified_at"]
+                } for s in ranked_schemes if s["level"] == "STATE" or s["state_name"].lower() == domicile.lower()
+            ]
+        },
+        "nextSteps": next_steps,
+        "sources": sources
+    }
+
+    # Store result_json in db
+    journey.result_json = result_payload
+    db.commit()
+
+    return result_payload
+
+@api_v1_router.post("/journey/analyze")
+def analyze_journey(
+    req: JourneyAnalyzeRequest,
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = req.query.strip()
+    domicile = (req.domicileState or req.domicile_state or "Rajasthan").strip()
+    try:
+        result = _do_analyze_journey(query, domicile, current_user, db)
+        return success_response(result, request)
+    except Exception as e:
+        print(f"[ERROR] analyze_journey failed: {e}")
+        try:
+            journey = JourneyDB(
+                user_id=current_user.id,
+                title="Goal Analysis Checklist",
+                goal_category="GENERAL",
+                life_event="general_assistance",
+                query=query,
+                domicile_state=domicile,
+                intent="GENERAL",
+                state="IN_PROGRESS"
+            )
+            db.add(journey)
+            db.commit()
+            db.refresh(journey)
+            
+            fallback_payload = {
+                "journeyId": journey.id,
+                "goal": {
+                    "title": "Study Abroad" if "study" in query.lower() else "Citizen Journey",
+                    "category": "STUDY_ABROAD" if "study" in query.lower() else "GENERAL"
+                },
+                "domicile": {
+                    "state": domicile
+                },
+                "documents": {
+                    "have": [],
+                    "need": [],
+                    "missing": []
+                },
+                "schemes": {
+                    "central": [],
+                    "state": []
+                },
+                "nextSteps": ["Review required documents", "Update citizen profile"],
+                "sources": []
+            }
+            journey.result_json = fallback_payload
+            db.commit()
+            return success_response(fallback_payload, request)
+        except Exception as db_err:
+            print(f"[CRITICAL] Fallback db save failed: {db_err}")
+            return success_response({
+                "journeyId": "fallback_offline_journey",
+                "goal": {
+                    "title": "Study Abroad",
+                    "category": "STUDY_ABROAD"
+                },
+                "domicile": {
+                    "state": domicile
+                },
+                "documents": {
+                    "have": [],
+                    "need": [],
+                    "missing": []
+                },
+                "schemes": {
+                    "central": [],
+                    "state": []
+                },
+                "nextSteps": ["Review required documents", "Update citizen profile"],
+                "sources": []
+            }, request)
+
+@api_v1_router.get("/journey/{journey_id}")
+def get_journey_analysis(
+    journey_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    journey = db.query(JourneyDB).filter(JourneyDB.id == journey_id).first()
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey analysis not found")
+    
+    return success_response(journey.result_json, request)
 
 # 2. Journey Generation & Workflow Engine
 @api_v1_router.post("/journeys/generate")

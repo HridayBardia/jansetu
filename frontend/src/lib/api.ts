@@ -561,11 +561,15 @@ export interface JourneyAnalyzeResponse {
   };
 }
 
-export async function analyzeJourneyAPI(query: string, domicile_state: string): Promise<JourneyAnalyzeResponse | null> {
-  return await apiFetch<JourneyAnalyzeResponse>('/journey/analyze', {
+export async function analyzeJourneyAPI(query: string, domicileState: string): Promise<any | null> {
+  return await apiFetch<any>('/journey/analyze', {
     method: 'POST',
-    body: JSON.stringify({ query, domicile_state })
+    body: JSON.stringify({ query, domicileState })
   });
+}
+
+export async function fetchJourneyAnalysisAPI(journeyId: string): Promise<any | null> {
+  return await apiFetch<any>(`/journey/${journeyId}`);
 }
 
 

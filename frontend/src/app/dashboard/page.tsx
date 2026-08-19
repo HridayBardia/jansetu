@@ -84,6 +84,7 @@ export default function DashboardPage() {
   const [goalInput, setGoalInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [journeyAnalysis, setJourneyAnalysis] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [selectedState, setSelectedState] = useState('All India');
   const [domicileState, setDomicileState] = useState('Rajasthan');
@@ -140,51 +141,50 @@ export default function DashboardPage() {
 
   const handleAnalyzeGoal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!goalInput.trim()) return;
+    setErrorMessage(null);
+
+    const trimmedGoal = goalInput.trim();
+    if (!trimmedGoal) {
+      setErrorMessage("Tell us what you want to accomplish.");
+      return;
+    }
+
+    if (!domicileState) {
+      setErrorMessage("Select your domicile state.");
+      return;
+    }
 
     setJourneyAnalysis(null);
     setIsAnalyzing(true);
     setGenerationStage(0);
 
-    const stages = [
-      "Understanding your goal",
-      "Finding relevant requirements",
-      "Checking your documents",
-      "Finding matching government schemes",
-      "Building your journey"
-    ];
-
-    let currentStage = 0;
-    const timer = setInterval(() => {
-      if (currentStage < stages.length - 1) {
-        currentStage++;
-        setGenerationStage(currentStage);
-      }
-    }, 250);
+    // Simulated quick progress indicators
+    const timer1 = setTimeout(() => setGenerationStage(1), 150); // Checking your documents
+    const timer2 = setTimeout(() => setGenerationStage(2), 350); // Finding government schemes
+    const timer3 = setTimeout(() => setGenerationStage(3), 550); // Building your journey
 
     try {
-      const res = await analyzeJourneyAPI(goalInput, domicileState);
-      clearInterval(timer);
-      setGenerationStage(stages.length);
+      const res = await analyzeJourneyAPI(trimmedGoal, domicileState);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      setGenerationStage(4);
       
-      if (res) {
-        const journeyId = `analysis_${res.intent?.primary?.toLowerCase() || 'general'}_${Date.now()}`;
-        sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify({
-          result: res,
-          query: goalInput,
-          domicile: domicileState
-        }));
+      if (res && res.journeyId) {
+        // Store structured response in session storage
+        sessionStorage.setItem(`journey_analysis_${res.journeyId}`, JSON.stringify(res));
         
-        setTimeout(() => {
-          setIsAnalyzing(false);
-          router.push(`/journey/${journeyId}`);
-        }, 600);
+        // Immediate redirection
+        router.push(`/journey/${res.journeyId}`);
       } else {
-        setIsAnalyzing(false);
+        throw new Error("Journey was not created.");
       }
     } catch (err) {
-      clearInterval(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
       console.error(err);
+      setErrorMessage("We couldn't create your journey. Please try again.");
       setIsAnalyzing(false);
     }
   };
@@ -354,13 +354,13 @@ export default function DashboardPage() {
                 />
                 <button
                   type="submit"
-                  disabled={isAnalyzing || !goalInput.trim()}
+                  disabled={isAnalyzing}
                   className="absolute bottom-3 right-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-lg disabled:opacity-50 transition"
                 >
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Analyzing...</span>
+                      <span>UNDERSTANDING YOUR GOAL...</span>
                     </>
                   ) : (
                     <>
@@ -373,6 +373,13 @@ export default function DashboardPage() {
             </div>
           </div>
         </form>
+        
+        {errorMessage && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg flex items-center gap-2 mt-4">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Quick Starts */}
         <div className="mt-4 pt-4 border-t border-slate-800/80">
@@ -444,9 +451,8 @@ export default function DashboardPage() {
             <div className="space-y-4 pt-2 border-t border-slate-800">
               {[
                 "Understanding your goal",
-                "Finding relevant requirements",
                 "Checking your documents",
-                "Finding matching government schemes",
+                "Finding relevant government schemes",
                 "Building your journey"
               ].map((label, idx) => {
                 const isCompleted = generationStage > idx;
@@ -460,7 +466,7 @@ export default function DashboardPage() {
                           ? 'text-amber-400 font-bold' 
                           : 'text-slate-500'
                     }`}>
-                      {isCompleted ? '✓' : isActive ? '●' : '○'} {label}
+                      {isCompleted ? '✓' : '•'} {label}
                     </span>
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                       {isCompleted ? 'Done' : isActive ? 'Active' : 'Pending'}

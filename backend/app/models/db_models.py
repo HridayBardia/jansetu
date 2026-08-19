@@ -41,6 +41,10 @@ class JourneyDB(Base):
     location_city = Column(String, nullable=True, default=None)
     context_data = Column(JSON, default=dict)
     progress_percentage = Column(Integer, default=0)
+    query = Column(Text, nullable=True)
+    domicile_state = Column(String, nullable=True)
+    intent = Column(String, nullable=True)
+    result_json = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

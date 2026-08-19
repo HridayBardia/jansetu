@@ -62,13 +62,11 @@ def test_1_australia_study_query():
     assert res.status_code == 200
     data = res.json()["data"]
     
-    assert data["intent"]["primary"] == "STUDY_ABROAD"
-    assert data["location"]["destination"] == "Australia"
-    assert data["location"]["current_location"] == "Udaipur"
-    assert data["location"]["domicile_state"] == "Rajasthan"
+    assert data["goal"]["category"] == "STUDY_ABROAD"
+    assert data["domicile"]["state"] == "Rajasthan"
     
     # Check schemes loaded (Rajiv Gandhi Scholarship should match Rajasthan domicile)
-    schemes = data["schemes"]
+    schemes = data["schemes"]["central"] + data["schemes"]["state"]
     assert any(s["id"] == "sch_rj_rgs" for s in schemes)
 
 def test_2_canada_study_query():
@@ -83,8 +81,7 @@ def test_2_canada_study_query():
     assert res.status_code == 200
     data = res.json()["data"]
     
-    assert data["intent"]["primary"] == "STUDY_ABROAD"
-    assert data["location"]["destination"] == "Canada"
+    assert data["goal"]["category"] == "STUDY_ABROAD"
 
 def test_3_rajasthan_scholarship():
     payload = {
@@ -94,7 +91,8 @@ def test_3_rajasthan_scholarship():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    assert any(s["id"] == "sch_rj_anupriti" for s in data["schemes"])
+    schemes = data["schemes"]["central"] + data["schemes"]["state"]
+    assert any(s["id"] == "sch_rj_anupriti" for s in schemes)
 
 def test_4_karnataka_scholarship():
     payload = {
@@ -104,8 +102,8 @@ def test_4_karnataka_scholarship():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    # SSP Karnataka is for Karnataka domicile
-    assert any(s["id"] == "sch_ka_ssp" for s in data["schemes"])
+    schemes = data["schemes"]["central"] + data["schemes"]["state"]
+    assert any(s["id"] == "sch_ka_ssp" for s in schemes)
 
 def test_5_driving_licence():
     payload = {
@@ -115,8 +113,9 @@ def test_5_driving_licence():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    assert data["intent"]["primary"] == "DRIVING_LICENCE"
-    assert any("Passport" not in d["name"] for d in data["documents"]["needed"])
+    assert data["goal"]["category"] == "DRIVING_LICENCE"
+    needed = data["documents"]["need"] + data["documents"]["missing"]
+    assert any("Passport" not in d["name"] for d in needed)
 
 def test_6_business_registration():
     payload = {
@@ -126,8 +125,9 @@ def test_6_business_registration():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    assert data["intent"]["primary"] == "BUSINESS_REGISTRATION"
-    assert any(d["type"] == "RENT_AGREEMENT" for d in data["documents"]["needed"])
+    assert data["goal"]["category"] == "BUSINESS_REGISTRATION"
+    needed = data["documents"]["need"] + data["documents"]["missing"]
+    assert any(d["type"] == "RENT_AGREEMENT" for d in needed)
 
 def test_7_farmer_schemes():
     payload = {
@@ -137,7 +137,7 @@ def test_7_farmer_schemes():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    assert data["intent"]["primary"] == "FARMER_BENEFITS"
+    assert data["goal"]["category"] == "FARMER_BENEFITS"
 
 def test_8_missing_documents():
     # Hriday does not have a Passport in vault
@@ -151,7 +151,7 @@ def test_8_missing_documents():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    needed = [d["type"] for d in data["documents"]["needed"]]
+    needed = [d["type"] for d in data["documents"]["need"] + data["documents"]["missing"]]
     assert "PASSPORT" in needed
 
 def test_9_existing_documents():
@@ -165,7 +165,7 @@ def test_9_existing_documents():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    available = [d["type"] for d in data["documents"]["available"]]
+    available = [d["type"] for d in data["documents"]["have"]]
     assert "AADHAAR" in available
     assert "PAN" in available
 
@@ -186,9 +186,9 @@ def test_11_conditional_documents():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    needed = data["documents"]["needed"]
+    needed = data["documents"]["need"]
     english_doc = next(d for d in needed if d["type"] == "ENGLISH_TEST")
-    assert english_doc["status"] == "Conditional"
+    assert english_doc["status"] == "CONDITIONAL"
 
 def test_12_domicile_filtering():
     # Domicile state: Karnataka -> Should NOT get Rajasthan Rajiv Gandhi Scholarship
@@ -199,7 +199,8 @@ def test_12_domicile_filtering():
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
     
-    assert not any(s["id"] == "sch_rj_rgs" for s in data["schemes"])
+    schemes = data["schemes"]["central"] + data["schemes"]["state"]
+    assert not any(s["id"] == "sch_rj_rgs" for s in schemes)
 
 def test_13_central_schemes():
     for state in ["Rajasthan", "Karnataka", "Gujarat"]:
@@ -209,7 +210,7 @@ def test_13_central_schemes():
         }
         res = client.post("/api/v1/journey/analyze", json=payload)
         data = res.json()["data"]
-        assert any(s["level"] == "CENTRAL" for s in data["schemes"])
+        assert any(s["level"] == "CENTRAL" for s in data["schemes"]["central"])
 
 def test_14_state_schemes():
     payload = {
@@ -218,7 +219,7 @@ def test_14_state_schemes():
     }
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
-    assert any(s["id"] == "sch_gj_mysy" for s in data["schemes"])
+    assert any(s["id"] == "sch_gj_mysy" for s in data["schemes"]["state"])
 
 def test_15_no_matching_scheme():
     payload = {
@@ -227,7 +228,8 @@ def test_15_no_matching_scheme():
     }
     res = client.post("/api/v1/journey/analyze", json=payload)
     data = res.json()["data"]
-    assert len(data["schemes"]) == 0 or all(s["category"] != "spaceship" for s in data["schemes"])
+    schemes = data["schemes"]["central"] + data["schemes"]["state"]
+    assert len(schemes) == 0 or all(s["category"] != "spaceship" for s in schemes)
 
 def test_16_ambiguous_query():
     payload = {
@@ -252,13 +254,13 @@ def test_18_different_users():
     active_mock_username = "hriday"
     payload = {"query": "I want to study abroad", "domicile_state": "Rajasthan"}
     res1 = client.post("/api/v1/journey/analyze", json=payload)
-    needed1 = [d["type"] for d in res1.json()["data"]["documents"]["needed"]]
+    needed1 = [d["type"] for d in res1.json()["data"]["documents"]["missing"] + res1.json()["data"]["documents"]["need"]]
     assert "PASSPORT" in needed1
     
     # Ayush
     active_mock_username = "ayush"
     res2 = client.post("/api/v1/journey/analyze", json=payload)
-    available2 = [d["type"] for d in res2.json()["data"]["documents"]["available"]]
+    available2 = [d["type"] for d in res2.json()["data"]["documents"]["have"]]
     assert "PASSPORT" in available2
 
 def test_19_document_authorization():

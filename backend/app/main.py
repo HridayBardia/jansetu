@@ -98,12 +98,16 @@ async def add_request_id_header(request: Request, call_next):
     response.headers["X-Request-ID"] = req_id
     return response
 
-# Middleware: Route /api/backend to /api/v1 internally to support Zeabur/Vercel proxying
+# Middleware: Route /api/backend and /api/journey internally
 @app.middleware("http")
 async def rewrite_api_backend_path(request: Request, call_next):
     if request.url.path.startswith("/api/backend"):
         scope = request.scope.copy()
         scope["path"] = request.url.path.replace("/api/backend", "/api/v1", 1)
+        request = Request(scope, receive=request._receive)
+    elif request.url.path.startswith("/api/journey"):
+        scope = request.scope.copy()
+        scope["path"] = request.url.path.replace("/api/journey", "/api/v1/journey", 1)
         request = Request(scope, receive=request._receive)
     return await call_next(request)
 
