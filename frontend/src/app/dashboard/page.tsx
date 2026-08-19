@@ -36,6 +36,46 @@ import {
   Globe
 } from 'lucide-react';
 
+const INDIAN_STATES_AND_UTS = [
+  { name: "Andhra Pradesh", code: "AP", type: "STATE", official_name: "State of Andhra Pradesh" },
+  { name: "Arunachal Pradesh", code: "AR", type: "STATE", official_name: "State of Arunachal Pradesh" },
+  { name: "Assam", code: "AS", type: "STATE", official_name: "State of Assam" },
+  { name: "Bihar", code: "BR", type: "STATE", official_name: "State of Bihar" },
+  { name: "Chhattisgarh", code: "CT", type: "STATE", official_name: "State of Chhattisgarh" },
+  { name: "Goa", code: "GA", type: "STATE", official_name: "State of Goa" },
+  { name: "Gujarat", code: "GJ", type: "STATE", official_name: "State of Gujarat" },
+  { name: "Haryana", code: "HR", type: "STATE", official_name: "State of Haryana" },
+  { name: "Himachal Pradesh", code: "HP", type: "STATE", official_name: "State of Himachal Pradesh" },
+  { name: "Jharkhand", code: "JH", type: "STATE", official_name: "State of Jharkhand" },
+  { name: "Karnataka", code: "KA", type: "STATE", official_name: "State of Karnataka" },
+  { name: "Kerala", code: "KL", type: "STATE", official_name: "State of Kerala" },
+  { name: "Madhya Pradesh", code: "MP", type: "STATE", official_name: "State of Madhya Pradesh" },
+  { name: "Maharashtra", code: "MH", type: "STATE", official_name: "State of Maharashtra" },
+  { name: "Manipur", code: "MN", type: "STATE", official_name: "State of Manipur" },
+  { name: "Meghalaya", code: "ML", type: "STATE", official_name: "State of Meghalaya" },
+  { name: "Mizoram", code: "MZ", type: "STATE", official_name: "State of Mizoram" },
+  { name: "Nagaland", code: "NL", type: "STATE", official_name: "State of Nagaland" },
+  { name: "Odisha", code: "OR", type: "STATE", official_name: "State of Odisha" },
+  { name: "Punjab", code: "PB", type: "STATE", official_name: "State of Punjab" },
+  { name: "Rajasthan", code: "RJ", type: "STATE", official_name: "State of Rajasthan" },
+  { name: "Sikkim", code: "SK", type: "STATE", official_name: "State of Sikkim" },
+  { name: "Tamil Nadu", code: "TN", type: "STATE", official_name: "State of Tamil Nadu" },
+  { name: "Telangana", code: "TG", type: "STATE", official_name: "State of Telangana" },
+  { name: "Tripura", code: "TR", type: "STATE", official_name: "State of Tripura" },
+  { name: "Uttar Pradesh", code: "UP", type: "STATE", official_name: "State of Uttar Pradesh" },
+  { name: "Uttarakhand", code: "UT", type: "STATE", official_name: "State of Uttarakhand" },
+  { name: "West Bengal", code: "WB", type: "STATE", official_name: "State of West Bengal" },
+  
+  { name: "Andaman and Nicobar Islands", code: "AN", type: "UNION_TERRITORY", official_name: "Union Territory of Andaman and Nicobar Islands" },
+  { name: "Chandigarh", code: "CH", type: "UNION_TERRITORY", official_name: "Union Territory of Chandigarh" },
+  { name: "Dadra and Nagar Haveli and Daman and Diu", code: "DN", type: "UNION_TERRITORY", official_name: "Union Territory of Dadra and Nagar Haveli and Daman and Diu" },
+  { name: "Delhi", code: "DL", type: "UNION_TERRITORY", official_name: "National Capital Territory of Delhi" },
+  { name: "Jammu and Kashmir", code: "JK", type: "UNION_TERRITORY", official_name: "Union Territory of Jammu and Kashmir" },
+  { name: "Ladakh", code: "LA", type: "UNION_TERRITORY", official_name: "Union Territory of Ladakh" },
+  { name: "Lakshadweep", code: "LD", type: "UNION_TERRITORY", official_name: "Union Territory of Lakshadweep" },
+  { name: "Puducherry", code: "PY", type: "UNION_TERRITORY", official_name: "Union Territory of Puducherry" }
+];
+
 export default function DashboardPage() {
   const router = useRouter();
   const { t, isRTL } = useLanguage();
@@ -47,6 +87,8 @@ export default function DashboardPage() {
   
   const [selectedState, setSelectedState] = useState('All India');
   const [domicileState, setDomicileState] = useState('Rajasthan');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [statesList, setStatesList] = useState<any[]>([]);
   const [schemes, setSchemes] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -126,16 +168,23 @@ export default function DashboardPage() {
       setGenerationStage(stages.length);
       
       if (res) {
-        setJourneyAnalysis(res);
-        setDetectedLocation({
-          city: res.location.current_location,
-          state: res.location.domicile_state
-        });
+        const journeyId = `analysis_${res.intent?.primary?.toLowerCase() || 'general'}_${Date.now()}`;
+        sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify({
+          result: res,
+          query: goalInput,
+          domicile: domicileState
+        }));
+        
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          router.push(`/journey/${journeyId}`);
+        }, 600);
+      } else {
+        setIsAnalyzing(false);
       }
     } catch (err) {
       clearInterval(timer);
       console.error(err);
-    } finally {
       setIsAnalyzing(false);
     }
   };
@@ -172,6 +221,11 @@ export default function DashboardPage() {
     }, 1800);
   };
 
+  const filteredStates = INDIAN_STATES_AND_UTS.filter(st =>
+    st.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    st.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const localSchemes = schemes.filter(s => s.level === 'CITY' || s.level === 'LOCAL' || s.level === 'DISTRICT');
   const stateSchemes = schemes.filter(s => s.level === 'STATE' || s.level === 'UT');
   const nationalSchemes = schemes.filter(s => s.level === 'CENTRAL' || s.level === 'NATIONAL');
@@ -192,25 +246,98 @@ export default function DashboardPage() {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
         <form onSubmit={handleAnalyzeGoal} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1 md:col-span-1">
+            <div className="space-y-1 md:col-span-1 relative">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Domicile State
               </label>
-              <select
-                value={domicileState}
-                onChange={(e) => setDomicileState(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 text-sm focus:outline-none focus:border-amber-500/50"
+              
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 text-sm text-left focus:outline-none focus:border-amber-500/50 flex items-center justify-between transition-colors hover:border-slate-700"
               >
-                {statesList.length === 0 ? (
-                  <option value="Rajasthan">Rajasthan</option>
-                ) : (
-                  statesList.map((st) => (
-                    <option key={st.code} value={st.name}>
-                      {st.name} {st.is_ut ? '(UT)' : ''}
-                    </option>
-                  ))
-                )}
-              </select>
+                <span>{domicileState}</span>
+                <span className="text-slate-500 text-xs">▼</span>
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40 bg-transparent" 
+                    onClick={() => setIsDropdownOpen(false)} 
+                  />
+                  <div className="absolute left-0 right-0 mt-1.5 bg-slate-900 border border-slate-850 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 max-h-72 overflow-y-auto">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search state/UT..."
+                      autoFocus
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500/50"
+                    />
+                    
+                    <div className="space-y-3 pt-1">
+                      {/* States Group */}
+                      {filteredStates.filter(s => s.type === 'STATE').length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2 block">
+                            States
+                          </span>
+                          {filteredStates.filter(s => s.type === 'STATE').map(st => (
+                            <button
+                              key={st.code}
+                              type="button"
+                              onClick={() => {
+                                setDomicileState(st.name);
+                                setIsDropdownOpen(false);
+                                setSearchQuery('');
+                              }}
+                              className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition ${
+                                domicileState === st.name 
+                                  ? 'bg-amber-500/10 text-amber-400 font-semibold' 
+                                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                              }`}
+                            >
+                              {st.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* UTs Group */}
+                      {filteredStates.filter(s => s.type === 'UNION_TERRITORY').length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2 block">
+                            Union Territories
+                          </span>
+                          {filteredStates.filter(s => s.type === 'UNION_TERRITORY').map(st => (
+                            <button
+                              key={st.code}
+                              type="button"
+                              onClick={() => {
+                                setDomicileState(st.name);
+                                setIsDropdownOpen(false);
+                                setSearchQuery('');
+                              }}
+                              className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition ${
+                                domicileState === st.name 
+                                  ? 'bg-amber-500/10 text-amber-400 font-semibold' 
+                                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                              }`}
+                            >
+                              {st.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {filteredStates.length === 0 && (
+                        <p className="text-slate-500 text-xs text-center py-2">No matching states or UTs found.</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="space-y-1 md:col-span-2">

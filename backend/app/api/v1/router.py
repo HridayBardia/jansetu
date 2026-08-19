@@ -419,12 +419,30 @@ def analyze_journey(
     for dtype, dname, desc, is_mand in req_docs:
         if dtype in user_doc_types:
             doc = user_doc_types[dtype]
+            
+            status_val = "Available"
+            if doc.status == "EXPIRED":
+                status_val = "Expired"
+            elif doc.expiry_date:
+                try:
+                    expiry_dt = datetime.strptime(doc.expiry_date.split(" ")[0], "%Y-%m-%d")
+                    if expiry_dt < datetime.utcnow():
+                        status_val = "Expired"
+                    elif expiry_dt < datetime.utcnow() + timedelta(days=90):
+                        status_val = "Expiring Soon"
+                except Exception:
+                    pass
+            
+            v_status = doc.verification_status or "SYNTHETIC_DEMO"
+            if v_status == "DEMO_SYNTHETIC":
+                v_status = "SYNTHETIC_DEMO"
+                
             available_docs.append({
                 "name": dname,
                 "type": dtype,
-                "status": "Available",
+                "status": status_val,
                 "is_demo": True,
-                "verification_status": doc.verification_status or "SYNTHETIC_DEMO",
+                "verification_status": v_status,
                 "description": desc
             })
         else:
