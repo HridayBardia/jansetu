@@ -101,23 +101,30 @@ export default function JourneyResultPage() {
     );
   }
 
-  const { goal = {}, domicile = {}, targetLocation = null, documents = {}, schemes = {}, nextSteps = [], sources = [], diagnostics = null } = analysisData;
+  const goal = analysisData?.goal || {};
+  const domicile = analysisData?.domicile || {};
+  const targetLocation = analysisData?.targetLocation || null;
+  const documents = analysisData?.documents || {};
+  const schemes = analysisData?.schemes || {};
+  const nextSteps = analysisData?.nextSteps || [];
+  const sources = analysisData?.sources || [];
+  const diagnostics = analysisData?.diagnostics || null;
   
   const goalTitle = goal.title || "Citizen Goal";
   const goalCategory = goal.category || "GENERAL";
   const domicileState = domicile.state || "Rajasthan";
   
-  const haveDocs = documents.have || [];
-  const neededDocsList = documents.need || [];
+  const haveDocs = documents?.have || [];
+  const neededDocsList = documents?.need || [];
   
   // Group needed documents by priority
   const requiredDocs = neededDocsList.filter((d: any) => d.priority === 'Required');
   const conditionalDocs = neededDocsList.filter((d: any) => d.priority === 'Conditional');
   const recommendedDocs = neededDocsList.filter((d: any) => d.priority === 'Recommended');
 
-  const centralSchemes = schemes.central || [];
-  const stateSchemes = schemes.state || [];
-  const targetLocationSchemes = schemes.targetLocation || [];
+  const centralSchemes = schemes?.central || [];
+  const stateSchemes = schemes?.state || [];
+  const targetLocationSchemes = schemes?.targetLocation || [];
 
   useEffect(() => {
     if (analysisData && Object.keys(analysisData).length > 0) {
