@@ -435,8 +435,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             if f"live in {st.lower()}" in query_lower or f"domicile is {st.lower()}" in query_lower or f"resident of {st.lower()}" in query_lower:
                 query_domicile = st
                 break
-    if not query_domicile and len(found_states) > 0:
-        query_domicile = found_states[0]
             
     if query_domicile:
         extracted["user_domicile"] = query_domicile
@@ -530,7 +528,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         legacy_intent_sub = "Apply for passport"
         legacy_category = "documents"
         extracted["goal_category"] = "TRAVEL"
-    elif any(w in query_lower for w in ["farmer", "farming", "agricultural", "agriculture", "land"]):
+    elif any(w in query_lower for w in ["farmer", "farming", "agricultural", "agriculture", "land", "kisan"]):
         legacy_intent_primary = "FARMER_BENEFITS"
         legacy_intent_sub = "Apply for agricultural support"
         legacy_category = "agriculture"
@@ -1158,38 +1156,53 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     if not all(checklist):
         warnings.append("Internal verification pass flagged incomplete metadata. Running recovery mapping.")
 
+    # Calculate pre-eligibility retrieved counts
+    central_retrieved_count = sum(1 for s in schemes_db if s.level == "CENTRAL")
+    state_retrieved_count = sum(1 for s in schemes_db if domicile and s.state_name.lower() == domicile.lower())
+    target_location_retrieved_count = sum(1 for s in schemes_db if target_state and s.state_name.lower() == target_state.lower())
+
     # Format and print development-only diagnostics to the console log
-    debug_msg = f"""
-[JANSETU JOURNEY DEBUG]
+    trace_msg = f"""
+[JANSETU TRACE START]
 
-Goal:
-{goal_title} ({query})
+REQUEST
+goal = {query}
+domicile = {domicile}
 
-Detected intent:
-Primary: {legacy_intent_primary} | Sub: {legacy_intent_sub} | Category: {legacy_category}
+STEP 1 — INTENT
+intent = {legacy_intent_primary}
+targetLocation = {target_state or dest_country or 'None'}
+confidence = 0.95
 
-Domicile:
-{domicile}
+STEP 2 — USER DOCUMENTS
+documentsFound = {list(user_doc_types.keys())}
 
-Documents in user vault:
-{list(user_doc_types.keys())}
+STEP 3 — DOCUMENT REQUIREMENTS
+requiredDocuments = {[r["type"] for r in current_reqs]}
 
-Document requirements retrieved:
-{[r["type"] for r in current_reqs]}
+STEP 4 — SCHEME DATABASE
+totalSchemesInDatabase = {db.query(SchemeDB).count()}
 
-Document matches:
-Available: {[d["type"] for d in available_docs]} | Missing/Needed: {[d["type"] for d in needed_docs]}
+STEP 5 — SCHEME RETRIEVAL
+centralRetrieved = {central_retrieved_count}
+stateRetrieved = {state_retrieved_count}
+targetLocationRetrieved = {target_location_retrieved_count}
 
-Schemes retrieved:
-Total from DB: {retrieved_count} | Active: {active_count} | Relevant Category: {relevance_count}
+STEP 6 — SCHEME FILTER
+afterStatusFilter = {active_count}
+afterRelevanceFilter = {relevance_count}
+afterEligibilityFilter = {eligibility_count}
 
-Schemes after eligibility filtering:
-Eligible/Possible: {[s["name"] for s in ranked_schemes]}
+STEP 7 — FINAL RESPONSE
+documentsHave = {len(available_docs)}
+documentsNeed = {len(needed_docs)}
+centralSchemes = {len(central_list)}
+stateSchemes = {len(state_list)}
+targetLocationSchemes = {len(target_loc_list)}
 
-Schemes sent to frontend:
-Central: {len(result_payload["schemes"]["central"])} | State: {len(result_payload["schemes"]["state"])} | TargetLocation: {len(result_payload["schemes"]["targetLocation"])}
+[JANSETU TRACE END]
 """
-    print(debug_msg)
+    print(trace_msg)
 
     # Structured timing log (Section 25/30)
     duration = time.time() - start_time

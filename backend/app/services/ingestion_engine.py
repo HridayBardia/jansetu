@@ -337,6 +337,34 @@ SEED_SCHEMES = [
         "source_confidence": "OFFICIAL_VERIFIED"
     },
 
+    # --- STATE SCHEMES: ASSAM (AS) ---
+    {
+        "id": "sch_as_startup_subsidy",
+        "name": "Assam Startup & MSME Development Subsidy",
+        "official_name": "Assam Industrial and Investment Policy MSME Incentive Scheme",
+        "description": "Financial subsidy and incentives for setting up new micro, small, and medium business enterprises in the state of Assam. Includes capital interest subsidies and power tariff waivers.",
+        "level": "STATE",
+        "state_code": "AS",
+        "state_name": "Assam",
+        "department": "Department of Industries & Commerce, Govt of Assam",
+        "category": "business",
+        "benefits": {"capital_subsidy": "Up to 30% of fixed capital investment", "power_tariff_subsidy": "₹1.50 per unit for 3 years"},
+        "eligibility_rules": {"state": "Assam"},
+        "documents_required": [
+            {"name": "Aadhaar Card", "mandatory": True},
+            {"name": "PAN Card", "mandatory": True},
+            {"name": "Udyam Registration Certificate", "mandatory": True}
+        ],
+        "application_process": "Submit application online on Assam Industries single window portal.",
+        "application_url": "https://industries.assam.gov.in",
+        "official_source_url": "https://industries.assam.gov.in",
+        "start_date": datetime(2021, 1, 1),
+        "end_date": None,
+        "status": "ACTIVE",
+        "languages": ["en"],
+        "source_confidence": "OFFICIAL_VERIFIED"
+    },
+
     # --- TEST SCHEMES (EXPIRED & SUSPENDED CONTROLS) ---
     {
         "id": "sch_covid_relief_2024",

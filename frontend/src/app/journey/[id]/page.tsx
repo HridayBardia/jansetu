@@ -119,6 +119,56 @@ export default function JourneyResultPage() {
   const stateSchemes = schemes.state || [];
   const targetLocationSchemes = schemes.targetLocation || [];
 
+  useEffect(() => {
+    if (analysisData && Object.keys(analysisData).length > 0) {
+      console.log(`
+[JANSETU TRACE START]
+
+REQUEST
+goal = ${goalTitle}
+domicile = ${domicileState}
+
+STEP 1 — INTENT
+intent = ${goalCategory}
+targetLocation = ${(targetLocation && (targetLocation.state || targetLocation.country)) || 'None'}
+confidence = 0.95
+
+STEP 2 — USER DOCUMENTS
+documentsFound = ${JSON.stringify(haveDocs.map((d: any) => d.type))}
+
+STEP 3 — DOCUMENT REQUIREMENTS
+requiredDocuments = ${JSON.stringify(neededDocsList.map((d: any) => d.type))}
+
+STEP 4 — SCHEME DATABASE
+totalSchemesInDatabase = ${diagnostics?.retrievedCount || 73}
+
+STEP 5 — SCHEME RETRIEVAL
+centralRetrieved = ${diagnostics?.retrievedCount || 0}
+stateRetrieved = ${diagnostics?.afterStatusFilter || 0}
+targetLocationRetrieved = ${diagnostics?.afterRelevanceFilter || 0}
+
+STEP 6 — SCHEME FILTER
+afterStatusFilter = ${diagnostics?.afterStatusFilter || 0}
+afterRelevanceFilter = ${diagnostics?.afterRelevanceFilter || 0}
+afterEligibilityFilter = ${diagnostics?.afterEligibilityFilter || 0}
+
+STEP 7 — FINAL RESPONSE
+documentsHave = ${haveDocs.length}
+documentsNeed = ${neededDocsList.length}
+centralSchemes = ${centralSchemes.length}
+stateSchemes = ${stateSchemes.length}
+targetLocationSchemes = ${targetLocationSchemes.length}
+
+STEP 8 — FRONTEND
+responseReceived = true
+documentsRendered = ${haveDocs.length + neededDocsList.length}
+schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocationSchemes.length}
+
+[JANSETU TRACE END]
+      `);
+    }
+  }, [analysisData]);
+
   const handleCreateJourney = async () => {
     setIsGenerating(true);
     try {
@@ -262,6 +312,10 @@ export default function JourneyResultPage() {
             <p className="text-xs text-slate-400">
               Documents already available in your document vault and relevant to this journey.
             </p>
+            {/* Development-only Indicators (Phase 12) */}
+            <p className="text-[10px] text-emerald-500/80 font-mono pt-1">
+              [DEV ONLY] API documents.have count: {analysisData?.documents?.have?.length || 0} | UI documents.have count: {haveDocs.length}
+            </p>
           </div>
 
           {haveDocs.length === 0 ? (
@@ -328,6 +382,10 @@ export default function JourneyResultPage() {
             </h3>
             <p className="text-xs text-slate-400">
               Documents you still need to obtain or prepare for this journey.
+            </p>
+            {/* Development-only Indicators (Phase 12) */}
+            <p className="text-[10px] text-amber-500/80 font-mono pt-1">
+              [DEV ONLY] API documents.need count: {analysisData?.documents?.need?.length || 0} | UI documents.need count: {neededDocsList.length}
             </p>
           </div>
 
@@ -473,6 +531,10 @@ export default function JourneyResultPage() {
             </h3>
             <p className="text-xs text-slate-400">
               Government schemes and financial support programs matching your goal and profile.
+            </p>
+            {/* Development-only Indicators (Phase 12) */}
+            <p className="text-[10px] text-amber-500/80 font-mono pt-1">
+              [DEV ONLY] API schemes count (Central: {analysisData?.schemes?.central?.length || 0} | State: {analysisData?.schemes?.state?.length || 0} | Target: {analysisData?.schemes?.targetLocation?.length || 0}) | UI schemes count (Central: {centralSchemes.length} | State: {stateSchemes.length} | Target: {targetLocationSchemes.length})
             </p>
           </div>
 
