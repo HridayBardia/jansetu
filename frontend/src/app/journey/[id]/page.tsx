@@ -26,6 +26,144 @@ import {
 import { generateJourneyAPI, fetchJourneyAnalysisAPI, EMERGENCY_DEMO_MODE } from '@/lib/api';
 import { PdfViewerModal } from '@/components/PdfViewerModal';
 
+function CivicNetworkVisualizer({ domicile, targetLocation, docsCount, schemesCount }: any) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationId: number;
+    let width = (canvas.width = canvas.offsetWidth || 400);
+    let height = (canvas.height = canvas.offsetHeight || 250);
+
+    const nodes = [
+      { id: 'user', label: 'Citizen Portal', x: width / 2, y: height / 2, size: 8, color: '#f59e0b', pulse: 0 },
+      { id: 'domicile', label: domicile || 'Domicile', x: width * 0.2, y: height * 0.3, size: 6, color: '#10b981', pulse: 0 },
+      { id: 'target', label: targetLocation || 'Central Gov', x: width * 0.8, y: height * 0.3, size: 6, color: '#06b6d4', pulse: 0 },
+      { id: 'docs', label: `${docsCount} Documents`, x: width * 0.2, y: height * 0.7, size: 6, color: '#ec4899', pulse: 0 },
+      { id: 'schemes', label: `${schemesCount} Schemes`, x: width * 0.8, y: height * 0.7, size: 6, color: '#3b82f6', pulse: 0 }
+    ];
+
+    const connections = [
+      { from: 'user', to: 'domicile' },
+      { from: 'user', to: 'target' },
+      { from: 'user', to: 'docs' },
+      { from: 'user', to: 'schemes' },
+      { from: 'domicile', to: 'docs' },
+      { from: 'target', to: 'schemes' }
+    ];
+
+    const particles: { x: number; y: number; targetX: number; targetY: number; progress: number; speed: number; color: string }[] = [];
+
+    const spawnInterval = setInterval(() => {
+      if (particles.length < 25) {
+        const conn = connections[Math.floor(Math.random() * connections.length)];
+        const fromNode = nodes.find(n => n.id === conn.from)!;
+        const toNode = nodes.find(n => n.id === conn.to)!;
+        particles.push({
+          x: fromNode.x,
+          y: fromNode.y,
+          targetX: toNode.x,
+          targetY: toNode.y,
+          progress: 0,
+          speed: Math.random() * 0.01 + 0.005,
+          color: toNode.color
+        });
+      }
+    }, 300);
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw connection lines
+      connections.forEach(conn => {
+        const fromNode = nodes.find(n => n.id === conn.from)!;
+        const toNode = nodes.find(n => n.id === conn.to)!;
+        
+        ctx.lineWidth = 1;
+        const grad = ctx.createLinearGradient(fromNode.x, fromNode.y, toNode.x, toNode.y);
+        grad.addColorStop(0, `${fromNode.color}25`);
+        grad.addColorStop(1, `${toNode.color}25`);
+        ctx.strokeStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(fromNode.x, fromNode.y);
+        ctx.lineTo(toNode.x, toNode.y);
+        ctx.stroke();
+      });
+
+      // Update & Draw particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.progress += p.speed;
+        const px = p.x + (p.targetX - p.x) * p.progress;
+        const py = p.y + (p.targetY - p.y) * p.progress;
+
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (p.progress >= 1) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // Draw nodes
+      nodes.forEach(node => {
+        node.pulse += 0.04;
+        const size = node.size + Math.sin(node.pulse) * 1.5;
+
+        // Outer pulse circle
+        ctx.fillStyle = `${node.color}15`;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, size * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner solid node
+        ctx.fillStyle = node.color;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.size / 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Labels
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(node.label, node.x, node.y - node.size - 6);
+      });
+
+      animationId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    const handleResize = () => {
+      width = canvas.width = canvas.offsetWidth || 400;
+      height = canvas.height = canvas.offsetHeight || 250;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      clearInterval(spawnInterval);
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [domicile, targetLocation, docsCount, schemesCount]);
+
+  return (
+    <div className="relative w-full h-[220px] bg-slate-950/40 border border-slate-900 rounded-3xl overflow-hidden p-4">
+      <div className="absolute top-4 left-4 z-10">
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 block">Civic Dependency Map</span>
+        <span className="text-xs font-black text-white">Live Intelligence Mesh</span>
+      </div>
+      <canvas ref={canvasRef} className="w-full h-full block" />
+    </div>
+  );
+}
+
 function JourneyResultPage() {
   const params = useParams();
   const router = useRouter();
@@ -40,23 +178,51 @@ function JourneyResultPage() {
 
   const normalizeJourneyAnalysis = (res: any): any => {
     if (!res) return null;
+    
+    // Map available/needed documents if using mock keys
+    const rawHave = Array.isArray(res.documents?.have) ? res.documents.have : Array.isArray(res.documents?.available) ? res.documents.available : [];
+    const rawNeed = Array.isArray(res.documents?.need) ? res.documents.need : Array.isArray(res.documents?.needed) ? res.documents.needed : [];
+
+    const normalizedHave = rawHave.map((d: any) => ({
+      name: d.name || d.title || "",
+      verification_status: d.verification_status || d.verificationStatus || d.status || "VERIFIED",
+      type: d.type || d.document_type || d.documentType || "DOCUMENT",
+      issuing_authority: d.issuing_authority || d.issuer || 'Government Authority',
+      masked_document_number: d.masked_document_number || d.masked_number || 'XXXX-XXXX-1234',
+      why_it_matches: d.why_it_matches || d.description || d.why_matches || 'Verified document matching this goal.',
+      issue_date: d.issue_date || null,
+      expiry_date: d.expiry_date || null,
+      source: d.source || d.official_source || 'https://india.gov.in'
+    }));
+
+    const normalizedNeed = rawNeed.map((d: any) => ({
+      name: d.name || d.title || "",
+      priority: d.priority || d.status || "Required",
+      reason: d.reason || d.description || "Required for verification.",
+      authority: d.authority || d.issuer || "Government Authority",
+      how_to: d.how_to || d.howTo || d.how_to_obtain || "Apply on official portal.",
+      processing_time: d.processing_time || d.processingTime || "10 days",
+      type: d.type || d.documentType || "DOCUMENT",
+      official_source: d.official_source || d.officialUrl || 'https://india.gov.in'
+    }));
+
     return {
       ...res,
       goal: res.goal || {},
       domicile: res.domicile || {},
       targetLocation: res.targetLocation || null,
       documents: {
-        have: Array.isArray(res.documents?.have) ? res.documents.have : [],
-        need: Array.isArray(res.documents?.need) ? res.documents.need : [],
+        have: normalizedHave,
+        need: normalizedNeed,
         missing: Array.isArray(res.documents?.missing) ? res.documents.missing : [],
         conditional: Array.isArray(res.documents?.conditional) ? res.documents.conditional : []
       },
       schemes: {
-        central: Array.isArray(res.schemes?.central) ? res.schemes.central : [],
-        state: Array.isArray(res.schemes?.state) ? res.schemes.state : [],
-        targetLocation: Array.isArray(res.schemes?.targetLocation) ? res.schemes.targetLocation : []
+        central: res.schemes && Array.isArray(res.schemes.central) ? res.schemes.central : [],
+        state: res.schemes && Array.isArray(res.schemes.state) ? res.schemes.state : [],
+        targetLocation: res.schemes && Array.isArray(res.schemes.targetLocation) ? res.schemes.targetLocation : []
       },
-      nextSteps: Array.isArray(res.nextSteps) ? res.nextSteps : [],
+      nextSteps: Array.isArray(res.nextSteps) ? res.nextSteps : Array.isArray(res.next_steps) ? res.next_steps : [],
       sources: Array.isArray(res.sources) ? res.sources : [],
       diagnostics: res.diagnostics || {}
     };
@@ -353,6 +519,14 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
           </div>
         </div>
 
+        {/* Civic Intelligence Network Graph */}
+        <CivicNetworkVisualizer
+          domicile={domicileState}
+          targetLocation={(targetLocation && (targetLocation.state || targetLocation.country)) || 'Central'}
+          docsCount={haveDocs.length + neededDocsList.length}
+          schemesCount={centralSchemes.length + stateSchemes.length + targetLocationSchemes.length}
+        />
+
         {/* SECTION 1: VERIFIED DOCUMENTS */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden">
           <div className="space-y-1">
@@ -387,7 +561,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                       </div>
                       <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        <span>{doc?.status}</span>
+                        <span>{doc?.verification_status || 'VERIFIED'}</span>
                       </span>
                     </div>
 

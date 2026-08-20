@@ -10,7 +10,8 @@ import {
   fetchUserDocumentsAPI, 
   matchDocumentRequirementsAPI,
   analyzeJourneyAPI,
-  fetchStatesAPI
+  fetchStatesAPI,
+  logoutAPI
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
@@ -77,6 +78,14 @@ const INDIAN_STATES_AND_UTS = [
 ];
 
 const DEMO_MODE = true;
+
+function groupMatchedSchemes(matched: any[], domicile: string, targetState: string) {
+  const central = matched.filter(s => s.level === 'CENTRAL');
+  const targetLocation = matched.filter(s => s.level === 'STATE' && targetState && s.state_name.toLowerCase() === targetState.toLowerCase() && targetState.toLowerCase() !== domicile.toLowerCase());
+  const state = matched.filter(s => s.level === 'STATE' && (!targetLocation.some((x: any) => x.id === s.id)));
+
+  return { central, state, targetLocation };
+}
 
 function matchGovernmentSchemes(query: string, domicileState: string, allSchemes: any[]): any[] {
   const q = query.toLowerCase();
@@ -243,7 +252,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
           { name: "University Offer Letter", status: "Conditional", reason: "Required after receiving admission" }
         ]
       },
-      schemes: matchedSchemes,
+      schemes: groupMatchedSchemes(matchedSchemes, domicileState, "Australia"),
       next_steps: [
         "Apply for / renew passport",
         "Prepare and register for IELTS/PTE English exam",
@@ -287,7 +296,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
           { name: "Passport-size Photograph", status: "Required", reason: "Required for physical/digital record" }
         ]
       },
-      schemes: matchedSchemes,
+      schemes: groupMatchedSchemes(matchedSchemes, domicileState, ""),
       next_steps: [
         "Apply for Learner's Licence online via Sarathi portal",
         "Schedule and pass Learner's test (computer based)",
@@ -307,13 +316,15 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
     q.includes("business") ||
     q.includes("startup")
   ) {
+    const isRestaurant = q.includes("restaurant") || q.includes("food");
+    const targetState = q.includes("gujarat") ? "Gujarat" : "Karnataka";
     return {
       goal: {
-        title: "Start a Restaurant / Business",
-        description: "Business setup and regulatory compliance mapping for Karnataka."
+        title: isRestaurant ? "Start a Restaurant / Business" : "Start a Business / Startup",
+        description: `Business setup and regulatory compliance mapping for ${targetState}.`
       },
       location: {
-        current_location: "Bengaluru",
+        current_location: targetState === "Gujarat" ? "Vadodara" : "Bengaluru",
         domicile_state: domicileState || "Rajasthan",
         destination: null
       },
@@ -329,16 +340,16 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
           { name: "Business Constitution Documents", status: "Required", reason: "Depends on whether the business is proprietorship, partnership, LLP, or Pvt Ltd company." },
           { name: "Business Premises Address Proof (Lease/NOC)", status: "Required", reason: "Required for all local registrations and utility connections." },
           { name: "FSSAI Food Business License", status: "Required", reason: "Mandatory regulatory registration for all food/restaurant establishments." },
-          { name: "Local Municipal Corporation Trade License", status: "Required", reason: "Required from BBMP to operate a commercial business in Bengaluru." },
+          { name: "Local Municipal Corporation Trade License", status: "Required", reason: `Required to operate a commercial business in ${targetState}.` },
           { name: "Fire Department NOC", status: "Conditional", reason: "Required depending on seating capacity and building height." }
         ]
       },
-      schemes: matchedSchemes,
+      schemes: groupMatchedSchemes(matchedSchemes, domicileState, targetState),
       next_steps: [
         "Choose business structure and register entity (MCA/MSME Udyam)",
         "Execute rental agreement for commercial kitchen premises",
         "Apply for FSSAI registration/license online via FoSCoS portal",
-        "Obtain BBMP Trade License from local municipality",
+        "Obtain Trade License from local municipality",
         "Register for GST and open commercial bank account"
       ],
       sources: [
@@ -370,7 +381,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
         { name: "Additional documents depend on your exact goal", status: "Required", reason: "The requirement varies according to the service, jurisdiction and eligibility." }
       ]
     },
-    schemes: matchedSchemes,
+    schemes: groupMatchedSchemes(matchedSchemes, domicileState, ""),
     next_steps: [
       "Check required certificates or licenses on local state portal",
       "Prepare basic identification proofs (Aadhaar, PAN, Photos)"
@@ -498,8 +509,13 @@ export default function DashboardPage() {
       }
 
       const res = generateDemoJourney(trimmedGoal, domicileState, matchedSchemes);
-      setJourneyAnalysis(res);
+      const journeyId = `demo-${Date.now()}`;
+      const resWithId = { ...res, journeyId };
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify(resWithId));
+      }
       setIsAnalyzing(false);
+      router.push(`/journey/${journeyId}`);
       return;
     }
 
@@ -580,15 +596,72 @@ export default function DashboardPage() {
   const nationalSchemes = schemes.filter(s => s.level === 'CENTRAL' || s.level === 'NATIONAL');
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 py-6 px-4">
+    <div className="max-w-5xl mx-auto space-y-8 py-6 px-4">
+      {/* Brand Header */}
+      <div className="flex items-center justify-between border-b border-slate-900 pb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
+            JS
+          </div>
+          <span className="text-xs font-black text-slate-400 tracking-widest uppercase">AI Citizen Journey Engine</span>
+        </div>
+        <div className="flex items-center gap-4 text-xs font-medium text-slate-400">
+          <span className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800/60 text-[10px] uppercase font-bold text-slate-300">
+            ✓ Secure Gate
+          </span>
+          <button 
+            type="button"
+            onClick={() => logoutAPI().then(() => router.push('/login'))} 
+            className="hover:text-amber-500 transition font-bold"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+
       {/* Greeting Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-2">
-          <span>Good evening, {user?.full_name || 'Citizen'} 👋</span>
-        </h1>
-        <p className="text-xs text-slate-400">
-          Your personal authenticated citizen gateway to services, schemes, and documents.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            Good evening, {user?.full_name || 'Citizen'} 👋
+          </h1>
+          <p className="text-xs text-slate-500">
+            Your personal authenticated citizen gateway to services, schemes, and documents.
+          </p>
+        </div>
+      </div>
+
+      {/* Overview Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex items-center gap-4 transition hover:border-slate-700/80">
+          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document Vault</span>
+            <span className="text-sm font-black text-white">{userDocs.length} Verified Files</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex items-center gap-4 transition hover:border-slate-700/80">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
+            <Compass className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Journeys</span>
+            <span className="text-sm font-black text-white">{activeJourneys.length} Workflows</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex items-center gap-4 transition hover:border-slate-700/80">
+          <div className="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
+            <Landmark className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Government Support</span>
+            <span className="text-sm font-black text-white">{schemes.length} Schemes Available</span>
+          </div>
+        </div>
       </div>
 
       {/* Main Goal Input Card */}
@@ -615,7 +688,7 @@ export default function DashboardPage() {
                     className="fixed inset-0 z-40 bg-transparent" 
                     onClick={() => setIsDropdownOpen(false)} 
                   />
-                  <div className="absolute left-0 right-0 mt-1.5 bg-slate-900 border border-slate-850 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 max-h-72 overflow-y-auto">
+                  <div className="absolute left-0 right-0 mt-1.5 bg-slate-900 border border-slate-855 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 max-h-72 overflow-y-auto">
                     <input
                       type="text"
                       value={searchQuery}
@@ -698,7 +771,7 @@ export default function DashboardPage() {
                   rows={2}
                   value={goalInput}
                   onChange={(e) => setGoalInput(e.target.value)}
-                  placeholder="Tell us what you're trying to do... e.g. 'I wanna go to Australia for masters' or 'I want to start a business'..."
+                  placeholder="Tell us what you're trying to do... e.g. 'I want to study in Australia' or 'I want to start a business'..."
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 pr-40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm resize-none"
                 />
                 <button
@@ -781,7 +854,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Cinematic Progressive Loading Experience */}
+      {/* Cinematic Progressive Processing Screen */}
       {isAnalyzing && (
         <div className="fixed inset-0 z-50 bg-[#020205]/95 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden">
@@ -792,307 +865,37 @@ export default function DashboardPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Analyzing Citizen Query</h4>
+                <h4 className="text-sm font-bold text-white">Analyzing Goal & Intent</h4>
                 <p className="text-xs text-slate-400">Verifying requirements and rules deterministically...</p>
               </div>
             </div>
 
             <div className="space-y-4 pt-2 border-t border-slate-800">
-              {[
-                "Understanding your goal",
-                "Checking your documents",
-                "Finding relevant government schemes",
-                "Building your journey"
-              ].map((label, idx) => {
-                const isCompleted = generationStage > idx;
-                const isActive = generationStage === idx;
-                return (
-                  <div key={idx} className="flex items-center justify-between text-xs transition-all duration-350">
-                    <span className={`${
-                      isCompleted 
-                        ? 'text-emerald-400 font-semibold' 
-                        : isActive 
-                          ? 'text-amber-400 font-bold' 
-                          : 'text-slate-500'
-                    }`}>
-                      {isCompleted ? '✓' : '•'} {label}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      {isCompleted ? 'Done' : isActive ? 'Active' : 'Pending'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Personalized Citizen Journey Result UI */}
-      {journeyAnalysis && (
-        <div id="demo-results-area" className="bg-slate-900 border border-amber-500/30 rounded-2xl p-8 space-y-8 shadow-2xl animate-fade-in">
-          {DEMO_MODE && (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3 text-amber-400 text-xs">
-              <span className="text-base">⚡</span>
-              <div>
-                <strong className="font-black uppercase tracking-wider text-[10px]">DEMO MODE ACTIVE</strong>
-                <p className="text-slate-400 mt-0.5 font-semibold">
-                  Demo document data is simulated. Government scheme information is shown only when verified.
-                </p>
-              </div>
-            </div>
-          )}
-          {/* Header & Goal Identification */}
-          <div className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full">
-                Goal Identified
-              </span>
-              <h2 className="text-2xl font-black text-white mt-3">
-                {journeyAnalysis.goal.title}
-              </h2>
-              <p className="text-sm text-slate-400 mt-1">
-                {journeyAnalysis.goal.description}
-              </p>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
-                📍 Current: <strong className="text-white">{journeyAnalysis.location.current_location}</strong>
-              </span>
-              <span className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
-                🏡 Domicile: <strong className="text-white">{journeyAnalysis.location.domicile_state}</strong>
-              </span>
-              {journeyAnalysis.location.destination && (
-                <span className="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
-                  ✈️ Destination: <strong className="text-white">{journeyAnalysis.location.destination}</strong>
+              <div className="flex items-center justify-between text-xs">
+                <span className={generationStage >= 1 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 1 ? '✓' : '●'} Understanding your request
                 </span>
-              )}
-            </div>
-          </div>
-
-          {/* Documents Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Documents You Already Have */}
-            <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Documents You Already Have ({journeyAnalysis.documents.available.length})</span>
-              </h3>
-              
-              <div className="space-y-2">
-                {journeyAnalysis.documents.available.length === 0 ? (
-                  <p className="text-slate-500 text-xs italic">No matching documents found in your vault.</p>
-                ) : (
-                  journeyAnalysis.documents.available.map((doc: any, idx: number) => (
-                    <div key={idx} className="bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-white">✓ {doc.name}</span>
-                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-semibold uppercase">
-                          Available
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-amber-500/80 font-mono tracking-wider font-semibold">
-                        {doc.verification_status === 'DEMO_SYNTHETIC' || doc.verification_status === 'SYNTHETIC_DEMO' ? 'Demo Available' : doc.verification_status}
-                      </span>
-                    </div>
-                  ))
-                )}
+                <span className="text-[10px] text-slate-500 font-medium">Done</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className={generationStage >= 2 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 2 ? '✓' : '●'} Identifying your location & jurisdiction
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">Done</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className={generationStage >= 3 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 3 ? '✓' : '●'} Finding relevant government support
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">Done</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className={generationStage >= 4 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 4 ? '✓' : '●'} Checking current eligibility constraints
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">Ready</span>
               </div>
             </div>
-
-            {/* Documents You Need */}
-            <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-amber-500 flex items-center gap-2 uppercase tracking-wider">
-                <AlertCircle className="w-4 h-4" />
-                <span>Documents You Need ({journeyAnalysis.documents.needed.length})</span>
-              </h3>
-              
-              <div className="space-y-2">
-                {journeyAnalysis.documents.needed.length === 0 ? (
-                  <p className="text-emerald-400 text-xs font-semibold">✓ All required documents are ready in your vault!</p>
-                ) : (
-                  journeyAnalysis.documents.needed.map((doc: any, idx: number) => (
-                    <div key={idx} className="bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-white">⚠ {doc.name}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${
-                          doc.status === 'Required' 
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        }`}>
-                          {doc.status === 'Required' ? 'Missing' : doc.status}
-                        </span>
-                      </div>
-                      <p className="text-slate-400 text-xs">{doc.reason}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Schemes Section */}
-          <div className="space-y-4 pt-4 border-t border-slate-800/80">
-            <h3 className="text-sm font-bold text-cyan-400 flex items-center gap-2 uppercase tracking-wider">
-              <Landmark className="w-4 h-4" />
-              <span>Relevant Government Support / Scholarships</span>
-            </h3>
-
-            {schemesError ? (
-              <div className="bg-slate-950 border border-red-500/20 rounded-xl p-6 text-center space-y-3 flex flex-col items-center">
-                <p className="text-xs font-semibold text-red-400">
-                  Government scheme information could not be refreshed right now.
-                </p>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setErrorMessage(null);
-                    try {
-                      const schemesRes = await fetchSchemesAPI({ limit: 100 });
-                      if (schemesRes && schemesRes.schemes) {
-                        const matched = matchGovernmentSchemes(goalInput, domicileState, schemesRes.schemes);
-                        setJourneyAnalysis((prev: any) => prev ? { ...prev, schemes: matched } : null);
-                        setSchemesError(false);
-                      }
-                    } catch (err) {
-                      console.warn("Retry failed:", err);
-                    }
-                  }}
-                  className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-500 font-bold px-4 py-2 rounded-lg text-xs transition"
-                >
-                  Retry
-                </button>
-              </div>
-            ) : journeyAnalysis.schemes.length === 0 ? (
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 text-center space-y-1">
-                <p className="text-xs font-semibold text-slate-400">
-                  No directly relevant government support was found for this goal.
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  We only show government schemes that strictly match your location, domicile, and goal parameters.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {journeyAnalysis.schemes.map((sch: any) => (
-                  <div key={sch.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 flex flex-col justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] bg-cyan-500/15 text-cyan-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          {sch.level}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                          sch.match_status === 'HIGH_MATCH' 
-                            ? 'bg-emerald-500/15 text-emerald-400' 
-                            : 'bg-amber-500/15 text-amber-400'
-                        }`}>
-                          {sch.match_status.replace('_', ' ')}
-                        </span>
-                      </div>
-                      
-                      <h4 className="text-sm font-bold text-white leading-tight">
-                        {sch.name}
-                      </h4>
-                      <p className="text-xs text-slate-400 line-clamp-2">
-                        {sch.description}
-                      </p>
-                    </div>
-
-                    {/* Eligibility Match Breakdown */}
-                    <div className="bg-slate-900/60 rounded-lg p-3 space-y-1">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                        Why It Matches
-                      </span>
-                      {sch.why_matches.map((reason: string, idx: number) => (
-                        <div key={idx} className="text-xs flex items-start gap-1.5 text-slate-300">
-                          <span>{reason}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-900">
-                      <span>Last verified: {sch.last_verified_at}</span>
-                      {sch.official_source_url && (
-                        <a 
-                          href={sch.official_source_url} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-cyan-400 hover:underline font-semibold"
-                        >
-                          Official Portal →
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Next Steps & Sources Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800/80">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-amber-500 flex items-center gap-2 uppercase tracking-wider">
-                <Compass className="w-4 h-4" />
-                <span>Next Steps Checklist</span>
-              </h3>
-              
-              <ol className="space-y-2 text-xs">
-                {journeyAnalysis.next_steps.map((step: string, idx: number) => (
-                  <li key={idx} className="flex items-start gap-3 bg-slate-950/40 p-2.5 rounded-lg border border-slate-900/50">
-                    <span className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 font-bold font-mono">
-                      {idx + 1}
-                    </span>
-                    <span className="text-slate-200 mt-0.5">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            {/* Official Sources Section */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
-                <Globe className="w-4 h-4" />
-                <span>Official Government Sources</span>
-              </h3>
-
-              <div className="space-y-2">
-                {journeyAnalysis.sources.map((src: any, idx: number) => (
-                  <div key={idx} className="bg-slate-950/40 p-3 rounded-lg border border-slate-900/50 flex items-center justify-between gap-3 text-xs">
-                    <div>
-                      <span className="font-bold text-slate-200 block">{src.name}</span>
-                      <span className="text-[10px] text-slate-500 font-medium">Last verified: {src.last_verified}</span>
-                    </div>
-                    <a 
-                      href={src.url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white px-3 py-1.5 rounded border border-slate-800 text-[10px] font-semibold tracking-wider shrink-0 transition"
-                    >
-                      Visit Source
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
-            <button
-              onClick={() => setJourneyAnalysis(null)}
-              className="px-4 py-2 rounded-lg text-xs text-slate-400 hover:text-slate-200"
-            >
-              Clear Analysis
-            </button>
-            <button
-              onClick={handleCreateJourney}
-              disabled={isGenerating}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-6 py-2.5 rounded-lg text-xs flex items-center gap-2 shadow-lg"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Build Journey Workflow</span>
-            </button>
           </div>
         </div>
       )}

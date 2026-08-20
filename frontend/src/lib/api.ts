@@ -579,9 +579,14 @@ export interface JourneyAnalyzeResponse {
   };
 }
 
-export const EMERGENCY_DEMO_MODE = true;
+export const EMERGENCY_DEMO_MODE = false;
 
 export async function analyzeJourneyAPI(query: string, domicileState: string): Promise<any | null> {
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('last_user_goal_query', query);
+    sessionStorage.setItem('last_user_domicile', domicileState);
+  }
+
   if (EMERGENCY_DEMO_MODE) {
     console.log("[Journey] EMERGENCY DEMO MODE active. Bypassing backend and simulating 1.2s delay.");
     await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -865,9 +870,22 @@ export async function fetchJourneyAnalysisAPI(journeyId: string): Promise<any | 
   }
   if (EMERGENCY_DEMO_MODE) {
     console.log("[Journey] EMERGENCY DEMO MODE active. Stored item not found, generating local fallback.");
-    return _clientSideJourneyFallback("I want to start a business in Gujarat", "Gujarat");
+    const lastQuery = (typeof window !== 'undefined' ? sessionStorage.getItem('last_user_goal_query') : null) || "I want to start a business in Gujarat";
+    const lastDomicile = (typeof window !== 'undefined' ? sessionStorage.getItem('last_user_domicile') : null) || "Gujarat";
+    return _clientSideJourneyFallback(lastQuery, lastDomicile);
   }
-  return await apiFetch<any>(`/journey/${journeyId}`);
+  try {
+    return await apiFetch<any>(`/journey/${journeyId}`);
+  } catch (err: any) {
+    console.warn("[Journey] Failed to fetch from backend, generating offline client-side fallback:", err?.message);
+    const lastQuery = (typeof window !== 'undefined' ? sessionStorage.getItem('last_user_goal_query') : null) || "I want to start a business in Gujarat";
+    const lastDomicile = (typeof window !== 'undefined' ? sessionStorage.getItem('last_user_domicile') : null) || "Gujarat";
+    const result = _clientSideJourneyFallback(lastQuery, lastDomicile);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify(result));
+    }
+    return result;
+  }
 }
 
 
