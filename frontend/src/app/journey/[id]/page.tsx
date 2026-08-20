@@ -26,7 +26,7 @@ import {
 import { generateJourneyAPI, fetchJourneyAnalysisAPI } from '@/lib/api';
 import { PdfViewerModal } from '@/components/PdfViewerModal';
 
-export default function JourneyResultPage() {
+function JourneyResultPage() {
   const params = useParams();
   const router = useRouter();
   const journeyId = params?.id as string;
@@ -626,7 +626,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                       <div className="space-y-1.5 pt-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                         <div className="space-y-1">
-                          {(scheme?.why_matches || scheme?.whyMatches || [])?.map((matchDetail: any, mIdx: number) => {
+                          {(Array.isArray(scheme?.why_matches) ? scheme.why_matches : Array.isArray(scheme?.whyMatches) ? scheme.whyMatches : typeof (scheme?.why_matches || scheme?.whyMatches) === 'string' ? [scheme.why_matches || scheme.whyMatches] : [])?.map((matchDetail: any, mIdx: number) => {
                             const detailStr = typeof matchDetail === 'string' ? matchDetail : String(matchDetail || '');
                             const isSuccess = detailStr.includes('✓');
                             const isWarning = detailStr.includes('⚠');
@@ -715,7 +715,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                         <div className="space-y-1.5 pt-1">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                           <div className="space-y-1">
-                            {(scheme?.why_matches || scheme?.whyMatches || [])?.map((matchDetail: any, mIdx: number) => {
+                            {(Array.isArray(scheme?.why_matches) ? scheme.why_matches : Array.isArray(scheme?.whyMatches) ? scheme.whyMatches : typeof (scheme?.why_matches || scheme?.whyMatches) === 'string' ? [scheme.why_matches || scheme.whyMatches] : [])?.map((matchDetail: any, mIdx: number) => {
                               const detailStr = typeof matchDetail === 'string' ? matchDetail : String(matchDetail || '');
                               const isSuccess = detailStr.includes('✓');
                               const isWarning = detailStr.includes('⚠');
@@ -793,7 +793,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                         <div className="space-y-1.5 pt-1">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                           <div className="space-y-1">
-                            {(scheme?.why_matches || scheme?.whyMatches || [])?.map((matchDetail: any, mIdx: number) => {
+                            {(Array.isArray(scheme?.why_matches) ? scheme.why_matches : Array.isArray(scheme?.whyMatches) ? scheme.whyMatches : typeof (scheme?.why_matches || scheme?.whyMatches) === 'string' ? [scheme.why_matches || scheme.whyMatches] : [])?.map((matchDetail: any, mIdx: number) => {
                               const detailStr = typeof matchDetail === 'string' ? matchDetail : String(matchDetail || '');
                               const isSuccess = detailStr.includes('✓');
                               const isWarning = detailStr.includes('⚠');
@@ -947,3 +947,60 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
     </div>
   );
 }
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error in JourneyResultPage:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#020205] text-white flex flex-col items-center justify-center p-4 text-center">
+          <XCircle className="w-12 h-12 text-red-500 mb-4 animate-bounce" />
+          <h2 className="text-xl font-bold text-white mb-2">Journey temporarily unavailable</h2>
+          <p className="text-slate-400 text-sm max-w-md mb-6">
+            Your request was received, but this journey could not be displayed.
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.reload();
+              }}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition"
+            >
+              Try Again
+            </button>
+            <Link 
+              href="/dashboard"
+              className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-500 font-bold px-6 py-2.5 rounded-xl text-xs transition flex items-center justify-center"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default function JourneyResultPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <JourneyResultPage />
+    </ErrorBoundary>
+  );
+}
+

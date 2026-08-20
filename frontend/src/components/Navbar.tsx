@@ -97,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-6 h-11">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+            const active = pathname === item.href || (item.href !== '/' && pathname && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
@@ -121,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-around">
           {navItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+            const active = pathname === item.href || (item.href !== '/' && pathname && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}

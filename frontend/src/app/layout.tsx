@@ -18,11 +18,11 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
   React.useEffect(() => {
     if (!isLoading) {
       const protectedRoutes = ['/dashboard', '/journeys', '/alerts', '/help', '/privacy', '/admin'];
-      const isProtected = protectedRoutes.some(route => pathname.startsWith(route));
+      const isProtected = pathname ? protectedRoutes.some(route => pathname.startsWith(route)) : false;
       if (isProtected && !isAuthenticated) {
         router.replace('/login');
       }
-      if (pathname === '/login' && isAuthenticated) {
+      if (pathname && pathname === '/login' && isAuthenticated) {
         router.replace('/dashboard');
       }
     }
