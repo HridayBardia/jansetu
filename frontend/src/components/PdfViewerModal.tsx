@@ -45,7 +45,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${documentData.document_type.toLowerCase()}_demo_document.txt`;
+    link.download = `${(documentData.document_type || 'document').toLowerCase()}_demo_document.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -152,7 +152,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
                 </div>
                 <div>
                   <h4 className="text-base sm:text-lg font-black text-white tracking-wide">
-                    {documentData.document_name.toUpperCase()}
+                    {(documentData.document_name || '').toUpperCase()}
                   </h4>
                   <p className="text-xs text-amber-400 font-semibold">
                     {documentData.issued_by || 'Government of India'}

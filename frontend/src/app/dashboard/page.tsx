@@ -164,15 +164,19 @@ export default function DashboardPage() {
     const timer3 = setTimeout(() => setGenerationStage(3), 550); // Building your journey
 
     try {
+      console.log("[Journey] User query:", trimmedGoal);
       const res = await analyzeJourneyAPI(trimmedGoal, domicileState);
+      console.log("[Journey] API response:", res);
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
       setGenerationStage(4);
       
       if (res && res.journeyId) {
+        console.log("[Journey] Saving journey:", res);
         // Store structured response in session storage
         sessionStorage.setItem(`journey_analysis_${res.journeyId}`, JSON.stringify(res));
+        console.log("[Journey] Stored journey:", sessionStorage.getItem(`journey_analysis_${res.journeyId}`));
         
         // Immediate redirection
         router.push(`/journey/${res.journeyId}`);

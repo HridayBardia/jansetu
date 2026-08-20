@@ -51,6 +51,15 @@ def get_request_id(request: Request) -> str:
 def success_response(data: Any, request: Request):
     return APIResponse(success=True, data=data, request_id=get_request_id(request))
 
+@api_v1_router.post("/dev/log")
+async def dev_log(req: Request):
+    try:
+        body = await req.json()
+        print(f"\n[CLIENT EXCEPTION REPORT] {body.get('message')}\n")
+    except Exception as e:
+        print(f"[CLIENT EXCEPTION LOG ERROR] {e}")
+    return {"status": "ok"}
+
 def error_response(code: str, message: str, status_code: int, request: Request, details: Optional[str] = None):
     from fastapi.responses import JSONResponse
     content = {

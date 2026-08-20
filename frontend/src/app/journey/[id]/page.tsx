@@ -63,6 +63,7 @@ function JourneyResultPage() {
   };
 
   useEffect(() => {
+    console.log("[Journey] Results page loaded");
     if (!journeyId) return;
 
     async function loadAnalysis() {
@@ -71,10 +72,14 @@ function JourneyResultPage() {
         setError(null);
         
         // 1. First check sessionStorage for instant load
+        console.log("[Journey] Checking stored journey for key:", `journey_analysis_${journeyId}`);
         const stored = sessionStorage.getItem(`journey_analysis_${journeyId}`);
+        console.log("[Journey] Stored journey:", stored);
         if (stored) {
           try {
-            setAnalysisData(normalizeJourneyAnalysis(JSON.parse(stored)));
+            const parsed = JSON.parse(stored);
+            console.log("[Journey] Parsed journey from storage:", parsed);
+            setAnalysisData(normalizeJourneyAnalysis(parsed));
             setLoading(false);
             return;
           } catch (e) {
@@ -83,8 +88,11 @@ function JourneyResultPage() {
         }
 
         // 2. Fetch from DB singular endpoint
+        console.log("[Journey] Stored journey not found/failed, calling API for journey:", journeyId);
         const res = await fetchJourneyAnalysisAPI(journeyId);
+        console.log("[Journey] API response for journey:", res);
         if (res) {
+          console.log("[Journey] Parsed journey from API:", res);
           setAnalysisData(normalizeJourneyAnalysis(res));
         } else {
           setError("We couldn't retrieve your journey analysis. Please try again.");
@@ -152,6 +160,7 @@ function JourneyResultPage() {
 
   useEffect(() => {
     if (analysisData && Object.keys(analysisData).length > 0) {
+      console.log("[Journey] Results page data:", analysisData);
       console.log(`
 [JANSETU TRACE START]
 
@@ -960,6 +969,15 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
   componentDidCatch(error: any, errorInfo: any) {
     console.error("ErrorBoundary caught an error in JourneyResultPage:", error, errorInfo);
+    try {
+      fetch('http://localhost:8000/api/v1/dev/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `CRASH REPORT: ${error?.message || error}\nStack: ${error?.stack}\nComponent Stack: ${errorInfo?.componentStack}`
+        })
+      }).catch(() => {});
+    } catch (e) {}
   }
 
   render() {
