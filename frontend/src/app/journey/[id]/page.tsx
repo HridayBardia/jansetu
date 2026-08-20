@@ -206,6 +206,31 @@ function JourneyResultPage() {
       official_source: d.official_source || d.officialUrl || 'https://india.gov.in'
     }));
 
+    let centralList: any[] = [];
+    let stateList: any[] = [];
+    let targetList: any[] = [];
+
+    if (res.schemes && typeof res.schemes === 'object' && !Array.isArray(res.schemes)) {
+      centralList = Array.isArray(res.schemes.central) ? res.schemes.central : [];
+      stateList = Array.isArray(res.schemes.state) ? res.schemes.state : [];
+      targetList = Array.isArray(res.schemes.targetLocation) ? res.schemes.targetLocation : [];
+    } else if (Array.isArray(res.schemes)) {
+      const domicileVal = (res.domicile?.state || "").toLowerCase();
+      const targetVal = (res.targetLocation && (typeof res.targetLocation === 'string' ? res.targetLocation : res.targetLocation.state || res.targetLocation.country || ""))?.toLowerCase();
+      
+      centralList = res.schemes.filter((s: any) => s?.level === 'CENTRAL');
+      targetList = res.schemes.filter((s: any) => s?.level === 'STATE' && targetVal && s?.state_name?.toLowerCase() === targetVal && targetVal !== domicileVal);
+      stateList = res.schemes.filter((s: any) => s?.level === 'STATE' && !targetList.some((x: any) => x.id === s.id));
+    }
+
+    const normalizeSchemes = (list: any[]) => {
+      if (!Array.isArray(list)) return [];
+      return list.map((s: any) => ({
+        ...s,
+        benefits: typeof s.benefits === 'object' && s.benefits !== null ? s.benefits : s.benefits || ''
+      }));
+    };
+
     return {
       ...res,
       goal: res.goal || {},
@@ -218,9 +243,9 @@ function JourneyResultPage() {
         conditional: Array.isArray(res.documents?.conditional) ? res.documents.conditional : []
       },
       schemes: {
-        central: res.schemes && Array.isArray(res.schemes.central) ? res.schemes.central : [],
-        state: res.schemes && Array.isArray(res.schemes.state) ? res.schemes.state : [],
-        targetLocation: res.schemes && Array.isArray(res.schemes.targetLocation) ? res.schemes.targetLocation : []
+        central: normalizeSchemes(centralList),
+        state: normalizeSchemes(stateList),
+        targetLocation: normalizeSchemes(targetList)
       },
       nextSteps: Array.isArray(res.nextSteps) ? res.nextSteps : Array.isArray(res.next_steps) ? res.next_steps : [],
       sources: Array.isArray(res.sources) ? res.sources : [],
@@ -229,7 +254,9 @@ function JourneyResultPage() {
   };
 
   useEffect(() => {
-    console.log("[Journey] Results page loaded");
+    console.log("[Journey DEBUG] results route loaded");
+    console.log("[Journey DEBUG] route params:", params);
+    
     if (!journeyId) return;
 
     async function loadAnalysis() {
@@ -244,7 +271,7 @@ function JourneyResultPage() {
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
-            console.log("[Journey] Parsed journey from storage:", parsed);
+            console.log("[Journey DEBUG] retrieved journey:", parsed);
             setAnalysisData(normalizeJourneyAnalysis(parsed));
             setLoading(false);
             return;
@@ -256,7 +283,7 @@ function JourneyResultPage() {
         // 2. Fetch from DB singular endpoint
         console.log("[Journey] Stored journey not found/failed, calling API for journey:", journeyId);
         const res = await fetchJourneyAnalysisAPI(journeyId);
-        console.log("[Journey] API response for journey:", res);
+        console.log("[Journey DEBUG] retrieved journey:", res);
         if (res) {
           console.log("[Journey] Parsed journey from API:", res);
           setAnalysisData(normalizeJourneyAnalysis(res));
@@ -802,7 +829,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                         <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
                           <div className="space-y-1">
-                            {typeof scheme.benefits === 'object' ? (
+                            {typeof scheme.benefits === 'object' && scheme.benefits !== null ? (
                               Object.entries(scheme.benefits).map(([bKey, bVal]) => (
                                 <p key={bKey} className="text-slate-300">
                                   <strong className="text-slate-400 capitalize">{bKey.replace(/_/g, ' ')}:</strong> {String(bVal)}
@@ -891,7 +918,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                           <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
                             <div className="space-y-1">
-                              {typeof scheme.benefits === 'object' ? (
+                              {typeof scheme.benefits === 'object' && scheme.benefits !== null ? (
                                 Object.entries(scheme.benefits).map(([bKey, bVal]) => (
                                   <p key={bKey} className="text-slate-300">
                                     <strong className="text-slate-400 capitalize">{bKey.replace(/_/g, ' ')}:</strong> {String(bVal)}
@@ -969,7 +996,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                           <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
                             <div className="space-y-1">
-                              {typeof scheme.benefits === 'object' ? (
+                              {typeof scheme.benefits === 'object' && scheme.benefits !== null ? (
                                 Object.entries(scheme.benefits).map(([bKey, bVal]) => (
                                   <p key={bKey} className="text-slate-300">
                                     <strong className="text-slate-400 capitalize">{bKey.replace(/_/g, ' ')}:</strong> {String(bVal)}

@@ -475,6 +475,8 @@ export default function DashboardPage() {
     setIsAnalyzing(true);
     setGenerationStage(0);
 
+    console.log("[Journey DEBUG] query:", trimmedGoal);
+
     if (DEMO_MODE) {
       const timer1 = setTimeout(() => setGenerationStage(1), 200);
       const timer2 = setTimeout(() => setGenerationStage(2), 450);
@@ -510,10 +512,19 @@ export default function DashboardPage() {
 
       const res = generateDemoJourney(trimmedGoal, domicileState, matchedSchemes);
       const journeyId = `demo-${Date.now()}`;
-      const resWithId = { ...res, journeyId };
+      const resWithId = { ...res, journeyId, id: journeyId };
+      
+      console.log("[Journey DEBUG] generated journey:", resWithId);
+      console.log("[Journey DEBUG] journey ID:", journeyId);
+      
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify(resWithId));
+        sessionStorage.setItem("citizenJourney", JSON.stringify(resWithId));
       }
+      
+      console.log("[Journey DEBUG] before navigation:", resWithId);
+      console.log("[Journey DEBUG] storage:", sessionStorage.getItem("citizenJourney"));
+
       setIsAnalyzing(false);
       router.push(`/journey/${journeyId}`);
       return;
@@ -533,14 +544,24 @@ export default function DashboardPage() {
       clearTimeout(timer3);
       setGenerationStage(4);
       
-      if (res && res.journeyId) {
-        console.log("[Journey] Saving journey:", res);
-        // Store structured response in session storage
-        sessionStorage.setItem(`journey_analysis_${res.journeyId}`, JSON.stringify(res));
-        console.log("[Journey] Stored journey:", sessionStorage.getItem(`journey_analysis_${res.journeyId}`));
+      const journeyId = res?.journeyId || res?.id;
+      const resWithId = res ? { ...res, journeyId, id: journeyId } : null;
+
+      console.log("[Journey DEBUG] generated journey:", resWithId);
+      console.log("[Journey DEBUG] journey ID:", journeyId);
+
+      if (resWithId && journeyId) {
+        console.log("[Journey] Saving journey:", resWithId);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify(resWithId));
+          sessionStorage.setItem("citizenJourney", JSON.stringify(resWithId));
+        }
+        
+        console.log("[Journey DEBUG] before navigation:", resWithId);
+        console.log("[Journey DEBUG] storage:", sessionStorage.getItem("citizenJourney"));
         
         // Immediate redirection
-        router.push(`/journey/${res.journeyId}`);
+        router.push(`/journey/${journeyId}`);
       } else {
         throw new Error("Journey was not created.");
       }

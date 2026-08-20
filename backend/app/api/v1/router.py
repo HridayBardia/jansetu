@@ -2129,3 +2129,17 @@ def get_admin_diagnostics(request: Request, db: Session = Depends(get_db)):
     )
     return success_response(diag.model_dump(), request)
 
+
+@api_v1_router.post("/dev/log")
+async def dev_log(request: Request):
+    try:
+        body = await request.json()
+        print("\n" + "="*80)
+        print("FRONTEND CRASH LOG RECEIVED:")
+        print(body.get("message"))
+        print("="*80 + "\n")
+    except Exception as e:
+        print(f"Error parsing dev log: {e}")
+    return {"status": "ok"}
+
+
