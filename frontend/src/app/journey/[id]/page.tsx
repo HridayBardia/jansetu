@@ -29,7 +29,7 @@ import { PdfViewerModal } from '@/components/PdfViewerModal';
 export default function JourneyResultPage() {
   const params = useParams();
   const router = useRouter();
-  const journeyId = params.id as string;
+  const journeyId = params?.id as string;
 
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

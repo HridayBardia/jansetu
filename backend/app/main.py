@@ -75,6 +75,12 @@ def seed_synthetic_users():
 seed_synthetic_users()
 
 try:
+    import sys
+    import os
+    backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if backend_root not in sys.path:
+        sys.path.insert(0, backend_root)
+        
     from seed import seed_baseline_if_empty
     seed_baseline_if_empty()
 except Exception as seed_err:
