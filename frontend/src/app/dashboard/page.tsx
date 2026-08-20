@@ -390,6 +390,7 @@ export default function DashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [journeyAnalysis, setJourneyAnalysis] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [schemesError, setSchemesError] = useState(false);
   
   const [selectedState, setSelectedState] = useState('All India');
   const [domicileState, setDomicileState] = useState('Rajasthan');
@@ -471,13 +472,18 @@ export default function DashboardPage() {
 
       // Fetch real schemes dynamically from database
       let matchedSchemes: any[] = [];
+      let didFail = false;
       try {
+        setSchemesError(false);
         const schemesRes = await fetchSchemesAPI({ limit: 100 });
         if (schemesRes && schemesRes.schemes) {
           matchedSchemes = matchGovernmentSchemes(trimmedGoal, domicileState, schemesRes.schemes);
+        } else {
+          didFail = true;
         }
       } catch (err) {
         console.warn("Failed to fetch schemes for demo:", err);
+        didFail = true;
       }
 
       await new Promise(resolve => setTimeout(resolve, 1100));
@@ -486,6 +492,10 @@ export default function DashboardPage() {
       clearTimeout(timer2);
       clearTimeout(timer3);
       clearTimeout(timer4);
+
+      if (didFail) {
+        setSchemesError(true);
+      }
 
       const res = generateDemoJourney(trimmedGoal, domicileState, matchedSchemes);
       setJourneyAnalysis(res);
@@ -929,13 +939,38 @@ export default function DashboardPage() {
               <span>Relevant Government Support / Scholarships</span>
             </h3>
 
-            {journeyAnalysis.schemes.length === 0 ? (
+            {schemesError ? (
+              <div className="bg-slate-950 border border-red-500/20 rounded-xl p-6 text-center space-y-3 flex flex-col items-center">
+                <p className="text-xs font-semibold text-red-400">
+                  Government scheme information could not be refreshed right now.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setErrorMessage(null);
+                    try {
+                      const schemesRes = await fetchSchemesAPI({ limit: 100 });
+                      if (schemesRes && schemesRes.schemes) {
+                        const matched = matchGovernmentSchemes(goalInput, domicileState, schemesRes.schemes);
+                        setJourneyAnalysis((prev: any) => prev ? { ...prev, schemes: matched } : null);
+                        setSchemesError(false);
+                      }
+                    } catch (err) {
+                      console.warn("Retry failed:", err);
+                    }
+                  }}
+                  className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-500 font-bold px-4 py-2 rounded-lg text-xs transition"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : journeyAnalysis.schemes.length === 0 ? (
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 text-center space-y-1">
                 <p className="text-xs font-semibold text-slate-400">
-                  {DEMO_MODE ? "No verified schemes available in Demo Mode." : "No verified scheme matching your current information was found."}
+                  No directly relevant government support was found for this goal.
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  {DEMO_MODE ? "Government scheme verification is temporarily unavailable in this demonstration." : "We only show government schemes that strictly match your parameters."}
+                  We only show government schemes that strictly match your location, domicile, and goal parameters.
                 </p>
               </div>
             ) : (
