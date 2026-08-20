@@ -599,11 +599,78 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         else:
             goal_title = "Citizen Service Journey"
 
-    # 2. Document Requirement Engine (Compare and classify status)
+    # 2. Document Synonym Normalizer & Matching Engine
+    def normalize_document_type(doc_type: str, doc_name: str = "") -> str:
+        val = (doc_type or "").strip().upper()
+        name = (doc_name or "").strip().lower()
+        if val in ["AADHAAR", "AADHAAR CARD", "AADHAR", "AADHAR CARD"]:
+            return "AADHAAR"
+        if val in ["PAN", "PAN CARD"]:
+            return "PAN"
+        if val in ["CLASS_10_MARKSHEET", "10TH_MARKSHEET", "10TH MARKSHEET", "10TH CERTIFICATE", "SSC MARKSHEET", "CLASS 10 MARKSHEET"]:
+            return "10TH_MARKSHEET"
+        if val in ["CLASS_12_MARKSHEET", "12TH_MARKSHEET", "12TH MARKSHEET", "12TH CERTIFICATE", "HSC MARKSHEET", "CLASS 12 MARKSHEET"]:
+            return "12TH_MARKSHEET"
+        if val in ["DEGREE_CERTIFICATE", "DEGREE CERTIFICATE", "GRADUATION CERTIFICATE", "UNIVERSITY DEGREE", "DEGREE/UNIVERSITY MARKSHEET"]:
+            return "MARKSHEET"
+        if val in ["RENT_AGREEMENT", "LEASE_AGREEMENT", "RENT AGREEMENT", "LEASE AGREEMENT"]:
+            return "RENT_AGREEMENT"
+        if val in ["DRIVING_LICENCE", "DRIVING LICENSE", "DL"]:
+            return "DRIVING_LICENCE"
+        if val in ["INCOME_CERTIFICATE", "INCOME CERTIFICATE"]:
+            return "INCOME_CERTIFICATE"
+        if val in ["DOMICILE_CERTIFICATE", "DOMICILE CERTIFICATE"]:
+            return "DOMICILE_CERTIFICATE"
+        if val in ["LAND_RECORD", "LAND RECORD", "PATTA", "JAMABANDI"]:
+            return "LAND_RECORD"
+        if val in ["BANK_PROOF", "BANK PASSBOOK", "BANK STATEMENT", "BANK_DOCUMENT"]:
+            return "BANK_PROOF"
+        if val in ["PASSPORT", "PASSPORT CARD"]:
+            return "PASSPORT"
+        if val in ["ENGLISH_TEST", "IELTS", "PTE", "TOEFL"]:
+            return "ENGLISH_TEST"
+        if val in ["TRADE_LICENSE", "TRADE LICENCE", "TRADE LICENSE"]:
+            return "TRADE_LICENSE"
+        if val in ["FSSAI_LICENSE", "FSSAI LICENCE", "FSSAI"]:
+            return "FSSAI_LICENSE"
+        if val in ["FIRE_NOC", "FIRE SAFETY NOC", "FIRE NOC"]:
+            return "FIRE_NOC"
+        
+        if "aadhar" in name or "aadhaar" in name:
+            return "AADHAAR"
+        if "pan card" in name or "pan" == name:
+            return "PAN"
+        if "10th" in name or "class 10" in name or "ssc" in name:
+            return "10TH_MARKSHEET"
+        if "12th" in name or "class 12" in name or "hsc" in name:
+            return "12TH_MARKSHEET"
+        if "degree" in name or "graduation certificate" in name:
+            return "MARKSHEET"
+        if "rent" in name or "lease" in name:
+            return "RENT_AGREEMENT"
+        if "driving" in name or "dl" in name:
+            return "DRIVING_LICENCE"
+        if "income" in name:
+            return "INCOME_CERTIFICATE"
+        if "domicile" in name:
+            return "DOMICILE_CERTIFICATE"
+        if "land" in name or "patta" in name or "jamabandi" in name:
+            return "LAND_RECORD"
+        if "passbook" in name or "bank" in name:
+            return "BANK_PROOF"
+        if "passport" in name:
+            return "PASSPORT"
+        if "ielts" in name or "pte" in name or "english" in name:
+            return "ENGLISH_TEST"
+            
+        return val
+
     user_doc_types = {}
     try:
         user_docs = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == current_user.id).all()
-        user_doc_types = {d.document_type.upper(): d for d in user_docs}
+        for d in user_docs:
+            norm_type = normalize_document_type(d.document_type, d.document_name)
+            user_doc_types[norm_type] = d
     except Exception as de:
         print(f"[WARN] Failed to query user documents: {de}")
         warnings.append("Document vault data could not be refreshed right now.")
@@ -722,7 +789,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
 
     # Double-check that we do not have empty required documents list
     if not available_docs and not needed_docs:
-        # Fallback to Aadhaar and PAN if somehow empty
         needed_docs.append({
             "name": "Aadhaar Card",
             "type": "AADHAAR",
@@ -736,28 +802,52 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             "official_source": "https://uidai.gov.in"
         })
 
-    # 3. Scheme eligibility and ranking (Separation of Domicile vs Target Location)
+    # 3. Government Scheme Engine (Strict Category & Jurisdiction Mapping)
+    def map_goal_to_scheme_categories(intent: str) -> List[str]:
+        cat = intent.upper()
+        if cat in ["STUDY_ABROAD", "SCHOLARSHIP", "EDUCATION"]:
+            return ["education", "general"]
+        elif cat in ["BUSINESS_REGISTRATION", "BUSINESS", "LEGAL_REGISTRATION"]:
+            return ["business", "general"]
+        elif cat in ["FARMER_BENEFITS", "AGRICULTURE"]:
+            return ["agriculture", "general"]
+        elif cat in ["DRIVING_LICENCE", "LICENSING", "TRAVEL", "CERTIFICATES", "DOMICILE_CERTIFICATE"]:
+            return ["documents", "general"]
+        return ["general"]
+
     schemes_db = []
+    retrieved_count = 0
+    active_count = 0
+    relevance_count = 0
+    eligibility_count = 0
+
     try:
-        # Search states: Domicile state + Business/Working state + relevant jurisdictions
         search_states = ["Central"]
         if extracted["user_domicile"]:
             search_states.append(extracted["user_domicile"])
-        if extracted["business_location"] and extracted["business_location"] not in search_states:
-            search_states.append(extracted["business_location"])
-        if extracted["working_location"] and extracted["working_location"] not in search_states:
-            search_states.append(extracted["working_location"])
-        for state_item in extracted["relevant_jurisdictions"]:
-            if state_item not in search_states:
-                search_states.append(state_item)
-                
-        # Filter schemes matching legacy categories
-        sch_category = legacy_category
-        schemes_query = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE")
-        if sch_category != "general":
-            schemes_query = schemes_query.filter(SchemeDB.category == sch_category)
+        
+        # Target state extraction
+        target_state = extracted.get("business_location") or extracted.get("working_location") or extracted.get("target_location") or extracted.get("destination_state")
+        if target_state and target_state not in search_states and target_state.lower() not in ["australia", "canada", "uk", "usa"]:
+            search_states.append(target_state)
             
-        from sqlalchemy import or_
+        for state_item in extracted["relevant_jurisdictions"]:
+            if state_item not in search_states and state_item.lower() not in ["australia", "canada", "uk", "usa"]:
+                search_states.append(state_item)
+
+        target_categories = map_goal_to_scheme_categories(legacy_intent_primary)
+        
+        # Base ACTIVE query
+        schemes_query = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE")
+        retrieved_count = schemes_query.count()
+        active_count = retrieved_count
+        
+        # Apply Category Mapping
+        if target_categories:
+            schemes_query = schemes_query.filter(SchemeDB.category.in_(target_categories))
+            relevance_count = schemes_query.count()
+            
+        # Apply Jurisdiction filter
         state_filters = [SchemeDB.level == "CENTRAL"]
         for st_name in search_states:
             state_filters.append(SchemeDB.state_name.ilike(f"%{st_name}%"))
@@ -765,79 +855,59 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         schemes_query = schemes_query.filter(or_(*state_filters))
         schemes_db = schemes_query.all()
         
-        # Fallback: if no schemes found, retrieve matching locations
+        # Fallback if empty
         if not schemes_db:
             schemes_db = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE").filter(or_(*state_filters)).all()
             
     except Exception as se:
         print(f"[WARN] Failed to query schemes: {se}")
-        warnings.append("Government scheme information is temporarily unavailable. Your journey has still been created.")
+        warnings.append("Government scheme information is temporarily unavailable.")
 
-    # Relevance ranking and scoring
+    # Relevance ranking, scoring, and eligibility checks
     ranked_schemes = []
     user_profile = None
     try:
         user_profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == current_user.id).first()
     except Exception as pe:
         print(f"[WARN] Failed to query citizen profile: {pe}")
-        
+
     for s in schemes_db:
         why_match = []
         is_eligible = True
         missing_info = False
-        relevance_score = 0
         
-        # Category Relevance
-        if s.category == sch_category:
-            relevance_score += 5
-            why_match.append(f"✓ Category Relevance: Fits {s.category.title()} category")
-        else:
-            # If categories differ completely, skip unless it's a general or driving licence query
-            if legacy_intent_primary == "DRIVING_LICENCE" or sch_category == "general":
-                relevance_score += 1
-            else:
-                continue
+        # Category check
+        if s.category not in target_categories:
+            continue
             
-        # Domicile & Location check
+        # Jurisdiction match
+        state_match = False
         if s.level == "CENTRAL":
-            relevance_score += 3
+            state_match = True
             why_match.append("✓ Central Scheme (applicable nationwide)")
         else:
-            state_match = False
-            # Check domicile state match
-            if extracted["user_domicile"] and s.state_name.lower() == extracted["user_domicile"].lower():
-                relevance_score += 4
-                why_match.append(f"✓ Domicile Match: Eligible resident of {extracted['user_domicile']}")
+            if domicile and s.state_name.lower() == domicile.lower():
+                why_match.append(f"✓ Domicile Match: Eligible resident of {domicile}")
                 state_match = True
-            
-            # Check business location match
-            if extracted["business_location"] and s.state_name.lower() == extracted["business_location"].lower():
-                relevance_score += 4
-                why_match.append(f"✓ Business Location Match: Operating in {extracted['business_location']}")
-                state_match = True
-                
-            # Check working location match
-            if extracted["working_location"] and s.state_name.lower() == extracted["working_location"].lower():
-                relevance_score += 4
-                why_match.append(f"✓ Work Location Match: Working in {extracted['working_location']}")
+            if target_state and s.state_name.lower() == target_state.lower():
+                why_match.append(f"✓ Target Location Match: Operating/studying in {target_state}")
                 state_match = True
                 
             if not state_match and s.state_name.lower() not in ["central", "all"]:
                 is_eligible = False
                 why_match.append(f"✗ Jurisdiction: Requires residency or operation in {s.state_name}")
-                
-        # Profile validation checks
+
         rules = s.eligibility_rules or {}
         
-        # State restriction rule
+        # Domicile requirement rule
         req_state = rules.get("state")
         if req_state:
             if s.category in ["education", "general"]:
-                if extracted["user_domicile"] and extracted["user_domicile"].lower() != req_state.lower():
+                if domicile and domicile.lower() != req_state.lower():
                     is_eligible = False
                     why_match.append(f"✗ Domicile: Requires {req_state} residency")
             else:
-                loc_state = extracted["business_location"] or extracted["working_location"] or extracted["user_domicile"]
+                loc_state = target_state or domicile
                 if loc_state and loc_state.lower() != req_state.lower():
                     is_eligible = False
                     why_match.append(f"✗ Location: Requires operations in {req_state}")
@@ -847,11 +917,10 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         if income_limit:
             if user_profile and user_profile.annual_income is not None:
                 if user_profile.annual_income <= income_limit:
-                    relevance_score += 2
-                    why_match.append(f"✓ Income: Annual income (₹{user_profile.annual_income/100000:.1f}L) is below the ₹{income_limit/100000:.1f}L limit")
+                    why_match.append(f"✓ Income: Family income (₹{user_profile.annual_income/100000:.1f}L) is below the ₹{income_limit/100000:.1f}L limit")
                 else:
                     is_eligible = False
-                    why_match.append(f"✗ Income: Annual income exceeds the ₹{income_limit/100000:.1f}L threshold")
+                    why_match.append(f"✗ Income: Family income exceeds the ₹{income_limit/100000:.1f}L threshold")
             else:
                 missing_info = True
                 why_match.append(f"⚠ Income Verification: Need to confirm family income is below ₹{income_limit/100000:.1f}L")
@@ -861,7 +930,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         if req_occ:
             if user_profile and user_profile.occupation:
                 if user_profile.occupation.lower() == req_occ.lower() or req_occ.lower() in user_profile.occupation.lower():
-                    relevance_score += 2
                     why_match.append(f"✓ Occupation: Targets {req_occ} group")
                 else:
                     is_eligible = False
@@ -875,7 +943,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         if age_limit:
             if user_profile and user_profile.age is not None:
                 if user_profile.age <= age_limit:
-                    relevance_score += 2
                     why_match.append(f"✓ Age: Applicant age ({user_profile.age}) meets maximum age limit of {age_limit}")
                 else:
                     is_eligible = False
@@ -887,37 +954,63 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         # Study Abroad / Course check
         if rules.get("course") == "study_abroad":
             if legacy_intent_primary == "STUDY_ABROAD":
-                relevance_score += 3
                 why_match.append("✓ Course Match: Course involves studies abroad")
             else:
                 is_eligible = False
 
-        # Determine status
         if not is_eligible:
-            match_status = "NOT_ELIGIBLE"
-        elif missing_info:
-            match_status = "POSSIBLE_MATCH"
-        else:
-            match_status = "HIGH_MATCH"
-            relevance_score += 3
-            
-        if match_status != "NOT_ELIGIBLE":
-            ranked_schemes.append({
-                "id": s.id,
-                "name": s.name,
-                "official_name": s.official_name,
-                "description": s.description,
-                "level": s.level,
-                "state_name": s.state_name,
-                "department": s.department,
-                "category": s.category,
-                "benefits": s.benefits,
-                "match_status": match_status,
-                "why_matches": why_match,
-                "official_source_url": s.official_source_url,
-                "last_verified_at": s.last_verified_at.strftime('%d %B %Y') if s.last_verified_at else "19 August 2026",
-                "relevance_score": relevance_score
-            })
+            continue
+
+        # Score calculation out of 100
+        goal_relevance_score = 0
+        query_words = [w.lower() for w in query.split() if len(w) > 3]
+        match_score = 0
+        for w in query_words:
+            if w in s.name.lower():
+                match_score += 15
+            elif w in s.description.lower():
+                match_score += 5
+        goal_relevance_score = min(match_score, 40)
+        
+        category_score = 20 if s.category == legacy_category else 10
+        location_score = 10 if s.level == "CENTRAL" else 15
+        
+        match_status = "POSSIBLE_MATCH" if missing_info else "HIGH_MATCH"
+        eligibility_score = 15 if match_status == "HIGH_MATCH" else 8
+        freshness_score = 10 if s.status == "ACTIVE" else 0
+        
+        total_relevance = goal_relevance_score + category_score + location_score + eligibility_score + freshness_score
+        eligibility_count += 1
+        
+        ranked_schemes.append({
+            "id": s.id,
+            "name": s.name,
+            "official_name": s.official_name,
+            "officialName": s.official_name,
+            "description": s.description,
+            "level": s.level,
+            "governmentLevel": s.level,
+            "state_name": s.state_name,
+            "state": s.state_name,
+            "department": s.department,
+            "category": s.category,
+            "benefits": s.benefits,
+            "match_status": match_status,
+            "eligibilityStatus": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
+            "eligibility_status": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
+            "eligibilitySummary": "All eligibility constraints satisfied." if match_status == "HIGH_MATCH" else "Missing profile parameters to fully verify eligibility.",
+            "why_matches": why_match,
+            "whyRelevant": "; ".join([r.replace("✓ ", "").replace("⚠ ", "") for r in why_match]),
+            "official_source_url": s.official_source_url,
+            "officialUrl": s.official_source_url,
+            "source": s.source_type or "Government Ministry",
+            "status": s.status,
+            "documentsRequired": s.documents_required or [],
+            "documents_required": s.documents_required or [],
+            "last_verified_at": s.last_verified_at.strftime('%d %B %Y') if s.last_verified_at else "19 August 2026",
+            "lastVerified": s.last_verified_at.strftime('%d %B %Y') if s.last_verified_at else "19 August 2026",
+            "relevance_score": total_relevance
+        })
 
     # Sort schemes by relevance score
     ranked_schemes.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -995,20 +1088,42 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
         ]
 
-    # 6. Save to Database
-    journey.title = goal_title
-    journey.goal_category = extracted["goal_category"]
-    journey.life_event = extracted["sub_category"]
-    journey.intent = legacy_intent_primary
-    journey.location_state = extracted["business_location"] or extracted["working_location"] or domicile
-    journey.location_city = extracted["current_city"]
-    journey.status = "PARTIAL" if warnings else "COMPLETE"
-    
+    # 6. Target Location Root and Schemes Mapping
+    target_loc_val = None
+    if target_state or dest_country:
+        target_loc_val = {}
+        if target_state:
+            target_loc_val["state"] = target_state
+        if dest_country:
+            target_loc_val["country"] = dest_country
+        else:
+            target_loc_val["country"] = "India"
+
+    central_list = []
+    state_list = []
+    target_loc_list = []
+
+    for s in ranked_schemes:
+        if s["level"] == "CENTRAL":
+            central_list.append(s)
+        elif target_state and s["state_name"].lower() == target_state.lower() and target_state.lower() != domicile.lower():
+            target_loc_list.append(s)
+        else:
+            state_list.append(s)
+
     # 7. Formulate structured JSON payload
+    diagnostics = {
+        "retrievedCount": retrieved_count,
+        "afterStatusFilter": active_count,
+        "afterRelevanceFilter": relevance_count,
+        "afterEligibilityFilter": eligibility_count,
+        "finalCount": len(ranked_schemes)
+    }
+
     result_payload = {
         "success": True,
         "journeyId": journey.id,
-        "status": journey.status,
+        "status": "COMPLETE",
         "goal": {
             "title": goal_title,
             "category": legacy_intent_primary
@@ -1016,92 +1131,22 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "domicile": {
             "state": domicile
         },
+        "targetLocation": target_loc_val,
         "documents": {
             "have": available_docs,
-            "need": [
-                {
-                    "name": d["name"],
-                    "type": d["type"],
-                    "status": d["status"],
-                    "reason": d["reason"],
-                    "required_by": d["required_by"],
-                    "priority": d["priority"],
-                    "how_to": d["how_to"],
-                    "processing_time": d["processing_time"],
-                    "authority": d["authority"],
-                    "official_source": d["official_source"]
-                } for d in needed_docs
-            ],
-            "missing": [
-                {
-                    "name": d["name"],
-                    "type": d["type"],
-                    "status": "MISSING",
-                    "reason": d["reason"],
-                    "required_by": d["required_by"],
-                    "priority": d["priority"],
-                    "how_to": d["how_to"],
-                    "processing_time": d["processing_time"],
-                    "authority": d["authority"],
-                    "official_source": d["official_source"]
-                } for d in needed_docs if d["priority"] == "Required"
-            ],
-            "conditional": [
-                {
-                    "name": d["name"],
-                    "type": d["type"],
-                    "status": "CONDITIONAL",
-                    "reason": d["reason"],
-                    "required_by": d["required_by"],
-                    "priority": d["priority"],
-                    "how_to": d["how_to"],
-                    "processing_time": d["processing_time"],
-                    "authority": d["authority"],
-                    "official_source": d["official_source"]
-                } for d in needed_docs if d["priority"] in ["Conditional", "Recommended"]
-            ]
+            "need": needed_docs,
+            "missing": [d for d in needed_docs if d["priority"] == "Required"],
+            "conditional": [d for d in needed_docs if d["priority"] in ["Conditional", "Recommended"]]
         },
         "schemes": {
-            "central": [
-                {
-                    "id": s["id"],
-                    "name": s["name"],
-                    "official_name": s["official_name"],
-                    "description": s["description"],
-                    "level": s["level"],
-                    "state_name": s["state_name"],
-                    "department": s["department"],
-                    "category": s["category"],
-                    "benefits": s["benefits"],
-                    "match_status": s["match_status"],
-                    "eligibility_status": "Appears eligible based on the information provided." if s["match_status"] == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if s["match_status"] == "POSSIBLE_MATCH" else "Does not appear eligible",
-                    "why_matches": s["why_matches"],
-                    "official_source_url": s["official_source_url"],
-                    "last_verified_at": s["last_verified_at"]
-                } for s in ranked_schemes if s["level"] == "CENTRAL"
-            ],
-            "state": [
-                {
-                    "id": s["id"],
-                    "name": s["name"],
-                    "official_name": s["official_name"],
-                    "description": s["description"],
-                    "level": s["level"],
-                    "state_name": s["state_name"],
-                    "department": s["department"],
-                    "category": s["category"],
-                    "benefits": s["benefits"],
-                    "match_status": s["match_status"],
-                    "eligibility_status": "Appears eligible based on the information provided." if s["match_status"] == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if s["match_status"] == "POSSIBLE_MATCH" else "Does not appear eligible",
-                    "why_matches": s["why_matches"],
-                    "official_source_url": s["official_source_url"],
-                    "last_verified_at": s["last_verified_at"]
-                } for s in ranked_schemes if s["level"] in ["STATE", "CITY", "DISTRICT"]
-            ]
+            "central": central_list[:15],
+            "state": state_list[:15],
+            "targetLocation": target_loc_list[:15]
         },
         "nextSteps": next_steps,
         "sources": sources,
-        "warnings": warnings
+        "warnings": warnings,
+        "diagnostics": diagnostics
     }
 
     # Final verification pass
@@ -1112,6 +1157,39 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     ]
     if not all(checklist):
         warnings.append("Internal verification pass flagged incomplete metadata. Running recovery mapping.")
+
+    # Format and print development-only diagnostics to the console log
+    debug_msg = f"""
+[JANSETU JOURNEY DEBUG]
+
+Goal:
+{goal_title} ({query})
+
+Detected intent:
+Primary: {legacy_intent_primary} | Sub: {legacy_intent_sub} | Category: {legacy_category}
+
+Domicile:
+{domicile}
+
+Documents in user vault:
+{list(user_doc_types.keys())}
+
+Document requirements retrieved:
+{[r["type"] for r in current_reqs]}
+
+Document matches:
+Available: {[d["type"] for d in available_docs]} | Missing/Needed: {[d["type"] for d in needed_docs]}
+
+Schemes retrieved:
+Total from DB: {retrieved_count} | Active: {active_count} | Relevant Category: {relevance_count}
+
+Schemes after eligibility filtering:
+Eligible/Possible: {[s["name"] for s in ranked_schemes]}
+
+Schemes sent to frontend:
+Central: {len(result_payload["schemes"]["central"])} | State: {len(result_payload["schemes"]["state"])} | TargetLocation: {len(result_payload["schemes"]["targetLocation"])}
+"""
+    print(debug_msg)
 
     # Structured timing log (Section 25/30)
     duration = time.time() - start_time
@@ -1127,6 +1205,13 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
           f"total_response_time={duration:.3f}s")
 
     # Store result_json in db
+    journey.title = goal_title
+    journey.goal_category = extracted["goal_category"]
+    journey.life_event = extracted["sub_category"]
+    journey.intent = legacy_intent_primary
+    journey.location_state = extracted["business_location"] or extracted["working_location"] or domicile
+    journey.location_city = extracted["current_city"]
+    journey.status = "COMPLETE"
     journey.result_json = result_payload
     db.commit()
 

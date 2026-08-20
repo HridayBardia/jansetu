@@ -20,7 +20,8 @@ import {
   ClipboardList,
   Eye,
   ShieldCheck,
-  CheckCircle
+  CheckCircle,
+  Globe
 } from 'lucide-react';
 import { generateJourneyAPI, fetchJourneyAnalysisAPI } from '@/lib/api';
 import { PdfViewerModal } from '@/components/PdfViewerModal';
@@ -100,7 +101,7 @@ export default function JourneyResultPage() {
     );
   }
 
-  const { goal = {}, domicile = {}, documents = {}, schemes = {}, nextSteps = [], sources = [] } = analysisData;
+  const { goal = {}, domicile = {}, targetLocation = null, documents = {}, schemes = {}, nextSteps = [], sources = [], diagnostics = null } = analysisData;
   
   const goalTitle = goal.title || "Citizen Goal";
   const goalCategory = goal.category || "GENERAL";
@@ -116,6 +117,7 @@ export default function JourneyResultPage() {
 
   const centralSchemes = schemes.central || [];
   const stateSchemes = schemes.state || [];
+  const targetLocationSchemes = schemes.targetLocation || [];
 
   const handleCreateJourney = async () => {
     setIsGenerating(true);
@@ -221,11 +223,17 @@ export default function JourneyResultPage() {
               <Compass className="w-6 h-6 text-amber-500 shrink-0" />
               {goalTitle}
             </h2>
-            <div className="flex items-center gap-4 text-xs text-slate-400 pt-1">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 pt-1">
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800/60 px-3 py-1 rounded-full text-slate-300">
                 <MapPin className="w-3.5 h-3.5 text-amber-500" />
                 <span>Domicile: <strong className="text-white font-bold">{domicileState}</strong></span>
               </div>
+              {targetLocation && (targetLocation.state || targetLocation.country) && (
+                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800/60 px-3 py-1 rounded-full text-slate-300">
+                  <Globe className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Target: <strong className="text-white font-bold">{targetLocation.state || targetLocation.country}</strong></span>
+                </div>
+              )}
               <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800/60 px-3 py-1 rounded-full text-slate-300">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Status: <strong className="text-emerald-400 font-bold">Matched</strong></span>
@@ -480,96 +488,24 @@ export default function JourneyResultPage() {
               </h4>
 
               {centralSchemes.length === 0 ? (
-                <p className="text-slate-500 text-xs italic py-4">No matching central schemes identified.</p>
+                <div className="py-4 space-y-1">
+                  <p className="text-slate-500 text-xs italic">No matching central schemes identified.</p>
+                  {diagnostics && (
+                    <p className="text-[10px] text-amber-500/60 font-mono">
+                      [JANSETU DIAGNOSTICS] No schemes returned by API (Retrieved: {diagnostics.retrievedCount} | Active: {diagnostics.afterStatusFilter} | Relevance: {diagnostics.afterRelevanceFilter} | Eligible: {diagnostics.afterEligibilityFilter})
+                    </p>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-4">
                   {centralSchemes.map((scheme: any, idx: number) => (
-                    <div key={idx} className="bg-slate-950 border border-slate-850 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
+                    <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h5 className="text-xs font-extrabold text-blue-400 uppercase tracking-wider">{scheme.department}</h5>
                           <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
                         </div>
-                        {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status)}
-                      </div>
-
-                      <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
-
-                      {/* Benefits badge info */}
-                      {scheme.benefits && (
-                        <div className="bg-slate-900/60 border border-slate-850 rounded-xl p-3 text-xs">
-                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
-                          <div className="space-y-1">
-                            {typeof scheme.benefits === 'object' ? (
-                              Object.entries(scheme.benefits).map(([bKey, bVal]) => (
-                                <p key={bKey} className="text-slate-300">
-                                  <strong className="text-slate-400 capitalize">{bKey.replace(/_/g, ' ')}:</strong> {String(bVal)}
-                                </p>
-                              ))
-                            ) : (
-                              <p className="text-slate-300">{scheme.benefits}</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Why it matches list */}
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
-                        <div className="space-y-1">
-                          {scheme.why_matches?.map((matchDetail: string, mIdx: number) => {
-                            const isSuccess = matchDetail.includes('✓');
-                            const isWarning = matchDetail.includes('⚠');
-                            return (
-                              <div key={mIdx} className="text-xs text-slate-300 flex items-start gap-1.5">
-                                {isSuccess && <span className="text-emerald-400 font-bold shrink-0">✓</span>}
-                                {isWarning && <span className="text-amber-400 font-bold shrink-0">⚠</span>}
-                                {!isSuccess && !isWarning && <span className="text-amber-500 shrink-0">•</span>}
-                                <span>{matchDetail.replace(/^[✓⚠✗•]\s*/, '')}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
-                        <a
-                          href={scheme.official_source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
-                        >
-                          View Official Scheme <ExternalLink className="w-3 h-3" />
-                        </a>
-                        <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* State Schemes Column (6 cols) */}
-            <div className="md:col-span-6 space-y-4">
-              <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-widest border-b border-slate-800 pb-2 flex items-center justify-between">
-                <span>{domicileState} & Local Authorities</span>
-                <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[9px] px-2 py-0.5 rounded-full font-bold">
-                  {stateSchemes.length} Available
-                </span>
-              </h4>
-
-              {stateSchemes.length === 0 ? (
-                <p className="text-slate-500 text-xs italic py-4">No matching state or local schemes identified.</p>
-              ) : (
-                <div className="space-y-4">
-                  {stateSchemes.map((scheme: any, idx: number) => (
-                    <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h5 className="text-xs font-extrabold text-orange-400 uppercase tracking-wider">{scheme.department}</h5>
-                          <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
-                        </div>
-                        {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status)}
+                        {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status || scheme.eligibilityStatus)}
                       </div>
 
                       <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
@@ -596,7 +532,7 @@ export default function JourneyResultPage() {
                       <div className="space-y-1.5 pt-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                         <div className="space-y-1">
-                          {scheme.why_matches?.map((matchDetail: string, mIdx: number) => {
+                          {(scheme.why_matches || scheme.whyMatches || [])?.map((matchDetail: string, mIdx: number) => {
                             const isSuccess = matchDetail.includes('✓');
                             const isWarning = matchDetail.includes('⚠');
                             return (
@@ -613,17 +549,183 @@ export default function JourneyResultPage() {
 
                       <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                         <a
-                          href={scheme.official_source_url}
+                          href={scheme.official_source_url || scheme.officialUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
                         >
                           View Official Scheme <ExternalLink className="w-3 h-3" />
                         </a>
-                        <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at}</span>
+                        <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at || scheme.lastVerified}</span>
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* State & Target Schemes Column (6 cols) */}
+            <div className="md:col-span-6 space-y-6">
+              {/* Domicile State schemes */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-widest border-b border-slate-800 pb-2 flex items-center justify-between">
+                  <span>{domicileState} & Local Authorities</span>
+                  <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[9px] px-2 py-0.5 rounded-full font-bold">
+                    {stateSchemes.length} Available
+                  </span>
+                </h4>
+
+                {stateSchemes.length === 0 ? (
+                  <div className="py-4 space-y-1">
+                    <p className="text-slate-500 text-xs italic">No matching state or local schemes identified.</p>
+                    {diagnostics && (
+                      <p className="text-[10px] text-amber-500/60 font-mono">
+                        [JANSETU DIAGNOSTICS] No schemes returned by API (Retrieved: {diagnostics.retrievedCount} | Active: {diagnostics.afterStatusFilter} | Relevance: {diagnostics.afterRelevanceFilter} | Eligible: {diagnostics.afterEligibilityFilter})
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {stateSchemes.map((scheme: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h5 className="text-xs font-extrabold text-orange-400 uppercase tracking-wider">{scheme.department}</h5>
+                            <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
+                          </div>
+                          {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status || scheme.eligibilityStatus)}
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
+
+                        {/* Benefits badge info */}
+                        {scheme.benefits && (
+                          <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
+                            <div className="space-y-1">
+                              {typeof scheme.benefits === 'object' ? (
+                                Object.entries(scheme.benefits).map(([bKey, bVal]) => (
+                                  <p key={bKey} className="text-slate-300">
+                                    <strong className="text-slate-400 capitalize">{bKey.replace(/_/g, ' ')}:</strong> {String(bVal)}
+                                  </p>
+                                ))
+                              ) : (
+                                <p className="text-slate-300">{scheme.benefits}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Why it matches list */}
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
+                          <div className="space-y-1">
+                            {(scheme.why_matches || scheme.whyMatches || [])?.map((matchDetail: string, mIdx: number) => {
+                              const isSuccess = matchDetail.includes('✓');
+                              const isWarning = matchDetail.includes('⚠');
+                              return (
+                                <div key={mIdx} className="text-xs text-slate-300 flex items-start gap-1.5">
+                                  {isSuccess && <span className="text-emerald-400 font-bold shrink-0">✓</span>}
+                                  {isWarning && <span className="text-amber-400 font-bold shrink-0">⚠</span>}
+                                  {!isSuccess && !isWarning && <span className="text-amber-500 shrink-0">•</span>}
+                                  <span>{matchDetail.replace(/^[✓⚠✗•]\s*/, '')}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
+                          <a
+                            href={scheme.official_source_url || scheme.officialUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
+                          >
+                            View Official Scheme <ExternalLink className="w-3 h-3" />
+                          </a>
+                          <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at || scheme.lastVerified}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Target Location schemes */}
+              {targetLocationSchemes.length > 0 && (
+                <div className="space-y-4 pt-6 border-t border-slate-800/80">
+                  <h4 className="text-[10px] font-black text-teal-400 uppercase tracking-widest border-b border-slate-800 pb-2 flex items-center justify-between">
+                    <span>{(targetLocation && (targetLocation.state || targetLocation.country)) || "Target Location"} Government</span>
+                    <span className="bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[9px] px-2 py-0.5 rounded-full font-bold">
+                      {targetLocationSchemes.length} Available
+                    </span>
+                  </h4>
+
+                  <div className="space-y-4">
+                    {targetLocationSchemes.map((scheme: any, idx: number) => (
+                      <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h5 className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">{scheme.department}</h5>
+                            <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
+                          </div>
+                          {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status || scheme.eligibilityStatus)}
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
+
+                        {/* Benefits badge info */}
+                        {scheme.benefits && (
+                          <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
+                            <div className="space-y-1">
+                              {typeof scheme.benefits === 'object' ? (
+                                Object.entries(scheme.benefits).map(([bKey, bVal]) => (
+                                  <p key={bKey} className="text-slate-300">
+                                    <strong className="text-slate-400 capitalize">{bKey.replace(/_/g, ' ')}:</strong> {String(bVal)}
+                                  </p>
+                                ))
+                              ) : (
+                                <p className="text-slate-300">{scheme.benefits}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Why it matches list */}
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
+                          <div className="space-y-1">
+                            {(scheme.why_matches || scheme.whyMatches || [])?.map((matchDetail: string, mIdx: number) => {
+                              const isSuccess = matchDetail.includes('✓');
+                              const isWarning = matchDetail.includes('⚠');
+                              return (
+                                <div key={mIdx} className="text-xs text-slate-300 flex items-start gap-1.5">
+                                  {isSuccess && <span className="text-emerald-400 font-bold shrink-0">✓</span>}
+                                  {isWarning && <span className="text-amber-400 font-bold shrink-0">⚠</span>}
+                                  {!isSuccess && !isWarning && <span className="text-amber-500 shrink-0">•</span>}
+                                  <span>{matchDetail.replace(/^[✓⚠✗•]\s*/, '')}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
+                          <a
+                            href={scheme.official_source_url || scheme.officialUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
+                          >
+                            View Official Scheme <ExternalLink className="w-3 h-3" />
+                          </a>
+                          <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at || scheme.lastVerified}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
