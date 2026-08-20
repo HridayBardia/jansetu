@@ -15,9 +15,10 @@ from app.services.dependency_engine import DependencyEngine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
 
-def seed_database():
+def seed_database(drop_tables: bool = True):
     logger.info("Initializing database schema...")
-    Base.metadata.drop_all(bind=engine)
+    if drop_tables:
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -1016,6 +1017,19 @@ def seed_database():
         logger.info(f"Seeded {len(schemes_data)} government schemes successfully!")
 
         logger.info("Database seeding completed successfully!")
+    finally:
+        db.close()
+
+def seed_baseline_if_empty():
+    db = SessionLocal()
+    try:
+        if db.query(SchemeDB).count() > 0:
+            logger.info("Database already seeded with schemes. Skipping auto-seed.")
+            return
+        logger.info("Database schemes table is empty. Running baseline seed...")
+        seed_database(drop_tables=False)
+    except Exception as e:
+        logger.error(f"Error during baseline check/seed: {e}")
     finally:
         db.close()
 

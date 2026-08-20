@@ -74,6 +74,12 @@ def seed_synthetic_users():
 
 seed_synthetic_users()
 
+try:
+    from seed import seed_baseline_if_empty
+    seed_baseline_if_empty()
+except Exception as seed_err:
+    print(f"[WARN] Startup baseline seed call failed: {seed_err}")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Intelligent orchestration & guided workflow layer for Indian digital government services.",
