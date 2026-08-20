@@ -228,7 +228,7 @@ export default function JourneyDetailPage() {
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-slate-300">Step-by-Step Workflow Checklist</h3>
           <div className="space-y-3">
-            {journey.steps?.map((step: any, idx: number) => {
+            {Array.isArray(journey.steps) && journey.steps.map((step: any, idx: number) => {
               const isCompleted = step.state === 'COMPLETED';
               const isAvailable = step.state === 'AVAILABLE';
               const isLocked = step.state === 'LOCKED';
@@ -326,7 +326,7 @@ export default function JourneyDetailPage() {
           </div>
 
           <div className="space-y-4">
-            {journey.steps?.map((step: any, idx: number) => (
+            {Array.isArray(journey.steps) && journey.steps.map((step: any, idx: number) => (
               <div key={step.step_key} className="relative flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 border ${
                   step.state === 'COMPLETED'
@@ -430,7 +430,7 @@ export default function JourneyDetailPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-            {chatMessages.map((msg, idx) => (
+            {Array.isArray(chatMessages) && chatMessages.map((msg, idx) => (
               <div
                 key={idx}
                 className={`p-3 rounded-xl max-w-[85%] ${
@@ -440,7 +440,7 @@ export default function JourneyDetailPage() {
                 }`}
               >
                 <p>{msg.text}</p>
-                {msg.citations && msg.citations.length > 0 && (
+                {Array.isArray(msg.citations) && msg.citations.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-slate-800 space-y-1">
                     <span className="text-[10px] text-amber-400 font-semibold">Source Citations:</span>
                     {msg.citations.map((c: any, ci: number) => (

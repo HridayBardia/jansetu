@@ -38,6 +38,30 @@ export default function JourneyResultPage() {
   const [checkedSteps, setCheckedSteps] = useState<Record<number, boolean>>({});
   const [selectedPdfDoc, setSelectedPdfDoc] = useState<any | null>(null);
 
+  const normalizeJourneyAnalysis = (res: any): any => {
+    if (!res) return null;
+    return {
+      ...res,
+      goal: res.goal || {},
+      domicile: res.domicile || {},
+      targetLocation: res.targetLocation || null,
+      documents: {
+        have: Array.isArray(res.documents?.have) ? res.documents.have : [],
+        need: Array.isArray(res.documents?.need) ? res.documents.need : [],
+        missing: Array.isArray(res.documents?.missing) ? res.documents.missing : [],
+        conditional: Array.isArray(res.documents?.conditional) ? res.documents.conditional : []
+      },
+      schemes: {
+        central: Array.isArray(res.schemes?.central) ? res.schemes.central : [],
+        state: Array.isArray(res.schemes?.state) ? res.schemes.state : [],
+        targetLocation: Array.isArray(res.schemes?.targetLocation) ? res.schemes.targetLocation : []
+      },
+      nextSteps: Array.isArray(res.nextSteps) ? res.nextSteps : [],
+      sources: Array.isArray(res.sources) ? res.sources : [],
+      diagnostics: res.diagnostics || {}
+    };
+  };
+
   useEffect(() => {
     if (!journeyId) return;
 
@@ -50,7 +74,7 @@ export default function JourneyResultPage() {
         const stored = sessionStorage.getItem(`journey_analysis_${journeyId}`);
         if (stored) {
           try {
-            setAnalysisData(JSON.parse(stored));
+            setAnalysisData(normalizeJourneyAnalysis(JSON.parse(stored)));
             setLoading(false);
             return;
           } catch (e) {
@@ -61,7 +85,7 @@ export default function JourneyResultPage() {
         // 2. Fetch from DB singular endpoint
         const res = await fetchJourneyAnalysisAPI(journeyId);
         if (res) {
-          setAnalysisData(res);
+          setAnalysisData(normalizeJourneyAnalysis(res));
         } else {
           setError("We couldn't retrieve your journey analysis. Please try again.");
         }
@@ -118,9 +142,9 @@ export default function JourneyResultPage() {
   const neededDocsList = documents?.need || [];
   
   // Group needed documents by priority
-  const requiredDocs = neededDocsList.filter((d: any) => d.priority === 'Required');
-  const conditionalDocs = neededDocsList.filter((d: any) => d.priority === 'Conditional');
-  const recommendedDocs = neededDocsList.filter((d: any) => d.priority === 'Recommended');
+  const requiredDocs = Array.isArray(neededDocsList) ? neededDocsList.filter((d: any) => d?.priority === 'Required') : [];
+  const conditionalDocs = Array.isArray(neededDocsList) ? neededDocsList.filter((d: any) => d?.priority === 'Conditional') : [];
+  const recommendedDocs = Array.isArray(neededDocsList) ? neededDocsList.filter((d: any) => d?.priority === 'Recommended') : [];
 
   const centralSchemes = schemes?.central || [];
   const stateSchemes = schemes?.state || [];
@@ -326,8 +350,8 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
             </p>
           </div>
 
-          {haveDocs.length === 0 ? (
-            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-8 text-center max-w-lg mx-auto">
+          {(!Array.isArray(haveDocs) || haveDocs.length === 0) ? (
+            <div className="bg-slate-950 border border-slate-855 rounded-2xl p-8 text-center max-w-lg mx-auto">
               <FileText className="w-10 h-10 text-slate-600 mx-auto mb-3" />
               <p className="text-slate-400 text-xs font-semibold">No matching verified documents currently in your vault.</p>
               <p className="text-[11px] text-slate-500 mt-1">Upload files directly to your vault to enable automatic matching.</p>
@@ -335,31 +359,31 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {haveDocs.map((doc: any, idx: number) => (
-                <div key={idx} className="bg-slate-950 border border-slate-850 hover:border-slate-750 transition duration-300 rounded-2xl p-5 flex flex-col justify-between gap-4">
+                <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-750 transition duration-300 rounded-2xl p-5 flex flex-col justify-between gap-4">
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="text-xs font-extrabold text-slate-400 tracking-wider uppercase">{doc.type}</h4>
-                        <h5 className="text-sm font-black text-white leading-snug mt-0.5">{doc.name}</h5>
+                        <h4 className="text-xs font-extrabold text-slate-400 tracking-wider uppercase">{doc?.type || doc?.document_type}</h4>
+                        <h5 className="text-sm font-black text-white leading-snug mt-0.5">{doc?.name}</h5>
                       </div>
                       <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        <span>{doc.status}</span>
+                        <span>{doc?.status}</span>
                       </span>
                     </div>
 
                     <div className="space-y-1.5 text-xs text-slate-400 leading-relaxed pt-1">
-                      <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc.issuing_authority || 'Government Authority'}</p>
-                      <p><strong className="text-slate-300 font-semibold">Masked Number:</strong> <span className="font-mono">{doc.masked_document_number}</span></p>
-                      <p><strong className="text-slate-300 font-semibold">Relevance:</strong> {doc.why_it_matches || doc.description}</p>
-                      {doc.issue_date && <p><strong className="text-slate-300 font-semibold">Issued:</strong> {doc.issue_date}</p>}
-                      {doc.expiry_date && <p><strong className="text-slate-300 font-semibold">Expiry:</strong> {doc.expiry_date}</p>}
+                      <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc?.issuing_authority || doc?.issuer || 'Government Authority'}</p>
+                      <p><strong className="text-slate-300 font-semibold">Masked Number:</strong> <span className="font-mono">{doc?.masked_document_number || doc?.masked_number}</span></p>
+                      <p><strong className="text-slate-300 font-semibold">Relevance:</strong> {doc?.why_it_matches || doc?.description}</p>
+                      {doc?.issue_date && <p><strong className="text-slate-300 font-semibold">Issued:</strong> {doc?.issue_date}</p>}
+                      {doc?.expiry_date && <p><strong className="text-slate-300 font-semibold">Expiry:</strong> {doc?.expiry_date}</p>}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-900 text-[10px]">
                     <a
-                      href={doc.source || '#'}
+                      href={doc?.source || doc?.official_source || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
@@ -397,7 +421,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
             </p>
           </div>
 
-          {neededDocsList.length === 0 ? (
+          {(!Array.isArray(neededDocsList) || neededDocsList.length === 0) ? (
             <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 text-center max-w-lg mx-auto">
               <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
               <p className="text-emerald-400 text-xs font-bold">✓ Complete Vault Ready!</p>
@@ -407,7 +431,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
             <div className="space-y-6">
               
               {/* Group 1: Required */}
-              {requiredDocs.length > 0 && (
+              {Array.isArray(requiredDocs) && requiredDocs.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest border-b border-red-500/20 pb-1.5 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -418,21 +442,21 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                       <div key={idx} className="bg-slate-950 border border-slate-850 hover:border-slate-750 transition duration-300 rounded-2xl p-5 flex flex-col justify-between gap-4">
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-3">
-                            <h5 className="text-sm font-black text-white leading-snug">{doc.name}</h5>
+                            <h5 className="text-sm font-black text-white leading-snug">{doc?.name}</h5>
                             <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
                               REQUIRED
                             </span>
                           </div>
                           <div className="space-y-1.5 text-xs text-slate-400 leading-relaxed pt-1">
-                            <p><strong className="text-slate-300 font-semibold">Why:</strong> {doc.reason}</p>
-                            <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc.authority}</p>
-                            <p><strong className="text-slate-300 font-semibold">How to obtain:</strong> {doc.how_to}</p>
-                            <p><strong className="text-slate-300 font-semibold">Processing time:</strong> {doc.processing_time}</p>
+                            <p><strong className="text-slate-300 font-semibold">Why:</strong> {doc?.reason}</p>
+                            <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc?.authority}</p>
+                            <p><strong className="text-slate-300 font-semibold">How to obtain:</strong> {doc?.how_to}</p>
+                            <p><strong className="text-slate-300 font-semibold">Processing time:</strong> {doc?.processing_time}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                           <a
-                            href={doc.official_source || '#'}
+                            href={doc?.official_source || doc?.officialUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
@@ -445,9 +469,9 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                   </div>
                 </div>
               )}
-
+ 
               {/* Group 2: Conditional */}
-              {conditionalDocs.length > 0 && (
+              {Array.isArray(conditionalDocs) && conditionalDocs.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-widest border-b border-amber-500/20 pb-1.5 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -458,21 +482,21 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                       <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-750 transition duration-300 rounded-2xl p-5 flex flex-col justify-between gap-4">
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-3">
-                            <h5 className="text-sm font-black text-white leading-snug">{doc.name}</h5>
+                            <h5 className="text-sm font-black text-white leading-snug">{doc?.name}</h5>
                             <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
                               CONDITIONAL
                             </span>
                           </div>
                           <div className="space-y-1.5 text-xs text-slate-400 leading-relaxed pt-1">
-                            <p><strong className="text-slate-300 font-semibold">Condition:</strong> {doc.reason}</p>
-                            <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc.authority}</p>
-                            <p><strong className="text-slate-300 font-semibold">How to obtain:</strong> {doc.how_to}</p>
-                            <p><strong className="text-slate-300 font-semibold">Processing time:</strong> {doc.processing_time}</p>
+                            <p><strong className="text-slate-300 font-semibold">Condition:</strong> {doc?.reason}</p>
+                            <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc?.authority}</p>
+                            <p><strong className="text-slate-300 font-semibold">How to obtain:</strong> {doc?.how_to}</p>
+                            <p><strong className="text-slate-300 font-semibold">Processing time:</strong> {doc?.processing_time}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                           <a
-                            href={doc.official_source || '#'}
+                            href={doc?.official_source || doc?.officialUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
@@ -485,9 +509,9 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                   </div>
                 </div>
               )}
-
+ 
               {/* Group 3: Recommended */}
-              {recommendedDocs.length > 0 && (
+              {Array.isArray(recommendedDocs) && recommendedDocs.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-slate-600" />
@@ -498,21 +522,21 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                       <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-750 transition duration-300 rounded-2xl p-5 flex flex-col justify-between gap-4">
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-3">
-                            <h5 className="text-sm font-black text-white leading-snug">{doc.name}</h5>
+                            <h5 className="text-sm font-black text-white leading-snug">{doc?.name}</h5>
                             <span className="bg-slate-800 text-slate-400 border border-slate-700 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
                               RECOMMENDED
                             </span>
                           </div>
                           <div className="space-y-1.5 text-xs text-slate-400 leading-relaxed pt-1">
-                            <p><strong className="text-slate-300 font-semibold">Advantage:</strong> {doc.reason}</p>
-                            <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc.authority}</p>
-                            <p><strong className="text-slate-300 font-semibold">How to obtain:</strong> {doc.how_to}</p>
-                            <p><strong className="text-slate-300 font-semibold">Processing time:</strong> {doc.processing_time}</p>
+                            <p><strong className="text-slate-300 font-semibold">Advantage:</strong> {doc?.reason}</p>
+                            <p><strong className="text-slate-300 font-semibold">Authority:</strong> {doc?.authority}</p>
+                            <p><strong className="text-slate-300 font-semibold">How to obtain:</strong> {doc?.how_to}</p>
+                            <p><strong className="text-slate-300 font-semibold">Processing time:</strong> {doc?.processing_time}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                           <a
-                            href={doc.official_source || '#'}
+                            href={doc?.official_source || doc?.officialUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
@@ -525,7 +549,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                   </div>
                 </div>
               )}
-
+ 
             </div>
           )}
         </div>
@@ -568,20 +592,20 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {centralSchemes.map((scheme: any, idx: number) => (
+                  {Array.isArray(centralSchemes) && centralSchemes.map((scheme: any, idx: number) => (
                     <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h5 className="text-xs font-extrabold text-blue-400 uppercase tracking-wider">{scheme.department}</h5>
-                          <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
+                          <h5 className="text-xs font-extrabold text-blue-400 uppercase tracking-wider">{scheme?.department}</h5>
+                          <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme?.name}</h6>
                         </div>
-                        {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status || scheme.eligibilityStatus)}
+                        {getSchemeEligibilityBadge(scheme?.match_status || scheme?.eligibility_status || scheme?.eligibilityStatus)}
                       </div>
 
-                      <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">{scheme?.description}</p>
 
                       {/* Benefits badge info */}
-                      {scheme.benefits && (
+                      {scheme?.benefits && (
                         <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
                           <div className="space-y-1">
@@ -592,7 +616,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                                 </p>
                               ))
                             ) : (
-                              <p className="text-slate-300">{scheme.benefits}</p>
+                              <p className="text-slate-300">{scheme?.benefits}</p>
                             )}
                           </div>
                         </div>
@@ -602,15 +626,16 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                       <div className="space-y-1.5 pt-1">
                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                         <div className="space-y-1">
-                          {(scheme.why_matches || scheme.whyMatches || [])?.map((matchDetail: string, mIdx: number) => {
-                            const isSuccess = matchDetail.includes('✓');
-                            const isWarning = matchDetail.includes('⚠');
+                          {(scheme?.why_matches || scheme?.whyMatches || [])?.map((matchDetail: any, mIdx: number) => {
+                            const detailStr = typeof matchDetail === 'string' ? matchDetail : String(matchDetail || '');
+                            const isSuccess = detailStr.includes('✓');
+                            const isWarning = detailStr.includes('⚠');
                             return (
                               <div key={mIdx} className="text-xs text-slate-300 flex items-start gap-1.5">
                                 {isSuccess && <span className="text-emerald-400 font-bold shrink-0">✓</span>}
                                 {isWarning && <span className="text-amber-400 font-bold shrink-0">⚠</span>}
                                 {!isSuccess && !isWarning && <span className="text-amber-500 shrink-0">•</span>}
-                                <span>{matchDetail.replace(/^[✓⚠✗•]\s*/, '')}</span>
+                                <span>{detailStr.replace(/^[✓⚠✗•]\s*/, '')}</span>
                               </div>
                             );
                           })}
@@ -619,14 +644,14 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
 
                       <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                         <a
-                          href={scheme.official_source_url || scheme.officialUrl}
+                          href={scheme?.official_source_url || scheme?.officialUrl || '#'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
                         >
                           View Official Scheme <ExternalLink className="w-3 h-3" />
                         </a>
-                        <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at || scheme.lastVerified}</span>
+                        <span className="text-slate-500 font-semibold">Verified: {scheme?.last_verified_at || scheme?.lastVerified}</span>
                       </div>
                     </div>
                   ))}
@@ -656,20 +681,20 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {stateSchemes.map((scheme: any, idx: number) => (
+                    {Array.isArray(stateSchemes) && stateSchemes.map((scheme: any, idx: number) => (
                       <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <h5 className="text-xs font-extrabold text-orange-400 uppercase tracking-wider">{scheme.department}</h5>
-                            <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
+                            <h5 className="text-xs font-extrabold text-orange-400 uppercase tracking-wider">{scheme?.department}</h5>
+                            <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme?.name}</h6>
                           </div>
-                          {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status || scheme.eligibilityStatus)}
+                          {getSchemeEligibilityBadge(scheme?.match_status || scheme?.eligibility_status || scheme?.eligibilityStatus)}
                         </div>
 
-                        <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
+                        <p className="text-xs text-slate-400 leading-relaxed">{scheme?.description}</p>
 
                         {/* Benefits badge info */}
-                        {scheme.benefits && (
+                        {scheme?.benefits && (
                           <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
                             <div className="space-y-1">
@@ -680,7 +705,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                                   </p>
                                 ))
                               ) : (
-                                <p className="text-slate-300">{scheme.benefits}</p>
+                                <p className="text-slate-300">{scheme?.benefits}</p>
                               )}
                             </div>
                           </div>
@@ -690,15 +715,16 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                         <div className="space-y-1.5 pt-1">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                           <div className="space-y-1">
-                            {(scheme.why_matches || scheme.whyMatches || [])?.map((matchDetail: string, mIdx: number) => {
-                              const isSuccess = matchDetail.includes('✓');
-                              const isWarning = matchDetail.includes('⚠');
+                            {(scheme?.why_matches || scheme?.whyMatches || [])?.map((matchDetail: any, mIdx: number) => {
+                              const detailStr = typeof matchDetail === 'string' ? matchDetail : String(matchDetail || '');
+                              const isSuccess = detailStr.includes('✓');
+                              const isWarning = detailStr.includes('⚠');
                               return (
                                 <div key={mIdx} className="text-xs text-slate-300 flex items-start gap-1.5">
                                   {isSuccess && <span className="text-emerald-400 font-bold shrink-0">✓</span>}
                                   {isWarning && <span className="text-amber-400 font-bold shrink-0">⚠</span>}
                                   {!isSuccess && !isWarning && <span className="text-amber-500 shrink-0">•</span>}
-                                  <span>{matchDetail.replace(/^[✓⚠✗•]\s*/, '')}</span>
+                                  <span>{detailStr.replace(/^[✓⚠✗•]\s*/, '')}</span>
                                 </div>
                               );
                             })}
@@ -707,14 +733,14 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
 
                         <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                           <a
-                            href={scheme.official_source_url || scheme.officialUrl}
+                            href={scheme?.official_source_url || scheme?.officialUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
                           >
                             View Official Scheme <ExternalLink className="w-3 h-3" />
                           </a>
-                          <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at || scheme.lastVerified}</span>
+                          <span className="text-slate-500 font-semibold">Verified: {scheme?.last_verified_at || scheme?.lastVerified}</span>
                         </div>
                       </div>
                     ))}
@@ -733,20 +759,20 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                   </h4>
 
                   <div className="space-y-4">
-                    {targetLocationSchemes.map((scheme: any, idx: number) => (
+                    {Array.isArray(targetLocationSchemes) && targetLocationSchemes.map((scheme: any, idx: number) => (
                       <div key={idx} className="bg-slate-950 border border-slate-855 hover:border-slate-800 transition duration-300 rounded-2xl p-5 space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <h5 className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">{scheme.department}</h5>
-                            <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme.name}</h6>
+                            <h5 className="text-xs font-extrabold text-teal-400 uppercase tracking-wider">{scheme?.department}</h5>
+                            <h6 className="text-sm font-black text-white leading-snug mt-0.5">{scheme?.name}</h6>
                           </div>
-                          {getSchemeEligibilityBadge(scheme.match_status || scheme.eligibility_status || scheme.eligibilityStatus)}
+                          {getSchemeEligibilityBadge(scheme?.match_status || scheme?.eligibility_status || scheme?.eligibilityStatus)}
                         </div>
 
-                        <p className="text-xs text-slate-400 leading-relaxed">{scheme.description}</p>
+                        <p className="text-xs text-slate-400 leading-relaxed">{scheme?.description}</p>
 
                         {/* Benefits badge info */}
-                        {scheme.benefits && (
+                        {scheme?.benefits && (
                           <div className="bg-slate-900/60 border border-slate-855 rounded-xl p-3 text-xs">
                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Potential Benefits</span>
                             <div className="space-y-1">
@@ -757,7 +783,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                                   </p>
                                 ))
                               ) : (
-                                <p className="text-slate-300">{scheme.benefits}</p>
+                                <p className="text-slate-300">{scheme?.benefits}</p>
                               )}
                             </div>
                           </div>
@@ -767,15 +793,16 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                         <div className="space-y-1.5 pt-1">
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block">Why this appears</span>
                           <div className="space-y-1">
-                            {(scheme.why_matches || scheme.whyMatches || [])?.map((matchDetail: string, mIdx: number) => {
-                              const isSuccess = matchDetail.includes('✓');
-                              const isWarning = matchDetail.includes('⚠');
+                            {(scheme?.why_matches || scheme?.whyMatches || [])?.map((matchDetail: any, mIdx: number) => {
+                              const detailStr = typeof matchDetail === 'string' ? matchDetail : String(matchDetail || '');
+                              const isSuccess = detailStr.includes('✓');
+                              const isWarning = detailStr.includes('⚠');
                               return (
                                 <div key={mIdx} className="text-xs text-slate-300 flex items-start gap-1.5">
                                   {isSuccess && <span className="text-emerald-400 font-bold shrink-0">✓</span>}
                                   {isWarning && <span className="text-amber-400 font-bold shrink-0">⚠</span>}
                                   {!isSuccess && !isWarning && <span className="text-amber-500 shrink-0">•</span>}
-                                  <span>{matchDetail.replace(/^[✓⚠✗•]\s*/, '')}</span>
+                                  <span>{detailStr.replace(/^[✓⚠✗•]\s*/, '')}</span>
                                 </div>
                               );
                             })}
@@ -784,14 +811,14 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
 
                         <div className="flex items-center justify-between text-[10px] pt-3 border-t border-slate-900">
                           <a
-                            href={scheme.official_source_url || scheme.officialUrl}
+                            href={scheme?.official_source_url || scheme?.officialUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold transition"
                           >
                             View Official Scheme <ExternalLink className="w-3 h-3" />
                           </a>
-                          <span className="text-slate-500 font-semibold">Verified: {scheme.last_verified_at || scheme.lastVerified}</span>
+                          <span className="text-slate-500 font-semibold">Verified: {scheme?.last_verified_at || scheme?.lastVerified}</span>
                         </div>
                       </div>
                     ))}
@@ -819,13 +846,13 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
             </div>
             
             <div className="space-y-3 pt-2">
-              {nextSteps.map((step: string, idx: number) => (
+              {Array.isArray(nextSteps) && nextSteps.map((step: string, idx: number) => (
                 <label 
                   key={idx} 
                   className={`flex items-start gap-3 p-3.5 rounded-xl border transition duration-200 cursor-pointer select-none ${
                     checkedSteps[idx] 
                       ? 'bg-slate-950 border-emerald-500/20 text-slate-500' 
-                      : 'bg-slate-950 border-slate-850 hover:border-slate-750 text-white'
+                      : 'bg-slate-950 border-slate-855 hover:border-slate-750 text-white'
                   }`}
                 >
                   <input
@@ -835,7 +862,7 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
                     className="w-4 h-4 mt-0.5 rounded border-slate-800 bg-slate-950 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-950 cursor-pointer"
                   />
                   <span className={`text-xs ${checkedSteps[idx] ? 'line-through' : ''}`}>
-                    {step}
+                    {String(step || '')}
                   </span>
                 </label>
               ))}
@@ -856,19 +883,19 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
               </div>
 
               <div className="space-y-3 pt-2">
-                {sources.map((source: any, idx: number) => (
-                  <div key={idx} className="bg-slate-950 border border-slate-850 rounded-xl p-3.5 space-y-1">
+                {Array.isArray(sources) && sources.map((source: any, idx: number) => (
+                  <div key={idx} className="bg-slate-950 border border-slate-855 rounded-xl p-3.5 space-y-1">
                     <a 
-                      href={source.url}
+                      href={source?.url || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-bold text-white hover:text-amber-500 flex items-center gap-1.5 group transition-colors"
                     >
-                      <span className="truncate">{source.name}</span>
+                      <span className="truncate">{source?.name}</span>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-500 shrink-0 transition-colors" />
                     </a>
                     <span className="text-[9px] text-slate-500 uppercase block tracking-wider font-bold">
-                      Last Checked: {source.last_verified}
+                      Last Checked: {source?.last_verified || source?.lastVerified}
                     </span>
                   </div>
                 ))}
