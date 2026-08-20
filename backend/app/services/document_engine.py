@@ -356,14 +356,47 @@ class DocumentConsistencyEngine:
 class DocumentRequirementMatcher:
     """Matches Citizen Document Inventory against Government Goal requirements"""
 
+    SATISFYING_TYPES: Dict[str, List[str]] = {
+        "AADHAAR": ["AADHAAR"],
+        "PAN": ["PAN"],
+        "PASSPORT": ["PASSPORT"],
+        "DRIVING_LICENCE": ["DRIVING_LICENCE"],
+        "INCOME_CERTIFICATE": ["INCOME_CERTIFICATE"],
+        "DOMICILE_CERTIFICATE": ["DOMICILE_CERTIFICATE"],
+        "10TH_MARKSHEET": ["10TH_MARKSHEET"],
+        "12TH_MARKSHEET": ["12TH_MARKSHEET"],
+        "MARKSHEET": ["MARKSHEET"],
+        "RENT_AGREEMENT": ["RENT_AGREEMENT"],
+        "GST_CERTIFICATE": ["GST_CERTIFICATE"],
+        "UDYAM_CERTIFICATE": ["UDYAM_CERTIFICATE"],
+        "FSSAI_LICENSE": ["FSSAI_LICENSE"],
+        "TRADE_LICENSE": ["TRADE_LICENSE"],
+        "FIRE_NOC": ["FIRE_NOC"],
+        "ENGLISH_TEST": ["ENGLISH_TEST"],
+        "FINANCIAL_DOCUMENTS": ["FINANCIAL_DOCUMENTS"],
+        "MEDICAL_CERTIFICATE": ["MEDICAL_CERTIFICATE"],
+        "LAND_RECORD": ["LAND_RECORD"],
+        "BANK_PROOF": ["BANK_PROOF", "BANK_DOCUMENT"],
+        "BANK_DOCUMENT": ["BANK_DOCUMENT", "BANK_PROOF"],
+        
+        # Generic semantic categories
+        "IDENTITY_PROOF": ["AADHAAR", "PASSPORT", "PAN", "VOTER_ID", "DRIVING_LICENCE"],
+        "ADDRESS_PROOF": ["AADHAAR", "DOMICILE_CERTIFICATE", "PASSPORT", "VOTER_ID", "DRIVING_LICENCE", "RENT_AGREEMENT"],
+        "RESIDENCE_PROOF": ["DOMICILE_CERTIFICATE", "AADHAAR", "PASSPORT", "VOTER_ID", "DRIVING_LICENCE"],
+        "PROOF_OF_DOB": ["BIRTH_CERTIFICATE", "10TH_MARKSHEET", "PASSPORT", "AADHAAR"],
+        "ACADEMIC_QUALIFICATION": ["MARKSHEET", "12TH_MARKSHEET", "10TH_MARKSHEET"],
+        "DEGREE_CERTIFICATE": ["MARKSHEET"]
+    }
+
     GOAL_REQUIREMENTS: Dict[str, Dict[str, Any]] = {
         "business": {
             "title": "Starting a Business",
             "mandatory": [
-                {"type": "AADHAAR", "name": "Aadhaar Card of Proprietor / Director", "issuer": "UIDAI"},
-                {"type": "PAN", "name": "PAN Card of Entity / Proprietor", "issuer": "Income Tax Dept"}
+                {"type": "AADHAAR", "name": "Aadhaar Card", "issuer": "UIDAI"},
+                {"type": "PAN", "name": "PAN Card", "issuer": "Income Tax Dept"}
             ],
             "conditional": [
+                {"type": "RENT_AGREEMENT", "name": "Premises Rent Agreement", "issuer": "Revenue Dept"},
                 {"type": "GST_CERTIFICATE", "name": "GSTIN Tax Certificate (Required if annual turnover > ₹20L)", "issuer": "GST Council"},
                 {"type": "UDYAM_CERTIFICATE", "name": "Udyam MSME Registration (Recommended for bank loans & subsidies)", "issuer": "Ministry of MSME"}
             ],
@@ -374,24 +407,99 @@ class DocumentRequirementMatcher:
         "education": {
             "title": "Education Funding & Scholarships",
             "mandatory": [
-                {"type": "AADHAAR", "name": "Aadhaar Card of Student", "issuer": "UIDAI"},
-                {"type": "MARKSHEET", "name": "10th & 12th Academic Marksheet / Pass Certificate", "issuer": "Education Board"},
-                {"type": "INCOME_CERTIFICATE", "name": "Family Income Certificate", "issuer": "Revenue Dept / Tehsildar"}
+                {"type": "AADHAAR", "name": "Aadhaar Card", "issuer": "UIDAI"},
+                {"type": "10TH_MARKSHEET", "name": "10th Marksheet", "issuer": "Education Board"},
+                {"type": "12TH_MARKSHEET", "name": "12th Marksheet", "issuer": "Education Board"},
+                {"type": "INCOME_CERTIFICATE", "name": "Family Income Certificate", "issuer": "Revenue Dept"},
+                {"type": "DOMICILE_CERTIFICATE", "name": "State Domicile Certificate", "issuer": "State Revenue Dept"}
             ],
-            "conditional": [
-                {"type": "DOMICILE_CERTIFICATE", "name": "State Domicile Certificate (Required for State Fee Reimbursement)", "issuer": "State Revenue Dept"}
-            ],
+            "conditional": [],
             "optional": [
                 {"type": "BANK_DOCUMENT", "name": "Student Bank Passbook / Cheque", "issuer": "Bank"}
             ]
+        },
+        "study_abroad": {
+            "title": "Study Abroad / Masters International Education",
+            "mandatory": [
+                {"type": "AADHAAR", "name": "Aadhaar Card", "issuer": "UIDAI"},
+                {"type": "PAN", "name": "PAN Card", "issuer": "Income Tax Dept"},
+                {"type": "PASSPORT", "name": "Passport", "issuer": "Ministry of External Affairs"},
+                {"type": "10TH_MARKSHEET", "name": "10th Marksheet", "issuer": "Education Board"},
+                {"type": "12TH_MARKSHEET", "name": "12th Marksheet", "issuer": "Education Board"},
+                {"type": "ACADEMIC_TRANSCRIPTS", "name": "Academic transcripts", "issuer": "University"}
+            ],
+            "conditional": [
+                {"type": "ENGLISH_TEST", "name": "English proficiency result", "issuer": "IDP / Pearson"},
+                {"type": "FINANCIAL_DOCUMENTS", "name": "Financial documents", "issuer": "Commercial Bank"}
+            ],
+            "optional": [
+                {"type": "MARKSHEET", "name": "Degree / provisional certificate", "issuer": "University"}
+            ]
+        },
+        "driving_licence": {
+            "title": "Driving Licence Application & Renewal",
+            "mandatory": [
+                {"type": "AADHAAR", "name": "Aadhaar Card", "issuer": "UIDAI"},
+                {"type": "DRIVING_LICENCE", "name": "Driving Licence", "issuer": "RTO"}
+            ],
+            "conditional": [
+                {"type": "MEDICAL_CERTIFICATE", "name": "Medical Certificate (Form 1A)", "issuer": "Registered Medical Practitioner"}
+            ],
+            "optional": []
+        },
+        "farmer_benefits": {
+            "title": "Farmer Assistance & Subsidies",
+            "mandatory": [
+                {"type": "AADHAAR", "name": "Aadhaar Card", "issuer": "UIDAI"},
+                {"type": "LAND_RECORD", "name": "Land Ownership Record (Patta/Jamabandi)", "issuer": "Revenue Dept"},
+                {"type": "BANK_PROOF", "name": "Bank Passbook", "issuer": "Commercial Bank"}
+            ],
+            "conditional": [],
+            "optional": [
+                {"type": "PAN", "name": "PAN Card", "issuer": "Income Tax Dept"}
+            ]
+        },
+        "certificates": {
+            "title": "Official Certificate Issuance",
+            "mandatory": [
+                {"type": "AADHAAR", "name": "Aadhaar Card", "issuer": "UIDAI"},
+                {"type": "DOMICILE_CERTIFICATE", "name": "Domicile Certificate", "issuer": "Revenue Dept"}
+            ],
+            "conditional": [
+                {"type": "INCOME_CERTIFICATE", "name": "Income Certificate", "issuer": "Revenue Dept"},
+                {"type": "CASTE_CERTIFICATE", "name": "Caste Certificate", "issuer": "Revenue Dept"}
+            ],
+            "optional": []
         }
     }
 
     @classmethod
-    def match_inventory(cls, goal_key: str, available_documents: List[Dict[str, Any]]) -> Dict[str, Any]:
-        req_set = cls.GOAL_REQUIREMENTS.get(goal_key.lower(), cls.GOAL_REQUIREMENTS["business"])
+    def get_goal_key(cls, category: str) -> str:
+        cat_lower = category.lower()
+        if "abroad" in cat_lower or "international" in cat_lower or cat_lower == "study_abroad":
+            return "study_abroad"
+        elif "scholarship" in cat_lower or cat_lower == "education":
+            return "education"
+        elif "business" in cat_lower or "restaurant" in cat_lower:
+            return "business"
+        elif "driving" in cat_lower or cat_lower == "driving_licence":
+            return "driving_licence"
+        elif "farmer" in cat_lower or "agri" in cat_lower or cat_lower == "farmer_benefits":
+            return "farmer_benefits"
+        elif "certificate" in cat_lower or cat_lower == "domicile_certificate":
+            return "certificates"
+        return "business" # fallback
 
-        user_types = {d.get("document_type", "").upper(): d for d in available_documents}
+    @classmethod
+    def match_inventory(cls, goal_key: str, available_documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+        mapped_key = cls.get_goal_key(goal_key)
+        req_set = cls.GOAL_REQUIREMENTS.get(mapped_key, cls.GOAL_REQUIREMENTS["business"])
+
+        # Indexed user document dictionary by uppercase document type
+        user_docs_by_type = {}
+        for d in available_documents:
+            dtype = d.get("document_type", "").upper()
+            user_docs_by_type[dtype] = d
 
         available_list = []
         missing_list = []
@@ -399,12 +507,21 @@ class DocumentRequirementMatcher:
         review_list = []
         conditional_list = []
 
+        # Helper to check semantic satisfaction
+        def find_satisfying_doc(req_type: str) -> Optional[Dict[str, Any]]:
+            satisfying = cls.SATISFYING_TYPES.get(req_type.upper(), [req_type.upper()])
+            for t in satisfying:
+                if t in user_docs_by_type:
+                    return user_docs_by_type[t]
+            return None
+
+        # Match mandatory documents
         for req in req_set["mandatory"]:
             rtype = req["type"]
-            if rtype in user_types:
-                user_doc = user_types[rtype]
-                estatus = user_doc.get("expiry_status", "VALID")
-                cstatus = user_doc.get("verification_status", "USER_PROVIDED")
+            matched_doc = find_satisfying_doc(rtype)
+            if matched_doc:
+                estatus = matched_doc.get("expiry_status", "VALID")
+                cstatus = matched_doc.get("verification_status", "USER_PROVIDED")
 
                 if estatus == "EXPIRED":
                     expired_list.append({
@@ -419,8 +536,8 @@ class DocumentRequirementMatcher:
                         "type": rtype,
                         "status": "AVAILABLE",
                         "verification_status": cstatus,
-                        "is_synthetic": user_doc.get("is_synthetic", False),
-                        "synthetic_notice": user_doc.get("synthetic_notice")
+                        "is_synthetic": matched_doc.get("is_synthetic", False),
+                        "synthetic_notice": matched_doc.get("synthetic_notice")
                     })
             else:
                 missing_list.append({
@@ -431,15 +548,16 @@ class DocumentRequirementMatcher:
                     "acquisition_guide": f"Obtain from official {req['issuer']} portal or local Seva Kendra."
                 })
 
+        # Match conditional documents
         for req in req_set["conditional"]:
             rtype = req["type"]
-            if rtype in user_types:
-                user_doc = user_types[rtype]
+            matched_doc = find_satisfying_doc(rtype)
+            if matched_doc:
                 available_list.append({
                     "name": req["name"],
                     "type": rtype,
                     "status": "AVAILABLE",
-                    "verification_status": user_doc.get("verification_status", "USER_PROVIDED")
+                    "verification_status": matched_doc.get("verification_status", "USER_PROVIDED")
                 })
             else:
                 conditional_list.append({
@@ -449,6 +567,23 @@ class DocumentRequirementMatcher:
                     "official_issuer": req["issuer"]
                 })
 
+        # Match optional documents (categorized under conditional in matching)
+        for req in req_set.get("optional", []):
+            rtype = req["type"]
+            matched_doc = find_satisfying_doc(rtype)
+            if matched_doc:
+                available_list.append({
+                    "name": req["name"],
+                    "type": rtype,
+                    "status": "AVAILABLE",
+                    "verification_status": matched_doc.get("verification_status", "USER_PROVIDED")
+                })
+
+        # Calculate progress: based on satisfied mandatory requirements
+        total_reqs = len(req_set["mandatory"])
+        satisfied_reqs = sum(1 for req in req_set["mandatory"] if find_satisfying_doc(req["type"]))
+        readiness_pct = int((satisfied_reqs / (total_reqs or 1)) * 100)
+
         return {
             "goal": goal_key,
             "available_documents": available_list,
@@ -456,7 +591,7 @@ class DocumentRequirementMatcher:
             "expired_documents": expired_list,
             "review_required_documents": review_list,
             "conditional_documents": conditional_list,
-            "readiness_percentage": int((len(available_list) / (len(req_set["mandatory"]) or 1)) * 100)
+            "readiness_percentage": readiness_pct
         }
 
 class DocumentGraphEngine:

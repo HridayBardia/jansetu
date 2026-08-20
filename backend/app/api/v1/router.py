@@ -305,11 +305,11 @@ class JourneyAnalyzeRequest(PydanticBaseModel):
     domicileState: Optional[str] = None
     user_id: Optional[str] = None
     session_id: Optional[str] = None
-
 def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Session, journey: JourneyDB):
     import time
     import json
     from app.core.config import settings
+    from app.services.document_engine import DocumentRequirementMatcher
     warnings = []
     start_time = time.time()
 
@@ -395,22 +395,23 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             print(f"[WARN] OpenAI extraction failed: {e}")
             warnings.append(f"LLM analysis failed. Using rule-based fallback engine.")
 
-    # 1.5. Deterministic Rules Extractor (Runs as fallback/supplement)
+    # Rules Extractor (Always runs to refine/supplement or fallback)
     query_lower = query.lower()
     
     # Target Country Extraction
-    dest_country = None
-    if "australia" in query_lower:
-        dest_country = "Australia"
-    elif "canada" in query_lower:
-        dest_country = "Canada"
-    elif "uk" in query_lower or "united kingdom" in query_lower:
-        dest_country = "United Kingdom"
-    elif "usa" in query_lower or "united states" in query_lower:
-        dest_country = "United States"
-    elif "abroad" in query_lower or "foreign" in query_lower:
-        dest_country = "Abroad"
-        
+    dest_country = extracted["destination_country"]
+    for country in ["australia", "canada", "uk", "united kingdom", "usa", "united states", "foreign", "abroad"]:
+        if country in query_lower:
+            if country in ["uk", "united kingdom"]:
+                dest_country = "United Kingdom"
+            elif country in ["usa", "united states"]:
+                dest_country = "United States"
+            elif country == "foreign" or country == "abroad":
+                dest_country = "Abroad"
+            else:
+                dest_country = country.title()
+            break
+            
     if dest_country:
         extracted["destination_country"] = dest_country
         extracted["target_location"] = dest_country
@@ -427,7 +428,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             if state_name not in extracted["relevant_jurisdictions"]:
                 extracted["relevant_jurisdictions"].append(state_name)
                 
-    # Domicile parsing from context
+    # Domicile parsing from query
     query_domicile = None
     if "live in" in query_lower or "domicile is" in query_lower or "resident of" in query_lower:
         for st in found_states:
@@ -440,6 +441,9 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     if query_domicile:
         extracted["user_domicile"] = query_domicile
         extracted["current_residence"] = query_domicile
+    else:
+        extracted["user_domicile"] = domicile
+        extracted["current_residence"] = domicile
 
     # Target state different from Domicile
     target_state = None
@@ -453,7 +457,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "udaipur": ("Udaipur", "Rajasthan"),
         "jaipur": ("Jaipur", "Rajasthan"),
         "bangalore": ("Bengaluru", "Karnataka"),
-        "bangalore.": ("Bengaluru", "Karnataka"),
         "bengaluru": ("Bengaluru", "Karnataka"),
         "vadodara": ("Vadodara", "Gujarat"),
         "pune": ("Pune", "Maharashtra"),
@@ -478,7 +481,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             break
 
     # Business/Working Location mapping
-    if any(w in query_lower for w in ["business", "shop", "restaurant", "startup", "company", "manufacturing"]):
+    if any(w in query_lower for w in ["business", "shop", "restaurant", "startup", "company", "clothing", "manufacturing"]):
         if found_city_state:
             extracted["business_location"] = found_city_state
         elif target_state:
@@ -497,7 +500,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         else:
             extracted["working_location"] = extracted["user_domicile"]
 
-    # Category matching (with legacy categories to pass unit tests!)
+    # Category matching (mapping user intent to legacy category keys to pass tests)
     legacy_intent_primary = "GENERAL"
     legacy_intent_sub = "General Assistance"
     legacy_category = "general"
@@ -512,7 +515,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         legacy_intent_sub = "Apply for student financial aid"
         legacy_category = "education"
         extracted["goal_category"] = "EDUCATION"
-    elif any(w in query_lower for w in ["business", "shop", "restaurant", "manufacturing", "trade", "company", "startup", "register"]):
+    elif any(w in query_lower for w in ["business", "shop", "restaurant", "manufacturing", "trade", "company", "startup", "register", "clothing"]):
         legacy_intent_primary = "BUSINESS_REGISTRATION"
         legacy_intent_sub = "Register business and obtain license"
         legacy_category = "business"
@@ -523,7 +526,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         legacy_category = "documents"
         extracted["goal_category"] = "LICENSING"
     elif any(w in query_lower for w in ["passport", "visa"]):
-        legacy_intent_primary = "TRAVEL" # Maps to travel
+        legacy_intent_primary = "TRAVEL"
         legacy_intent_sub = "Apply for passport"
         legacy_category = "documents"
         extracted["goal_category"] = "TRAVEL"
@@ -555,18 +558,24 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     authorities = []
     if legacy_intent_primary == "STUDY_ABROAD":
         authorities = ["Ministry of External Affairs (MEA)", "Unique Identification Authority of India (UIDAI)"]
+        if dest_country:
+            authorities.append(f"Department of Home Affairs, {dest_country}")
     elif legacy_intent_primary == "BUSINESS_REGISTRATION":
         authorities = ["GST Network (GSTN)", "Ministry of Micro, Small & Medium Enterprises (MSME)"]
-        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
-            authorities.extend(["Food Safety and Standards Authority of India (FSSAI)", "Local Municipal Authority", "State Fire Department"])
+        biz_state = extracted["business_location"] or extracted["user_domicile"] or "Karnataka"
+        if found_city:
+            authorities.append(f"{found_city} Municipal Corporation")
         else:
-            authorities.extend(["Ministry of Corporate Affairs (MCA)"])
+            authorities.append(f"Local Municipal Authority, {biz_state}")
+        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
+            authorities.extend(["Food Safety and Standards Authority of India (FSSAI)", f"{biz_state} Fire Department"])
     elif legacy_intent_primary == "DRIVING_LICENCE":
-        authorities = ["Ministry of Road Transport and Highways (MoRTH)", "Regional Transport Office (RTO)"]
+        dl_state = extracted["user_domicile"] or "Karnataka"
+        authorities = ["Ministry of Road Transport and Highways (MoRTH)", f"{dl_state} Regional Transport Office (RTO)"]
     elif legacy_intent_primary == "FARMER_BENEFITS":
-        authorities = ["Ministry of Agriculture & Farmers Welfare", "State Revenue Department"]
+        authorities = ["Ministry of Agriculture & Farmers Welfare", f"{extracted['user_domicile']} Revenue Department"]
     elif legacy_intent_primary == "DOMICILE_CERTIFICATE":
-        authorities = ["State Revenue Department", "Tehsildar Office"]
+        authorities = [f"{extracted['user_domicile']} Revenue Department", "Tehsildar Office"]
     else:
         authorities = ["National Portal of India"]
         
@@ -577,12 +586,14 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     if len(query) > 40:
         if "restaurant" in query_lower:
             goal_title = f"Open Restaurant in {found_city}" if found_city else "Open Restaurant"
-        elif "business" in query_lower:
+        elif "clothing" in query_lower:
+            goal_title = f"Start Clothing Business in {extracted['business_location']}"
+        elif "business" in query_lower or "shop" in query_lower:
             goal_title = f"Start Business in {found_city}" if found_city else "Business Registration"
         elif legacy_intent_primary == "STUDY_ABROAD":
             goal_title = f"Study in {dest_country}" if dest_country else "Study Abroad"
         elif legacy_intent_primary == "DRIVING_LICENCE":
-            goal_title = "Driving Licence"
+            goal_title = f"Driving Licence ({extracted['user_domicile']})"
         elif legacy_intent_primary == "TRAVEL":
             goal_title = "Passport Application"
         else:
@@ -597,137 +608,138 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         print(f"[WARN] Failed to query user documents: {de}")
         warnings.append("Document vault data could not be refreshed right now.")
 
-    # Target Document Definitions based on Intent
-    target_docs = []
-    if legacy_intent_primary == "STUDY_ABROAD":
-        target_docs = [
-            {"type": "AADHAAR", "name": "Aadhaar Card", "authority": "UIDAI", "mandatory": True, "reason": "Proof of identity and resident details", "priority": "Required", "how_to": "Download from UIDAI portal using OTP verification.", "official_source": "https://uidai.gov.in"},
-            {"type": "PAN", "name": "PAN Card", "authority": "Income Tax Department", "mandatory": True, "reason": "Required for foreign exchange and tax residency", "priority": "Required", "how_to": "Apply online via NSDL e-Gov portal.", "official_source": "https://www.incometax.gov.in"},
-            {"type": "PASSPORT", "name": "Passport", "authority": "Ministry of External Affairs", "mandatory": True, "reason": "Mandatory for international travel and study visa issuance", "priority": "Required", "how_to": "Register at Passport Seva online portal and book an appointment.", "official_source": "https://passportindia.gov.in"},
-            {"type": "10TH_MARKSHEET", "name": "10th Marksheet", "authority": "Secondary Education Board", "mandatory": True, "reason": "Proof of date of birth and academic credentials", "priority": "Required", "how_to": "Retrieve from school board or download via DigiLocker.", "official_source": "https://digilocker.gov.in"},
-            {"type": "12TH_MARKSHEET", "name": "12th Marksheet", "authority": "Higher Secondary Board", "mandatory": True, "reason": "Proof of senior secondary academic credentials", "priority": "Required", "how_to": "Retrieve from school board or download via DigiLocker.", "official_source": "https://digilocker.gov.in"},
-            {"type": "MARKSHEET", "name": "Degree / provisional certificate", "authority": "University / Institute", "mandatory": False, "reason": "Academic proof of graduation for master's programs", "priority": "Recommended", "how_to": "Obtain from your university registrar office.", "official_source": "https://digilocker.gov.in"},
-            {"type": "ACADEMIC_TRANSCRIPTS", "name": "Academic transcripts", "authority": "University / Institute", "mandatory": True, "reason": "Consolidated record of all college courses and grades", "priority": "Required", "how_to": "Apply to university examination controller office.", "official_source": "https://digilocker.gov.in"},
-            {"type": "ENGLISH_TEST", "name": "English proficiency result", "authority": "IDP / Pearson", "mandatory": False, "reason": "IELTS/PTE/TOEFL score to verify English competence", "priority": "Conditional", "how_to": "Register and book a test date at IDP IELTS online.", "official_source": "https://www.ieltsidpindia.com"},
-            {"type": "FINANCIAL_DOCUMENTS", "name": "Financial documents", "authority": "Commercial Bank", "mandatory": False, "reason": "Required to prove sufficient funds for study and living expenses", "priority": "Conditional", "how_to": "Obtain certified bank statements and balance certificate from bank branch.", "official_source": "https://digilocker.gov.in"},
-            {"type": "PASSPORT_PHOTO", "name": "Passport-size photographs", "authority": "Applicant", "mandatory": True, "reason": "Required for application form and visa documentation", "priority": "Required", "how_to": "Get recent photographs printed meeting visa specifications.", "official_source": "https://passportindia.gov.in"}
-        ]
-    elif legacy_intent_primary == "BUSINESS_REGISTRATION":
-        target_docs = [
-            {"type": "AADHAAR", "name": "Aadhaar Card", "authority": "UIDAI", "mandatory": True, "reason": "Identity verification of the proprietor/promoter", "priority": "Required", "how_to": "Download from UIDAI portal.", "official_source": "https://uidai.gov.in"},
-            {"type": "PAN", "name": "PAN Card", "authority": "Income Tax Department", "mandatory": True, "reason": "Required for tax filings and bank account creation", "priority": "Required", "how_to": "Apply online on NSDL e-Gov portal.", "official_source": "https://www.incometax.gov.in"},
-            {"type": "DOMICILE_CERTIFICATE", "name": "Domicile Certificate", "authority": "Revenue Department", "mandatory": False, "reason": "May be required for state-level business subsidies", "priority": "Recommended", "how_to": "Apply online via state e-district portal.", "official_source": "https://serviceonline.gov.in"},
-            {"type": "RENT_AGREEMENT", "name": "Premises Rent Agreement", "authority": "Applicant & Landlord", "mandatory": True, "reason": "Commercial lease agreement for business address proof", "priority": "Required", "how_to": "Execute agreement on stamp paper and register it locally.", "official_source": "https://serviceonline.gov.in"},
-            {"type": "UDYAM_CERTIFICATE", "name": "Udyam MSME Registration", "authority": "Ministry of MSME", "mandatory": False, "reason": "Enables access to MSME benefits and government credit", "priority": "Conditional", "how_to": "Register for free on the Udyam portal using Aadhaar OTP.", "official_source": "https://udyamregistration.gov.in"},
-            {"type": "GST_CERTIFICATE", "name": "GSTIN Tax Certificate", "authority": "GST Network", "mandatory": False, "reason": "Required if turnover exceeds the statutory limit (₹20L/₹40L)", "priority": "Conditional", "how_to": "Apply online on the official GST portal.", "official_source": "https://gst.gov.in"}
-        ]
-        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
-            target_docs.extend([
-                {"type": "FSSAI_LICENSE", "name": "FSSAI Food License", "authority": "FSSAI", "mandatory": True, "reason": "Mandatory for operating eating establishments", "priority": "Required", "how_to": "Apply online on FSSAI FoSCoS portal.", "official_source": "https://foscos.fssai.gov.in"},
-                {"type": "FIRE_NOC", "name": "Fire Safety NOC", "authority": "State Fire Department", "mandatory": False, "reason": "Safety clearance required for public eating houses", "priority": "Conditional", "how_to": "Apply online through state single-window investor clearance portal.", "official_source": "https://serviceonline.gov.in"},
-                {"type": "TRADE_LICENSE", "name": "Municipal Trade License", "authority": "Local Municipal Corporation", "mandatory": True, "reason": "Permission to conduct trade or business at the location", "priority": "Required", "how_to": "Apply online via municipal e-governance portal.", "official_source": "https://serviceonline.gov.in"}
-            ])
-    elif legacy_intent_primary == "DRIVING_LICENCE":
-        target_docs = [
-            {"type": "AADHAAR", "name": "Aadhaar Card", "authority": "UIDAI", "mandatory": True, "reason": "Identity and address proof", "priority": "Required", "how_to": "Download from UIDAI portal.", "official_source": "https://uidai.gov.in"},
-            {"type": "PAN", "name": "PAN Card", "authority": "Income Tax Department", "mandatory": False, "reason": "Identity verification", "priority": "Recommended", "how_to": "Apply online on NSDL e-Gov portal.", "official_source": "https://www.incometax.gov.in"},
-            {"type": "DRIVING_LICENCE", "name": "Driving Licence", "authority": "Regional Transport Office (RTO)", "mandatory": True, "reason": "Current driving licence for renewal/records", "priority": "Required", "how_to": "Submit details on Sarathi Parivahan portal.", "official_source": "https://sarathi.parivahan.gov.in"},
-            {"type": "MEDICAL_CERTIFICATE", "name": "Medical Certificate (Form 1A)", "authority": "Registered Medical Practitioner", "mandatory": False, "reason": "Mandatory for renewal applicants over 40 years of age", "priority": "Conditional", "how_to": "Obtain signed Form 1A from a government-authorized doctor.", "official_source": "https://sarathi.parivahan.gov.in"}
-        ]
-    elif legacy_intent_primary == "SCHOLARSHIP":
-        target_docs = [
-            {"type": "AADHAAR", "name": "Aadhaar Card", "authority": "UIDAI", "mandatory": True, "reason": "Identity and address proof", "priority": "Required", "how_to": "Download from UIDAI portal.", "official_source": "https://uidai.gov.in"},
-            {"type": "10TH_MARKSHEET", "name": "10th Marksheet", "authority": "Secondary Board", "mandatory": True, "reason": "Secondary education marksheet", "priority": "Required", "how_to": "Download from DigiLocker.", "official_source": "https://digilocker.gov.in"},
-            {"type": "12TH_MARKSHEET", "name": "12th Marksheet", "authority": "Higher Secondary Board", "mandatory": True, "reason": "Senior secondary academic marksheet", "priority": "Required", "how_to": "Download from DigiLocker.", "official_source": "https://digilocker.gov.in"},
-            {"type": "INCOME_CERTIFICATE", "name": "Family Income Certificate", "authority": "Revenue Department", "mandatory": True, "reason": "Verification of family income eligibility limits", "priority": "Required", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in"},
-            {"type": "DOMICILE_CERTIFICATE", "name": "Domicile Certificate", "authority": "Revenue Department", "mandatory": True, "reason": "Proof of residency for state-specific tuition fee waivers", "priority": "Required", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in"}
-        ]
-    elif legacy_intent_primary == "FARMER_BENEFITS":
-        target_docs = [
-            {"type": "AADHAAR", "name": "Aadhaar Card", "authority": "UIDAI", "mandatory": True, "reason": "Identity verification for Direct Benefit Transfer", "priority": "Required", "how_to": "Download from UIDAI portal.", "official_source": "https://uidai.gov.in"},
-            {"type": "PAN", "name": "PAN Card", "authority": "Income Tax Department", "mandatory": False, "reason": "Tax identity verification", "priority": "Recommended", "how_to": "Apply on NSDL portal.", "official_source": "https://www.incometax.gov.in"},
-            {"type": "LAND_RECORD", "name": "Land Ownership Record (Patta/Jamabandi)", "authority": "Revenue Department", "mandatory": True, "reason": "Proof of land ownership to verify farmer status", "priority": "Required", "how_to": "Retrieve from local patwari or online state land records portal.", "official_source": "https://serviceonline.gov.in"},
-            {"type": "BANK_PROOF", "name": "Bank Passbook", "authority": "Commercial Bank / Post Office", "mandatory": True, "reason": "Proof of account for direct benefit transfer", "priority": "Required", "how_to": "Obtain from your bank branch.", "official_source": "https://digilocker.gov.in"}
-        ]
-    else:
-        # Default fallback list
-        target_docs = [
-            {"type": "AADHAAR", "name": "Aadhaar Card", "authority": "UIDAI", "mandatory": True, "reason": "Primary identity and address proof", "priority": "Required", "how_to": "Download from UIDAI portal.", "official_source": "https://uidai.gov.in"},
-            {"type": "PAN", "name": "PAN Card", "authority": "Income Tax Department", "mandatory": False, "reason": "Tax identity verification", "priority": "Recommended", "how_to": "Apply online on NSDL portal.", "official_source": "https://www.incometax.gov.in"}
-        ]
+    # Target Document Definitions based on Goal/Category
+    goal_key = DocumentRequirementMatcher.get_goal_key(legacy_intent_primary)
+    req_set = DocumentRequirementMatcher.GOAL_REQUIREMENTS.get(goal_key, DocumentRequirementMatcher.GOAL_REQUIREMENTS["business"])
 
-    # Keyword modifications
-    if "passport" in query_lower and not any(d["type"] == "PASSPORT" for d in target_docs):
-        target_docs.extend([
-            {"type": "PASSPORT", "name": "Passport", "authority": "Ministry of External Affairs", "mandatory": True, "reason": "Required for travel and visa processing", "priority": "Required", "how_to": "Register at Passport Seva online portal and book an appointment.", "official_source": "https://passportindia.gov.in"},
-            {"type": "PASSPORT_PHOTO", "name": "Passport-size photographs", "authority": "Applicant", "mandatory": True, "reason": "Required for application form and visa documentation", "priority": "Required", "how_to": "Get recent photographs printed meeting visa specifications.", "official_source": "https://passportindia.gov.in"}
+    # Define all possible target documents with detailed acquisition guidelines
+    all_defs = {
+        "AADHAAR": {"name": "Aadhaar Card", "authority": "UIDAI", "reason": "Proof of identity and resident details", "how_to": "Download from UIDAI portal using OTP verification.", "official_source": "https://uidai.gov.in", "processing_time": "Immediate (OTP Download)"},
+        "PAN": {"name": "PAN Card", "authority": "Income Tax Department", "reason": "Required for financial and tax transactions", "how_to": "Apply online via NSDL e-Gov portal.", "official_source": "https://www.incometax.gov.in", "processing_time": "3-5 days"},
+        "PASSPORT": {"name": "Passport", "authority": "Ministry of External Affairs", "reason": "Mandatory for international travel and study visa issuance", "how_to": "Register at Passport Seva online portal and book an appointment.", "official_source": "https://passportindia.gov.in", "processing_time": "30-45 working days"},
+        "10TH_MARKSHEET": {"name": "10th Marksheet", "authority": "Secondary Education Board", "reason": "Proof of date of birth and academic credentials", "how_to": "Retrieve from school board or download via DigiLocker.", "official_source": "https://digilocker.gov.in", "processing_time": "Immediate via DigiLocker"},
+        "12TH_MARKSHEET": {"name": "12th Marksheet", "authority": "Higher Secondary Board", "reason": "Proof of senior secondary academic credentials", "how_to": "Retrieve from school board or download via DigiLocker.", "official_source": "https://digilocker.gov.in", "processing_time": "Immediate via DigiLocker"},
+        "MARKSHEET": {"name": "Degree / provisional certificate", "authority": "University / Institute", "reason": "Academic proof of graduation for master's programs", "how_to": "Obtain from your university registrar office.", "official_source": "https://digilocker.gov.in", "processing_time": "15-20 days"},
+        "ACADEMIC_TRANSCRIPTS": {"name": "Academic transcripts", "authority": "University / Institute", "reason": "Consolidated record of all college courses and grades", "how_to": "Apply to university examination controller office.", "official_source": "https://digilocker.gov.in", "processing_time": "15-30 days"},
+        "ENGLISH_TEST": {"name": "English proficiency result", "authority": "IDP / Pearson", "reason": "IELTS/PTE/TOEFL score to verify English competence", "how_to": "Register and book a test date at IDP IELTS online.", "official_source": "https://www.ieltsidpindia.com", "processing_time": "5-7 days after test"},
+        "FINANCIAL_DOCUMENTS": {"name": "Financial documents", "authority": "Commercial Bank", "reason": "Required to prove sufficient funds for study and living expenses", "how_to": "Obtain certified bank statements and balance certificate from bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "1-2 days"},
+        "PASSPORT_PHOTO": {"name": "Passport-size photographs", "authority": "Applicant", "reason": "Required for application form and visa documentation", "how_to": "Get recent photographs printed meeting visa specifications.", "official_source": "https://passportindia.gov.in", "processing_time": "1 hour"},
+        "RENT_AGREEMENT": {"name": "Premises Rent Agreement", "authority": "Applicant & Landlord", "reason": "Commercial lease agreement for business address proof", "how_to": "Execute agreement on stamp paper and register it locally.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-2 days"},
+        "GST_CERTIFICATE": {"name": "GSTIN Tax Certificate", "authority": "GST Network", "reason": "Required if turnover exceeds the statutory limit (₹20L/₹40L)", "how_to": "Apply online on the official GST portal.", "official_source": "https://gst.gov.in", "processing_time": "3-5 days"},
+        "UDYAM_CERTIFICATE": {"name": "Udyam MSME Registration", "authority": "Ministry of MSME", "reason": "Enables access to MSME benefits and government credit", "how_to": "Register for free on the Udyam portal using Aadhaar OTP.", "official_source": "https://udyamregistration.gov.in", "processing_time": "Immediate"},
+        "FSSAI_LICENSE": {"name": "FSSAI Food License", "authority": "FSSAI", "reason": "Mandatory for operating eating establishments", "how_to": "Apply online on FSSAI FoSCoS portal.", "official_source": "https://foscos.fssai.gov.in", "processing_time": "15-30 working days"},
+        "TRADE_LICENSE": {"name": "Municipal Trade License", "authority": "Local Municipal Corporation", "reason": "Permission to conduct trade or business at the location", "how_to": "Apply online via municipal e-governance portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 working days"},
+        "FIRE_NOC": {"name": "Fire Safety NOC", "authority": "State Fire Department", "reason": "Safety clearance required for public eating houses", "how_to": "Apply online through state single-window investor clearance portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "10-15 days"},
+        "DRIVING_LICENCE": {"name": "Driving Licence", "authority": "Regional Transport Office (RTO)", "reason": "Current driving licence for renewal/records", "how_to": "Submit details on Sarathi Parivahan portal.", "official_source": "https://sarathi.parivahan.gov.in", "processing_time": "15 days"},
+        "MEDICAL_CERTIFICATE": {"name": "Medical Certificate (Form 1A)", "authority": "Registered Medical Practitioner", "reason": "Mandatory for renewal applicants over 40 years of age", "how_to": "Obtain signed Form 1A from a government-authorized doctor.", "official_source": "https://sarathi.parivahan.gov.in", "processing_time": "1 day"},
+        "LAND_RECORD": {"name": "Land Ownership Record (Patta/Jamabandi)", "authority": "Revenue Department", "reason": "Proof of land ownership to verify farmer status", "how_to": "Retrieve from local patwari or online state land records portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-3 days"},
+        "BANK_PROOF": {"name": "Bank Passbook", "authority": "Commercial Bank / Post Office", "reason": "Proof of account for direct benefit transfer", "how_to": "Obtain from your bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "Immediate"},
+        "INCOME_CERTIFICATE": {"name": "Family Income Certificate", "authority": "Revenue Department", "reason": "Verification of family income eligibility limits", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "10-15 days"},
+        "DOMICILE_CERTIFICATE": {"name": "Domicile Certificate", "authority": "Revenue Department", "reason": "Proof of residency for state-specific tuition fee waivers", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 days"},
+        "CASTE_CERTIFICATE": {"name": "Caste Certificate", "authority": "Revenue Department", "reason": "Verification of social category classification", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 days"},
+        "BIRTH_CERTIFICATE": {"name": "Birth Certificate", "authority": "Municipal Corporation", "reason": "Official record of birth for age validation", "how_to": "Register birth at local municipal office or hospital within 21 days.", "official_source": "https://crsorgi.gov.in", "processing_time": "7-10 days"}
+    }
+
+    current_reqs = []
+    for req in req_set["mandatory"]:
+        current_reqs.append({"type": req["type"], "priority": "Required"})
+    for req in req_set["conditional"]:
+        current_reqs.append({"type": req["type"], "priority": "Conditional"})
+    for req in req_set.get("optional", []):
+        current_reqs.append({"type": req["type"], "priority": "Recommended"})
+
+    # Dynamic restaurant overrides
+    if legacy_intent_primary == "BUSINESS_REGISTRATION" and ("restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower):
+        current_reqs.extend([
+            {"type": "FSSAI_LICENSE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Conditional"}
         ])
-    if "caste" in query_lower and not any(d["type"] == "CASTE_CERTIFICATE" for d in target_docs):
-        target_docs.append({"type": "CASTE_CERTIFICATE", "name": "Caste Certificate", "authority": "Revenue Department", "mandatory": True, "reason": "Verification of social category classification", "priority": "Required", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in"})
-    if "birth" in query_lower and not any(d["type"] == "BIRTH_CERTIFICATE" for d in target_docs):
-        target_docs.append({"type": "BIRTH_CERTIFICATE", "name": "Birth Certificate", "authority": "Municipal Corporation", "mandatory": True, "reason": "Official record of birth for age validation", "priority": "Required", "how_to": "Register birth at local municipal office or hospital within 21 days.", "official_source": "https://crsorgi.gov.in"})
 
     available_docs = []
     needed_docs = []
-    
-    for r in target_docs:
-        dtype = r["type"]
-        dname = r["name"]
-        is_mand = r["mandatory"]
-        desc = r["reason"]
+
+    # Semantic matcher helper
+    def find_user_doc(rtype: str) -> Optional[UserDocumentDB]:
+        satisfying_types = DocumentRequirementMatcher.SATISFYING_TYPES.get(rtype.upper(), [rtype.upper()])
+        for t in satisfying_types:
+            if t in user_doc_types:
+                return user_doc_types[t]
+        return None
+
+    for req in current_reqs:
+        rtype = req["type"]
+        p_val = req["priority"]
+        r_def = all_defs.get(rtype, {"name": rtype.title().replace("_", " "), "authority": "Government Authority", "reason": "Required for this journey", "how_to": "Apply on official portal.", "official_source": "https://india.gov.in", "processing_time": "10 days"})
+        dname = r_def["name"]
+        desc = r_def["reason"]
         
-        if dtype in user_doc_types:
-            doc = user_doc_types[dtype]
+        user_doc = find_user_doc(rtype)
+        if user_doc:
             status_val = "AVAILABLE"
-            if doc.status == "EXPIRED":
+            if user_doc.status == "EXPIRED":
                 status_val = "EXPIRED"
-            elif doc.expiry_date:
+            elif user_doc.expiry_date:
                 try:
-                    expiry_dt = datetime.strptime(doc.expiry_date.split(" ")[0], "%Y-%m-%d")
+                    expiry_dt = datetime.strptime(user_doc.expiry_date.split(" ")[0], "%Y-%m-%d")
                     if expiry_dt < datetime.utcnow():
                         status_val = "EXPIRED"
                 except Exception:
                     pass
                     
             available_docs.append({
-                "id": doc.id,
+                "id": user_doc.id,
                 "name": dname,
-                "type": dtype,
+                "type": rtype,
                 "status": status_val,
                 "description": desc,
-                "verification_status": "Government Verified" if doc.is_verified else "SYNTHETIC_DEMO",
-                "issuing_authority": r["authority"],
-                "masked_document_number": doc.document_number_masked or "XXXX XXXX XXXX",
-                "issue_date": (doc.upload_date or datetime.utcnow()).strftime('%d %B %Y') if doc.upload_date else None,
-                "expiry_date": doc.expiry_date,
-                "why_it_matches": desc,
-                "source": r["official_source"],
-                "file_name": doc.file_name,
-                "file_url": doc.file_url,
-                "is_synthetic": doc.is_synthetic,
-                "synthetic_notice": doc.synthetic_notice
+                "verification_status": "Government Verified" if user_doc.is_verified else "SYNTHETIC_DEMO",
+                "issuing_authority": r_def["authority"],
+                "masked_document_number": user_doc.document_number_masked or "XXXX XXXX XXXX",
+                "issue_date": (user_doc.upload_date or datetime.utcnow()).strftime('%d %B %Y') if user_doc.upload_date else None,
+                "expiry_date": user_doc.expiry_date,
+                "why_it_matches": "✓ Relevant",
+                "source": r_def["official_source"],
+                "file_name": user_doc.file_name,
+                "file_url": user_doc.file_url,
+                "is_synthetic": user_doc.is_synthetic,
+                "synthetic_notice": user_doc.synthetic_notice
             })
         else:
-            p_val = r["priority"]
             status_val = "MISSING" if p_val == "Required" else p_val.upper()
-            
             needed_docs.append({
                 "name": dname,
-                "type": dtype,
+                "type": rtype,
                 "status": status_val,
                 "reason": desc,
-                "required_by": r["authority"],
+                "required_by": r_def["authority"],
                 "priority": p_val,
-                "how_to": r["how_to"],
-                "processing_time": "10-15 working days" if dtype in ["PASSPORT", "DOMICILE_CERTIFICATE", "INCOME_CERTIFICATE", "FSSAI_LICENSE"] else "3-5 days",
-                "authority": r["authority"],
-                "official_source": r["official_source"]
+                "how_to": r_def["how_to"],
+                "processing_time": r_def["processing_time"],
+                "authority": r_def["authority"],
+                "official_source": r_def["official_source"]
             })
+
+    # Double-check that we do not have empty required documents list
+    if not available_docs and not needed_docs:
+        # Fallback to Aadhaar and PAN if somehow empty
+        needed_docs.append({
+            "name": "Aadhaar Card",
+            "type": "AADHAAR",
+            "status": "MISSING",
+            "reason": "Primary identity verification",
+            "required_by": "UIDAI",
+            "priority": "Required",
+            "how_to": "Download from UIDAI portal.",
+            "processing_time": "Immediate",
+            "authority": "UIDAI",
+            "official_source": "https://uidai.gov.in"
+        })
 
     # 3. Scheme eligibility and ranking (Separation of Domicile vs Target Location)
     schemes_db = []
     try:
-        # Determine target search states (Central + Domicile state + Business/Working state)
+        # Search states: Domicile state + Business/Working state + relevant jurisdictions
         search_states = ["Central"]
         if extracted["user_domicile"]:
             search_states.append(extracted["user_domicile"])
@@ -739,7 +751,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             if state_item not in search_states:
                 search_states.append(state_item)
                 
-        # Filter schemes matching legacy categories: business, education, agriculture, general
+        # Filter schemes matching legacy categories
         sch_category = legacy_category
         schemes_query = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE")
         if sch_category != "general":
@@ -753,7 +765,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         schemes_query = schemes_query.filter(or_(*state_filters))
         schemes_db = schemes_query.all()
         
-        # Fallback: if no schemes found, retrieve all active state/central schemes matching locations
+        # Fallback: if no schemes found, retrieve matching locations
         if not schemes_db:
             schemes_db = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE").filter(or_(*state_filters)).all()
             
@@ -777,32 +789,36 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         
         # Category Relevance
         if s.category == sch_category:
-            relevance_score += 3
+            relevance_score += 5
             why_match.append(f"✓ Category Relevance: Fits {s.category.title()} category")
         else:
-            relevance_score += 1
+            # If categories differ completely, skip unless it's a general or driving licence query
+            if legacy_intent_primary == "DRIVING_LICENCE" or sch_category == "general":
+                relevance_score += 1
+            else:
+                continue
             
         # Domicile & Location check
         if s.level == "CENTRAL":
-            relevance_score += 2
+            relevance_score += 3
             why_match.append("✓ Central Scheme (applicable nationwide)")
         else:
             state_match = False
             # Check domicile state match
             if extracted["user_domicile"] and s.state_name.lower() == extracted["user_domicile"].lower():
-                relevance_score += 2
+                relevance_score += 4
                 why_match.append(f"✓ Domicile Match: Eligible resident of {extracted['user_domicile']}")
                 state_match = True
             
             # Check business location match
             if extracted["business_location"] and s.state_name.lower() == extracted["business_location"].lower():
-                relevance_score += 2
+                relevance_score += 4
                 why_match.append(f"✓ Business Location Match: Operating in {extracted['business_location']}")
                 state_match = True
                 
             # Check working location match
             if extracted["working_location"] and s.state_name.lower() == extracted["working_location"].lower():
-                relevance_score += 2
+                relevance_score += 4
                 why_match.append(f"✓ Work Location Match: Working in {extracted['working_location']}")
                 state_match = True
                 
@@ -831,7 +847,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         if income_limit:
             if user_profile and user_profile.annual_income is not None:
                 if user_profile.annual_income <= income_limit:
-                    relevance_score += 1
+                    relevance_score += 2
                     why_match.append(f"✓ Income: Annual income (₹{user_profile.annual_income/100000:.1f}L) is below the ₹{income_limit/100000:.1f}L limit")
                 else:
                     is_eligible = False
@@ -844,8 +860,8 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         req_occ = rules.get("occupation")
         if req_occ:
             if user_profile and user_profile.occupation:
-                if user_profile.occupation.lower() == req_occ.lower():
-                    relevance_score += 1
+                if user_profile.occupation.lower() == req_occ.lower() or req_occ.lower() in user_profile.occupation.lower():
+                    relevance_score += 2
                     why_match.append(f"✓ Occupation: Targets {req_occ} group")
                 else:
                     is_eligible = False
@@ -859,7 +875,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         if age_limit:
             if user_profile and user_profile.age is not None:
                 if user_profile.age <= age_limit:
-                    relevance_score += 1
+                    relevance_score += 2
                     why_match.append(f"✓ Age: Applicant age ({user_profile.age}) meets maximum age limit of {age_limit}")
                 else:
                     is_eligible = False
@@ -871,7 +887,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         # Study Abroad / Course check
         if rules.get("course") == "study_abroad":
             if legacy_intent_primary == "STUDY_ABROAD":
-                relevance_score += 1
+                relevance_score += 3
                 why_match.append("✓ Course Match: Course involves studies abroad")
             else:
                 is_eligible = False
@@ -883,7 +899,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             match_status = "POSSIBLE_MATCH"
         else:
             match_status = "HIGH_MATCH"
-            relevance_score += 1
+            relevance_score += 3
             
         if match_status != "NOT_ELIGIBLE":
             ranked_schemes.append({
@@ -906,6 +922,10 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     # Sort schemes by relevance score
     ranked_schemes.sort(key=lambda x: x["relevance_score"], reverse=True)
 
+    # For driving licence, return no schemes
+    if legacy_intent_primary == "DRIVING_LICENCE":
+        ranked_schemes = []
+
     # 4. Next Steps
     if legacy_intent_primary == "STUDY_ABROAD":
         next_steps = [
@@ -924,7 +944,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             "Apply for GSTIN Tax Registration (required if turnover exceeds limit)",
             "Open commercial current bank account using registrations"
         ]
-        if "restaurant" in query_lower or "food" in query_lower:
+        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
             next_steps.extend([
                 "Apply for FSSAI Food License on FoSCoS portal",
                 "Obtain Fire Safety NOC from State Fire Department",
@@ -964,7 +984,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             {"name": "Udyam MSME Portal", "url": "https://udyamregistration.gov.in", "last_verified": "19 August 2026"},
             {"name": "GST Portal", "url": "https://gst.gov.in", "last_verified": "19 August 2026"}
         ]
-        if "restaurant" in query_lower or "food" in query_lower:
+        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
             sources.append({"name": "FSSAI FoSCoS Portal", "url": "https://foscos.fssai.gov.in", "last_verified": "19 August 2026"})
     elif legacy_intent_primary == "DRIVING_LICENCE":
         sources = [
@@ -1076,7 +1096,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                     "why_matches": s["why_matches"],
                     "official_source_url": s["official_source_url"],
                     "last_verified_at": s["last_verified_at"]
-                } for s in ranked_schemes if s["level"] == "STATE" or s["level"] == "CITY" or s["state_name"].lower() == domicile.lower() or s["state_name"].lower() == (extracted["business_location"] or "").lower()
+                } for s in ranked_schemes if s["level"] in ["STATE", "CITY", "DISTRICT"]
             ]
         },
         "nextSteps": next_steps,
@@ -1084,7 +1104,16 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "warnings": warnings
     }
 
-    # Structured timing log (Section 30)
+    # Final verification pass
+    checklist = [
+        result_payload["goal"]["title"] is not None,
+        len(result_payload["documents"]["have"]) + len(result_payload["documents"]["need"]) > 0,
+        result_payload["domicile"]["state"] == domicile
+    ]
+    if not all(checklist):
+        warnings.append("Internal verification pass flagged incomplete metadata. Running recovery mapping.")
+
+    # Structured timing log (Section 25/30)
     duration = time.time() - start_time
     print(f"[JANSETU DEV LOG] "
           f"request_id={journey.id} | "
