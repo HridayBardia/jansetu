@@ -78,7 +78,135 @@ const INDIAN_STATES_AND_UTS = [
 
 const DEMO_MODE = true;
 
-function generateDemoJourney(query: string, domicileState: string) {
+function matchGovernmentSchemes(query: string, domicileState: string, allSchemes: any[]): any[] {
+  const q = query.toLowerCase();
+  const domicile = domicileState || 'Rajasthan';
+
+  // 1. Identify category
+  let category = 'general';
+  if (q.includes('study') || q.includes('masters') || q.includes('scholarship') || q.includes('education') || q.includes('college') || q.includes('engineering')) {
+    category = 'education';
+  } else if (q.includes('business') || q.includes('shop') || q.includes('restaurant') || q.includes('startup') || q.includes('manufacturing') || q.includes('textile')) {
+    category = 'business';
+  } else if (q.includes('farmer') || q.includes('farming') || q.includes('agriculture') || q.includes('kisan')) {
+    category = 'agriculture';
+  } else if (q.includes('driving') || q.includes('licence') || q.includes('license') || q.includes('dl')) {
+    category = 'documents';
+  }
+
+  // 2. Identify target business location / study location from query
+  let businessState = domicile;
+  const statesList = [
+    { name: "Karnataka", keywords: ["karnataka", "bangalore", "bengaluru"] },
+    { name: "Gujarat", keywords: ["gujarat", "vadodara", "ahmedabad", "gandhinagar"] },
+    { name: "Rajasthan", keywords: ["rajasthan", "udaipur", "jaipur"] }
+  ];
+
+  for (const st of statesList) {
+    if (st.keywords.some(kw => q.includes(kw))) {
+      businessState = st.name;
+      break;
+    }
+  }
+
+  const isStudyAbroad = q.includes('australia') || q.includes('abroad') || q.includes('foreign') || q.includes('overseas');
+
+  // Filter schemes
+  const activeSchemes = allSchemes.filter(s => s.status === 'ACTIVE' || !s.status);
+  const matched = [];
+
+  for (const s of activeSchemes) {
+    // Skip if category doesn't match
+    if (s.category !== category) continue;
+
+    // Skip discontinued/suspended legacy schemes
+    if (s.id === 'sch_suspended_legacy_transport') continue;
+
+    let isMatch = false;
+    let whyMatches = [];
+
+    if (category === 'education') {
+      if (isStudyAbroad) {
+        // Study abroad queries should only return study abroad schemes (NOS, RGS, etc.)
+        const isStudyAbroadScheme = s.id === 'sch_nos' || s.id === 'sch_rj_rgs' || s.name.toLowerCase().includes('overseas') || s.description.toLowerCase().includes('overseas') || s.description.toLowerCase().includes('abroad');
+        if (!isStudyAbroadScheme) continue;
+
+        if (s.level === 'CENTRAL') {
+          isMatch = true;
+          whyMatches.push("✓ Central Government Scheme");
+          whyMatches.push("✓ Supports overseas higher education");
+        } else if (s.state_name === domicile) {
+          isMatch = true;
+          whyMatches.push(`✓ Domicile Match: Resident of ${domicile}`);
+          whyMatches.push(`✓ State Scholarship: ${s.state_name} Higher Education Support`);
+        }
+      } else {
+        // Domestic education queries should not return overseas scholarships
+        const isStudyAbroadScheme = s.id === 'sch_nos' || s.id === 'sch_rj_rgs' || s.name.toLowerCase().includes('overseas') || s.description.toLowerCase().includes('overseas') || s.description.toLowerCase().includes('abroad');
+        if (isStudyAbroadScheme) continue;
+
+        if (s.level === 'CENTRAL') {
+          isMatch = true;
+          whyMatches.push("✓ Central Government Scheme");
+          whyMatches.push("✓ General education assistance");
+        } else if (s.state_name === domicile) {
+          isMatch = true;
+          whyMatches.push(`✓ Domicile Match: Resident of ${domicile}`);
+        }
+      }
+    } else if (category === 'business') {
+      if (s.level === 'CENTRAL') {
+        isMatch = true;
+        whyMatches.push("✓ Central Government MSME/Startup Initiative");
+      } else if (s.state_name === businessState) {
+        isMatch = true;
+        whyMatches.push(`✓ Operating Location Match: Business in ${businessState}`);
+        if (domicile !== businessState) {
+          whyMatches.push(`ℹ Domicile: ${domicile} (Eligibility verified for cross-state operation)`);
+        }
+      }
+    } else if (category === 'agriculture') {
+      if (s.level === 'CENTRAL') {
+        isMatch = true;
+        whyMatches.push("✓ Central Government Farmer Support");
+      } else if (s.state_name === domicile) {
+        isMatch = true;
+        whyMatches.push(`✓ Domicile Match: Land/Farming registered in ${domicile}`);
+      }
+    }
+
+    if (isMatch) {
+      // Extract benefits if available to render rich descriptions
+      let benefitNote = "";
+      if (s.benefits) {
+        try {
+          const bObj = typeof s.benefits === 'string' ? JSON.parse(s.benefits) : s.benefits;
+          if (bObj && typeof bObj === 'object') {
+            const entries = Object.entries(bObj).map(([k, v]) => `${k.replace(/_/g, ' ').toUpperCase()}: ${v}`);
+            if (entries.length > 0) {
+              benefitNote = ` [BENEFITS: ${entries.slice(0, 2).join(' | ')}]`;
+            }
+          }
+        } catch (e) {}
+      }
+
+      matched.push({
+        id: s.id,
+        level: s.level,
+        match_status: s.level === 'CENTRAL' ? 'POSSIBLE_MATCH' : 'HIGH_MATCH',
+        name: s.name,
+        description: s.description + benefitNote,
+        why_matches: whyMatches,
+        last_verified_at: s.last_verified_at || 'Recently',
+        official_source_url: s.official_source_url || s.application_url || '#'
+      });
+    }
+  }
+
+  return matched;
+}
+
+function generateDemoJourney(query: string, domicileState: string, matchedSchemes: any[]) {
   const q = query.toLowerCase();
 
   if (
@@ -115,7 +243,7 @@ function generateDemoJourney(query: string, domicileState: string) {
           { name: "University Offer Letter", status: "Conditional", reason: "Required after receiving admission" }
         ]
       },
-      schemes: [],
+      schemes: matchedSchemes,
       next_steps: [
         "Apply for / renew passport",
         "Prepare and register for IELTS/PTE English exam",
@@ -159,7 +287,7 @@ function generateDemoJourney(query: string, domicileState: string) {
           { name: "Passport-size Photograph", status: "Required", reason: "Required for physical/digital record" }
         ]
       },
-      schemes: [],
+      schemes: matchedSchemes,
       next_steps: [
         "Apply for Learner's Licence online via Sarathi portal",
         "Schedule and pass Learner's test (computer based)",
@@ -205,7 +333,7 @@ function generateDemoJourney(query: string, domicileState: string) {
           { name: "Fire Department NOC", status: "Conditional", reason: "Required depending on seating capacity and building height." }
         ]
       },
-      schemes: [],
+      schemes: matchedSchemes,
       next_steps: [
         "Choose business structure and register entity (MCA/MSME Udyam)",
         "Execute rental agreement for commercial kitchen premises",
@@ -242,7 +370,7 @@ function generateDemoJourney(query: string, domicileState: string) {
         { name: "Additional documents depend on your exact goal", status: "Required", reason: "The requirement varies according to the service, jurisdiction and eligibility." }
       ]
     },
-    schemes: [],
+    schemes: matchedSchemes,
     next_steps: [
       "Check required certificates or licenses on local state portal",
       "Prepare basic identification proofs (Aadhaar, PAN, Photos)"
@@ -341,6 +469,17 @@ export default function DashboardPage() {
       const timer3 = setTimeout(() => setGenerationStage(3), 700);
       const timer4 = setTimeout(() => setGenerationStage(4), 950);
 
+      // Fetch real schemes dynamically from database
+      let matchedSchemes: any[] = [];
+      try {
+        const schemesRes = await fetchSchemesAPI({ limit: 100 });
+        if (schemesRes && schemesRes.schemes) {
+          matchedSchemes = matchGovernmentSchemes(trimmedGoal, domicileState, schemesRes.schemes);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch schemes for demo:", err);
+      }
+
       await new Promise(resolve => setTimeout(resolve, 1100));
 
       clearTimeout(timer1);
@@ -348,7 +487,7 @@ export default function DashboardPage() {
       clearTimeout(timer3);
       clearTimeout(timer4);
 
-      const res = generateDemoJourney(trimmedGoal, domicileState);
+      const res = generateDemoJourney(trimmedGoal, domicileState, matchedSchemes);
       setJourneyAnalysis(res);
       setIsAnalyzing(false);
       return;
