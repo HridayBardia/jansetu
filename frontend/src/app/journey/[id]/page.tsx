@@ -141,10 +141,10 @@ targetLocation = ${(targetLocation && (targetLocation.state || targetLocation.co
 confidence = 0.95
 
 STEP 2 — USER DOCUMENTS
-documentsFound = ${JSON.stringify(haveDocs.map((d: any) => d.type))}
+documentsFound = ${JSON.stringify(haveDocs.map((d: any) => d?.type || d?.document_type))}
 
 STEP 3 — DOCUMENT REQUIREMENTS
-requiredDocuments = ${JSON.stringify(neededDocsList.map((d: any) => d.type))}
+requiredDocuments = ${JSON.stringify(neededDocsList.map((d: any) => d?.type))}
 
 STEP 4 — SCHEME DATABASE
 totalSchemesInDatabase = ${diagnostics?.retrievedCount || 73}
@@ -199,15 +199,16 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
     }
   };
 
-  const getSchemeEligibilityBadge = (eligibility: string) => {
-    if (eligibility && (eligibility.includes("Appears eligible") || eligibility.includes("HIGH_MATCH"))) {
+  const getSchemeEligibilityBadge = (eligibility: any) => {
+    const elStr = typeof eligibility === 'string' ? eligibility : '';
+    if (elStr.includes("Appears eligible") || elStr.includes("HIGH_MATCH")) {
       return (
         <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-2.5 py-0.5 rounded uppercase tracking-wider shrink-0">
           ✓ Likely match
         </span>
       );
     }
-    if (eligibility && (eligibility.includes("Potentially relevant") || eligibility.includes("POSSIBLE_MATCH"))) {
+    if (elStr.includes("Potentially relevant") || elStr.includes("POSSIBLE_MATCH")) {
       return (
         <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold px-2.5 py-0.5 rounded uppercase tracking-wider shrink-0">
           ⚠ Verification Needed
