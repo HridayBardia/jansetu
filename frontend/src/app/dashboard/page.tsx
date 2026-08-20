@@ -76,6 +76,183 @@ const INDIAN_STATES_AND_UTS = [
   { name: "Puducherry", code: "PY", type: "UNION_TERRITORY", official_name: "Union Territory of Puducherry" }
 ];
 
+const DEMO_MODE = true;
+
+function generateDemoJourney(query: string, domicileState: string) {
+  const q = query.toLowerCase();
+
+  if (
+    q.includes("australia") ||
+    q.includes("study abroad") ||
+    q.includes("masters")
+  ) {
+    return {
+      goal: {
+        title: "Study Masters in Australia",
+        description: "Personalized regulatory map for higher education in Australia."
+      },
+      location: {
+        current_location: "Udaipur",
+        domicile_state: domicileState || "Rajasthan",
+        destination: "Australia"
+      },
+      intent: {
+        primary: "STUDY_ABROAD"
+      },
+      documents: {
+        available: [
+          { name: "Aadhaar Card", verification_status: "VERIFIED" },
+          { name: "PAN Card", verification_status: "VERIFIED" },
+          { name: "Class 10 Marksheet", verification_status: "VERIFIED" },
+          { name: "Class 12 Marksheet", verification_status: "VERIFIED" },
+          { name: "Bachelor's Marksheet", verification_status: "VERIFIED" }
+        ],
+        needed: [
+          { name: "Valid Passport", status: "Required", reason: "Required for international travel and study" },
+          { name: "English Language Test Result", status: "Required", reason: "May be required by the university and/or visa process" },
+          { name: "University Academic Transcripts", status: "Required", reason: "Required for admission assessment" },
+          { name: "Degree / Provisional Certificate", status: "Required", reason: "Required depending on current academic status" },
+          { name: "University Offer Letter", status: "Conditional", reason: "Required after receiving admission" }
+        ]
+      },
+      schemes: [],
+      next_steps: [
+        "Apply for / renew passport",
+        "Prepare and register for IELTS/PTE English exam",
+        "Request official transcripts from university",
+        "Submit applications to Australian universities",
+        "Await offer letter and compile financial documentation"
+      ],
+      sources: [
+        { name: "Department of Home Affairs, Australia", last_verified: "Yesterday", url: "https://immi.homeaffairs.gov.au/" },
+        { name: "Ministry of External Affairs, India", last_verified: "2 days ago", url: "https://www.mea.gov.in/" }
+      ]
+    };
+  }
+
+  if (
+    q.includes("driving licence") ||
+    q.includes("driving license")
+  ) {
+    return {
+      goal: {
+        title: "Get a Driving Licence",
+        description: "Licensing workflow for Karnataka Transport Department."
+      },
+      location: {
+        current_location: "Bengaluru",
+        domicile_state: domicileState || "Karnataka",
+        destination: null
+      },
+      intent: {
+        primary: "LICENSING"
+      },
+      documents: {
+        available: [
+          { name: "Aadhaar Card", verification_status: "VERIFIED" },
+          { name: "PAN Card", verification_status: "VERIFIED" }
+        ],
+        needed: [
+          { name: "Age / Date-of-Birth Proof", status: "Required", reason: "Used to establish eligibility (min 18 years)" },
+          { name: "Address Proof", status: "Required", reason: "Required for the regional transport office licence application" },
+          { name: "Learner's Licence", status: "Required", reason: "Mandatory prerequisite before driving test" },
+          { name: "Passport-size Photograph", status: "Required", reason: "Required for physical/digital record" }
+        ]
+      },
+      schemes: [],
+      next_steps: [
+        "Apply for Learner's Licence online via Sarathi portal",
+        "Schedule and pass Learner's test (computer based)",
+        "Hold Learner's Licence for minimum 30 days while practicing",
+        "Schedule driving skill test track date",
+        "Pass driving test and receive driving licence"
+      ],
+      sources: [
+        { name: "Ministry of Road Transport and Highways (MoRTH)", last_verified: "Today", url: "https://sarathi.parivahan.gov.in/" },
+        { name: "Karnataka Transport Department", last_verified: "3 days ago", url: "https://transport.karnataka.gov.in/" }
+      ]
+    };
+  }
+
+  if (
+    q.includes("restaurant") ||
+    q.includes("business") ||
+    q.includes("startup")
+  ) {
+    return {
+      goal: {
+        title: "Start a Restaurant / Business",
+        description: "Business setup and regulatory compliance mapping for Karnataka."
+      },
+      location: {
+        current_location: "Bengaluru",
+        domicile_state: domicileState || "Rajasthan",
+        destination: null
+      },
+      intent: {
+        primary: "BUSINESS"
+      },
+      documents: {
+        available: [
+          { name: "Aadhaar Card", verification_status: "VERIFIED" },
+          { name: "PAN Card", verification_status: "VERIFIED" }
+        ],
+        needed: [
+          { name: "Business Constitution Documents", status: "Required", reason: "Depends on whether the business is proprietorship, partnership, LLP, or Pvt Ltd company." },
+          { name: "Business Premises Address Proof (Lease/NOC)", status: "Required", reason: "Required for all local registrations and utility connections." },
+          { name: "FSSAI Food Business License", status: "Required", reason: "Mandatory regulatory registration for all food/restaurant establishments." },
+          { name: "Local Municipal Corporation Trade License", status: "Required", reason: "Required from BBMP to operate a commercial business in Bengaluru." },
+          { name: "Fire Department NOC", status: "Conditional", reason: "Required depending on seating capacity and building height." }
+        ]
+      },
+      schemes: [],
+      next_steps: [
+        "Choose business structure and register entity (MCA/MSME Udyam)",
+        "Execute rental agreement for commercial kitchen premises",
+        "Apply for FSSAI registration/license online via FoSCoS portal",
+        "Obtain BBMP Trade License from local municipality",
+        "Register for GST and open commercial bank account"
+      ],
+      sources: [
+        { name: "Food Safety and Standards Authority of India (FSSAI)", last_verified: "Today", url: "https://foscos.fssai.gov.in/" },
+        { name: "Bruhat Bengaluru Mahanagara Palike (BBMP)", last_verified: "Yesterday", url: "https://bbmp.gov.in/" }
+      ]
+    };
+  }
+
+  return {
+    goal: {
+      title: "Citizen Goal Journey",
+      description: "Detailed regulatory checklist for your citizen query."
+    },
+    location: {
+      current_location: "Udaipur",
+      domicile_state: domicileState || "Rajasthan",
+      destination: null
+    },
+    intent: {
+      primary: "OTHER"
+    },
+    documents: {
+      available: [
+        { name: "Aadhaar Card", verification_status: "VERIFIED" },
+        { name: "PAN Card", verification_status: "VERIFIED" }
+      ],
+      needed: [
+        { name: "Additional documents depend on your exact goal", status: "Required", reason: "The requirement varies according to the service, jurisdiction and eligibility." }
+      ]
+    },
+    schemes: [],
+    next_steps: [
+      "Check required certificates or licenses on local state portal",
+      "Prepare basic identification proofs (Aadhaar, PAN, Photos)"
+    ],
+    sources: [
+      { name: "National Government Services Portal", last_verified: "Recently", url: "https://services.india.gov.in/" }
+    ]
+  };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { t, isRTL } = useLanguage();
@@ -157,6 +334,25 @@ export default function DashboardPage() {
     setJourneyAnalysis(null);
     setIsAnalyzing(true);
     setGenerationStage(0);
+
+    if (DEMO_MODE) {
+      const timer1 = setTimeout(() => setGenerationStage(1), 200);
+      const timer2 = setTimeout(() => setGenerationStage(2), 450);
+      const timer3 = setTimeout(() => setGenerationStage(3), 700);
+      const timer4 = setTimeout(() => setGenerationStage(4), 950);
+
+      await new Promise(resolve => setTimeout(resolve, 1100));
+
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+
+      const res = generateDemoJourney(trimmedGoal, domicileState);
+      setJourneyAnalysis(res);
+      setIsAnalyzing(false);
+      return;
+    }
 
     // Simulated quick progress indicators
     const timer1 = setTimeout(() => setGenerationStage(1), 150); // Checking your documents
@@ -485,7 +681,18 @@ export default function DashboardPage() {
 
       {/* Personalized Citizen Journey Result UI */}
       {journeyAnalysis && (
-        <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-8 space-y-8 shadow-2xl animate-fade-in">
+        <div id="demo-results-area" className="bg-slate-900 border border-amber-500/30 rounded-2xl p-8 space-y-8 shadow-2xl animate-fade-in">
+          {DEMO_MODE && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3 text-amber-400 text-xs">
+              <span className="text-base">⚡</span>
+              <div>
+                <strong className="font-black uppercase tracking-wider text-[10px]">DEMO MODE ACTIVE</strong>
+                <p className="text-slate-400 mt-0.5 font-semibold">
+                  Demo document data is simulated. Government scheme information is shown only when verified.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Header & Goal Identification */}
           <div className="border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -585,8 +792,12 @@ export default function DashboardPage() {
 
             {journeyAnalysis.schemes.length === 0 ? (
               <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 text-center space-y-1">
-                <p className="text-xs font-semibold text-slate-400">No verified scheme matching your current information was found.</p>
-                <p className="text-[11px] text-slate-500">We only show government schemes that strictly match your parameters.</p>
+                <p className="text-xs font-semibold text-slate-400">
+                  {DEMO_MODE ? "No verified schemes available in Demo Mode." : "No verified scheme matching your current information was found."}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {DEMO_MODE ? "Government scheme verification is temporarily unavailable in this demonstration." : "We only show government schemes that strictly match your parameters."}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
