@@ -520,13 +520,14 @@ export default function DashboardPage() {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify(resWithId));
         sessionStorage.setItem("citizenJourney", JSON.stringify(resWithId));
+        sessionStorage.setItem("activeCitizenJourney", JSON.stringify(resWithId));
       }
       
       console.log("[Journey DEBUG] before navigation:", resWithId);
       console.log("[Journey DEBUG] storage:", sessionStorage.getItem("citizenJourney"));
 
       setIsAnalyzing(false);
-      router.push(`/journey/${journeyId}`);
+      router.push(`/journey-preview`);
       return;
     }
 
@@ -555,13 +556,14 @@ export default function DashboardPage() {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem(`journey_analysis_${journeyId}`, JSON.stringify(resWithId));
           sessionStorage.setItem("citizenJourney", JSON.stringify(resWithId));
+          sessionStorage.setItem("activeCitizenJourney", JSON.stringify(resWithId));
         }
         
         console.log("[Journey DEBUG] before navigation:", resWithId);
         console.log("[Journey DEBUG] storage:", sessionStorage.getItem("citizenJourney"));
         
         // Immediate redirection
-        router.push(`/journey/${journeyId}`);
+        router.push(`/journey-preview`);
       } else {
         throw new Error("Journey was not created.");
       }
