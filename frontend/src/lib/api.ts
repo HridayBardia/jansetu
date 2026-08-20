@@ -579,7 +579,14 @@ export interface JourneyAnalyzeResponse {
   };
 }
 
+export const EMERGENCY_DEMO_MODE = true;
+
 export async function analyzeJourneyAPI(query: string, domicileState: string): Promise<any | null> {
+  if (EMERGENCY_DEMO_MODE) {
+    console.log("[Journey] EMERGENCY DEMO MODE active. Bypassing backend and simulating 1.2s delay.");
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    return _clientSideJourneyFallback(query, domicileState);
+  }
   try {
     const result = await apiFetch<any>('/journey/analyze', {
       method: 'POST',
@@ -855,6 +862,10 @@ export async function fetchJourneyAnalysisAPI(journeyId: string): Promise<any | 
     if (stored) {
       try { return JSON.parse(stored); } catch (e) {}
     }
+  }
+  if (EMERGENCY_DEMO_MODE) {
+    console.log("[Journey] EMERGENCY DEMO MODE active. Stored item not found, generating local fallback.");
+    return _clientSideJourneyFallback("I want to start a business in Gujarat", "Gujarat");
   }
   return await apiFetch<any>(`/journey/${journeyId}`);
 }

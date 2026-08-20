@@ -23,7 +23,7 @@ import {
   CheckCircle,
   Globe
 } from 'lucide-react';
-import { generateJourneyAPI, fetchJourneyAnalysisAPI } from '@/lib/api';
+import { generateJourneyAPI, fetchJourneyAnalysisAPI, EMERGENCY_DEMO_MODE } from '@/lib/api';
 import { PdfViewerModal } from '@/components/PdfViewerModal';
 
 function JourneyResultPage() {
@@ -304,6 +304,16 @@ schemesRendered = ${centralSchemes.length + stateSchemes.length + targetLocation
             </button>
           </div>
         </div>
+
+        {EMERGENCY_DEMO_MODE && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3 text-amber-400 text-xs animate-pulse">
+            <span className="text-base">⚡</span>
+            <div>
+              <strong className="font-black uppercase tracking-wider text-[10px]">DEMO MODE ACTIVE</strong>
+              <p className="text-slate-400 mt-0.5 font-semibold">Government verification databases are simulated in this presentation.</p>
+            </div>
+          </div>
+        )}
 
         {/* Goal Profile Meta Card */}
         <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
