@@ -7,17 +7,21 @@ import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/dashboard');
+      if (isAuthenticated && user) {
+        if (user.role === 'ADMIN' || user.role === 'admin') {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/citizen/dashboard');
+        }
       } else {
         router.replace('/login');
       }
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, user, router]);
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center">

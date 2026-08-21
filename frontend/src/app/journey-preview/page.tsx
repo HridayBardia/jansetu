@@ -96,7 +96,7 @@ export default function JourneyPreviewPage() {
         {/* Navigation */}
         <div>
           <Link 
-            href="/dashboard"
+            href="/citizen/dashboard"
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-amber-500 transition-colors mb-3 group"
           >
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />

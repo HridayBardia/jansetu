@@ -76,7 +76,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
       if (res && res.user) {
         onSuccess?.();
         onClose?.();
-        router.replace('/dashboard');
+        if (res.user.role === 'ADMIN' || res.user.role === 'admin') {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/citizen/dashboard');
+        }
       } else {
         setErrorMsg('Invalid username or PIN. Please try again.');
       }

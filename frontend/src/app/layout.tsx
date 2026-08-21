@@ -20,22 +20,26 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 function AppContent({ children, sandboxMode, setSandboxMode }: { children: React.ReactNode; sandboxMode: boolean; setSandboxMode: (val: boolean) => void }) {
-  const { isAuthModalOpen, closeAuthModal, isAuthenticated, isLoading } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, isAuthenticated, isLoading, user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   React.useEffect(() => {
     if (!isLoading) {
-      const protectedRoutes = ['/dashboard', '/journeys', '/alerts', '/help', '/privacy', '/admin'];
+      const protectedRoutes = ['/citizen', '/journeys', '/alerts', '/help', '/privacy', '/admin'];
       const isProtected = pathname ? protectedRoutes.some(route => pathname.startsWith(route)) : false;
       if (isProtected && !isAuthenticated) {
         router.replace('/login');
       }
-      if (pathname && pathname === '/login' && isAuthenticated) {
-        router.replace('/dashboard');
+      if (pathname && pathname === '/login' && isAuthenticated && user) {
+        if (user.role === 'ADMIN' || user.role === 'admin') {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/citizen/dashboard');
+        }
       }
     }
-  }, [isLoading, isAuthenticated, pathname, router]);
+  }, [isLoading, isAuthenticated, user, pathname, router]);
 
   if (isLoading) {
     return (
