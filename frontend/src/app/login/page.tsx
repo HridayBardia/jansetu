@@ -68,11 +68,6 @@ export default function LoginPage() {
     }
   };
 
-  const autofillDemo = (demoUsername: string) => {
-    setUsername(demoUsername);
-    setPinDigits(['1', '2', '3', '4', '5', '6']);
-    setErrorMsg(null);
-  };
 
   const handleLogin = async () => {
     const pin = pinDigits.join('');
@@ -239,25 +234,6 @@ export default function LoginPage() {
               {loginType === 'CITIZEN' ? 'Citizen Login' : 'Admin Login'}
             </h2>
 
-            {/* Demo Accounts List */}
-            <div style={{ marginBottom: '24px' }}>
-              <p style={{ color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', fontWeight: 600 }}>Demo Accounts</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {loginType === 'CITIZEN' ? (
-                  <>
-                    <button onClick={() => autofillDemo('hriday')} style={demoBtnStyle}>Hriday</button>
-                    <button onClick={() => autofillDemo('varad')} style={demoBtnStyle}>Varad</button>
-                    <button onClick={() => autofillDemo('ayuh')} style={demoBtnStyle}>Ayuh</button>
-                    <button onClick={() => autofillDemo('satwik')} style={demoBtnStyle}>Satwik</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => autofillDemo('dishita')} style={demoBtnStyle}>Dishita</button>
-                    <button onClick={() => autofillDemo('jyoti')} style={demoBtnStyle}>Jyoti</button>
-                  </>
-                )}
-              </div>
-            </div>
 
             {/* Error Banner */}
             {errorMsg && (
@@ -284,7 +260,7 @@ export default function LoginPage() {
                   onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
                   onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
                   placeholder="Enter your username"
-                  autoComplete="username"
+                  autoComplete="off"
                   style={{
                     width: '100%', padding: '13px 14px 13px 40px', background: 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#e2e8f0',
@@ -357,13 +333,3 @@ export default function LoginPage() {
   );
 }
 
-const demoBtnStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  color: '#cbd5e1',
-  padding: '6px 12px',
-  borderRadius: '8px',
-  fontSize: '13px',
-  cursor: 'pointer',
-  transition: 'all 0.2s',
-};

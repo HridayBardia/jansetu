@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { AdminAnalyticsView } from '@/components/AdminAnalyticsView';
-
+import { AdminCitizensView } from '@/components/AdminCitizensView';
+import { AdminApplicationsView } from '@/components/AdminApplicationsView';
+import { AdminInteropView } from '@/components/AdminInteropView';
+import { AdminDataQualityView } from '@/components/AdminDataQualityView';
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -34,8 +37,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-amber-500/30 font-sans">
-      <Navbar sandboxMode={true} setSandboxMode={() => {}} />
-
       <main className="max-w-7xl mx-auto px-4 py-8 relative">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
         <div className="absolute top-20 left-0 w-96 h-96 bg-gradient-to-tr from-amber-500/5 to-transparent blur-3xl pointer-events-none" />
@@ -50,15 +51,33 @@ export default function AdminDashboardPage() {
             </p>
           </header>
 
-          <AdminAnalyticsView 
-            analytics={{
-              total_journeys_started: 14520,
-              prerequisites_auto_resolved: 42100,
-              sources_indexed: 154,
-              time_saved_hours_per_citizen: 12.5,
-              avg_completion_rate: 85
-            }} 
-          />
+          {tab === 'official' || tab === 'overview' ? (
+            <AdminAnalyticsView 
+              analytics={user?.username === 'dishita' ? {
+                total_journeys_started: 4200,
+                prerequisites_auto_resolved: 15200,
+                sources_indexed: 54,
+                time_saved_hours_per_citizen: 9.5,
+                avg_completion_rate: 92
+              } : user?.username === 'jyoti' ? {
+                total_journeys_started: 10320,
+                prerequisites_auto_resolved: 26900,
+                sources_indexed: 100,
+                time_saved_hours_per_citizen: 14.2,
+                avg_completion_rate: 81
+              } : {
+                total_journeys_started: 14520,
+                prerequisites_auto_resolved: 42100,
+                sources_indexed: 154,
+                time_saved_hours_per_citizen: 12.5,
+                avg_completion_rate: 85
+              }} 
+            />
+          ) : null}
+          {tab === 'citizens' && <AdminCitizensView />}
+          {tab === 'applications' && <AdminApplicationsView />}
+          {tab === 'interop' && <AdminInteropView />}
+          {tab === 'data_quality' && <AdminDataQualityView />}
         </div>
       </main>
     </div>

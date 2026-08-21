@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { LanguageSelector } from './LanguageSelector';
 import { JanSetuLogo } from './JanSetuLogo';
 import { useLanguage } from '@/context/LanguageContext';
@@ -34,8 +34,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   setSandboxMode
 }) => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
   const { t } = useLanguage();
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+
+  const isActive = (href: string) => {
+    if (!pathname) return false;
+    const [base, query] = href.split('?');
+    if (pathname === base) {
+      if (query && query.startsWith('tab=')) {
+        return currentTab === query.replace('tab=', '');
+      } else {
+        if (pathname === '/admin/dashboard') return !currentTab || currentTab === 'overview';
+        if (pathname === '/citizen/dashboard') return !currentTab || currentTab === 'planner';
+        return true;
+      }
+    }
+    return pathname.startsWith(href) && href !== '/';
+  };
 
   let navItems: { label: string, href: string, icon: any }[] = [];
 
@@ -118,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-6 h-11">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || (item.href !== '/' && pathname && pathname.startsWith(item.href));
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
@@ -142,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-around">
           {navItems.slice(0, 5).map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || (item.href !== '/' && pathname && pathname.startsWith(item.href));
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}

@@ -132,7 +132,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
             onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
             onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
             placeholder="your_username"
-            autoComplete="username"
+            autoComplete="off"
             autoFocus
             className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-3 text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition"
           />

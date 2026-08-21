@@ -1,0 +1,269 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Radio, Database, Shield, Server, ArrowRight, Activity, ArrowRightLeft, ArrowDownCircle, Network } from 'lucide-react';
+
+const mockNodes = [
+  {
+    id: 'citizen',
+    label: 'Citizen Client',
+    type: 'client',
+    status: 'Active',
+    protocol: 'HTTPS / TLS 1.3',
+    latency: '45ms',
+    successRate: '99.9%',
+    demo: false
+  },
+  {
+    id: 'consent',
+    label: 'Consent Manager',
+    type: 'security',
+    status: 'Active',
+    protocol: 'OAuth 2.0 / JWT',
+    latency: '12ms',
+    successRate: '100%',
+    demo: false
+  },
+  {
+    id: 'gateway',
+    label: 'JanSetu Gateway',
+    type: 'core',
+    status: 'Active',
+    protocol: 'gRPC / REST',
+    latency: '5ms',
+    successRate: '99.99%',
+    demo: false
+  },
+  {
+    id: 'mca',
+    label: 'Ministry of Corp Affairs',
+    type: 'external',
+    status: 'Simulated',
+    protocol: 'REST API',
+    latency: '150ms',
+    successRate: '98.5%',
+    demo: true
+  },
+  {
+    id: 'uidai',
+    label: 'UIDAI (Aadhaar)',
+    type: 'external',
+    status: 'Simulated',
+    protocol: 'REST / XML',
+    latency: '200ms',
+    successRate: '97.2%',
+    demo: true
+  },
+  {
+    id: 'municipal',
+    label: 'Municipal Corporation',
+    type: 'external',
+    status: 'Simulated',
+    protocol: 'SOAP Adapter',
+    latency: '450ms',
+    successRate: '92.1%',
+    demo: true
+  }
+];
+
+export const AdminInteropView = () => {
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+          <Network className="w-6 h-6 text-pink-400" />
+          <span>Interoperability Gateway</span>
+        </h1>
+        <p className="text-sm text-slate-400 mt-1">
+          Monitor the real-time API topology connecting citizens to siloed government departments.
+        </p>
+      </div>
+
+      {/* Without vs With JanSetu Comparison */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider mb-4">Without JanSetu</h3>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <UserIcon /> <ArrowRight className="w-4 h-4 text-slate-600" /> 
+              <span>Portal A</span> <ArrowRight className="w-4 h-4 text-slate-600" /> 
+              <span className="text-xs text-slate-500 italic">Submit Identity Docs</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <UserIcon /> <ArrowRight className="w-4 h-4 text-slate-600" /> 
+              <span>Portal B</span> <ArrowRight className="w-4 h-4 text-slate-600" /> 
+              <span className="text-xs text-slate-500 italic">Submit Identity Docs AGAIN</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <UserIcon /> <ArrowRight className="w-4 h-4 text-slate-600" /> 
+              <span>Portal C</span> <ArrowRight className="w-4 h-4 text-slate-600" /> 
+              <span className="text-xs text-slate-500 italic">Submit Identity Docs AGAIN</span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 mt-4 leading-relaxed">
+            Citizens are forced to act as the integration layer, submitting the exact same information to disconnected portals.
+          </p>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-2xl" />
+          <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-4 relative z-10">With JanSetu</h3>
+          <div className="space-y-4 relative z-10">
+            <div className="flex items-center justify-between text-sm text-slate-300 bg-slate-950 p-3 rounded-xl border border-emerald-500/20">
+              <div className="flex items-center gap-3">
+                <UserIcon /> <ArrowRight className="w-4 h-4 text-emerald-500" /> 
+                <span className="font-bold text-white">JanSetu Gateway</span>
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded uppercase font-bold">1-Time Verification</span>
+            </div>
+            <div className="flex justify-center">
+              <ArrowDownCircle className="w-5 h-5 text-emerald-500/50" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-center text-xs text-slate-400">Portal A API</div>
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-center text-xs text-slate-400">Portal B API</div>
+              <div className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-center text-xs text-slate-400">Portal C API</div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 mt-4 leading-relaxed relative z-10">
+            Approved information moves securely via standardized API adapters without requiring the citizen to repeat the process.
+          </p>
+        </div>
+      </div>
+
+      {/* Interactive Topology Diagram */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+        
+        {/* Canvas Area */}
+        <div className="flex-1 p-8 relative min-h-[400px] border-b md:border-b-0 md:border-r border-slate-800 flex items-center justify-center bg-[#05050a]">
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+          
+          <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-xl">
+            {/* Top Row: Client */}
+            <NodeButton node={mockNodes[0]} onClick={() => setSelectedNode(mockNodes[0])} selected={selectedNode?.id === 'citizen'} />
+            
+            <div className="w-px h-8 bg-gradient-to-b from-blue-500 to-amber-500 relative">
+              <div className="absolute inset-0 animate-pulse bg-blue-400 blur-[2px]" />
+            </div>
+
+            {/* Middle Row: Security & Core */}
+            <div className="flex items-center gap-12">
+              <NodeButton node={mockNodes[1]} onClick={() => setSelectedNode(mockNodes[1])} selected={selectedNode?.id === 'consent'} />
+              <div className="h-px w-12 bg-amber-500 relative"><div className="absolute inset-0 animate-pulse bg-amber-400 blur-[2px]" /></div>
+              <NodeButton node={mockNodes[2]} onClick={() => setSelectedNode(mockNodes[2])} selected={selectedNode?.id === 'gateway'} />
+            </div>
+
+            <div className="flex w-full justify-between px-16 relative">
+               <svg className="absolute inset-0 w-full h-12" style={{ top: 0, left: 0 }}>
+                 <path d="M 50% 0 L 15% 100%" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="4 4" className="animate-[dash_1s_linear_infinite]" />
+                 <path d="M 50% 0 L 50% 100%" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="4 4" className="animate-[dash_1s_linear_infinite]" />
+                 <path d="M 50% 0 L 85% 100%" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="4 4" className="animate-[dash_1s_linear_infinite]" />
+               </svg>
+            </div>
+
+            {/* Bottom Row: External Services */}
+            <div className="flex items-center justify-between w-full mt-4">
+              <NodeButton node={mockNodes[3]} onClick={() => setSelectedNode(mockNodes[3])} selected={selectedNode?.id === 'mca'} />
+              <NodeButton node={mockNodes[4]} onClick={() => setSelectedNode(mockNodes[4])} selected={selectedNode?.id === 'uidai'} />
+              <NodeButton node={mockNodes[5]} onClick={() => setSelectedNode(mockNodes[5])} selected={selectedNode?.id === 'municipal'} />
+            </div>
+          </div>
+          
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes dash { to { stroke-dashoffset: -8; } }
+          `}} />
+        </div>
+
+        {/* Node Inspection Panel */}
+        <div className="w-full md:w-80 bg-slate-950 p-6 flex flex-col">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Node Inspector</h3>
+          
+          {!selectedNode ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50">
+              <Radio className="w-12 h-12 text-slate-600 mb-3" />
+              <p className="text-sm text-slate-400">Click a node in the topology graph to view technical telemetry.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  {selectedNode.demo && <span className="bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold border border-amber-500/20">Demo / Simulated</span>}
+                  {!selectedNode.demo && <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold border border-emerald-500/20">Live System</span>}
+                </div>
+                <h4 className="text-lg font-bold text-white">{selectedNode.label}</h4>
+                <p className="text-xs text-slate-400 font-mono mt-1">ID: net.{selectedNode.id}.jansetu.gov</p>
+              </div>
+
+              <div className="space-y-3 bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Status</span>
+                  <span className={selectedNode.status === 'Active' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>{selectedNode.status}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Protocol</span>
+                  <span className="text-slate-200 font-mono text-xs">{selectedNode.protocol}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Latency</span>
+                  <span className="text-slate-200">{selectedNode.latency}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Success Rate</span>
+                  <span className="text-emerald-400">{selectedNode.successRate}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-800">
+                <h5 className="text-xs font-bold text-slate-300 mb-2">Recent Exchange Log</h5>
+                <div className="bg-[#05050a] border border-slate-800 rounded p-2 font-mono text-[10px] text-slate-500 break-all h-24 overflow-y-auto">
+                  [14:22:01] REQ_ID: a7f8-99b2<br/>
+                  [14:22:01] TYPE: Schema validation<br/>
+                  [14:22:01] AUTH: Validated JWT<br/>
+                  [14:22:02] RES: 200 OK<br/>
+                  [14:22:02] PAYLOAD_SIZE: 1.2kb<br/>
+                  [14:22:05] REQ_ID: c1a2-88d3<br/>
+                  [14:22:05] RES: 200 OK
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// Helper Components
+const UserIcon = () => <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center"><UserCircleIcon /></div>;
+const UserCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>;
+
+const NodeButton = ({ node, onClick, selected }: { node: any, onClick: () => void, selected: boolean }) => {
+  const getIcon = () => {
+    if (node.type === 'client') return <UserCircleIcon />;
+    if (node.type === 'security') return <Shield className="w-5 h-5 text-amber-400" />;
+    if (node.type === 'core') return <Activity className="w-6 h-6 text-pink-400" />;
+    return <Database className="w-5 h-5 text-blue-400" />;
+  };
+
+  const getColors = () => {
+    if (selected) return 'bg-slate-800 border-white shadow-[0_0_15px_rgba(255,255,255,0.2)]';
+    if (node.type === 'core') return 'bg-slate-900 border-pink-500/50 hover:border-pink-400';
+    if (node.type === 'security') return 'bg-slate-900 border-amber-500/50 hover:border-amber-400';
+    return 'bg-slate-900 border-slate-700 hover:border-slate-500';
+  };
+
+  return (
+    <button 
+      onClick={onClick}
+      className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${getColors()} w-28 h-24 z-20`}
+    >
+      {getIcon()}
+      <span className="text-[10px] font-bold text-slate-300 text-center leading-tight">{node.label}</span>
+      {node.demo && <div className="absolute -bottom-2 bg-amber-500 text-slate-950 text-[8px] font-black px-1.5 rounded uppercase">DEMO</div>}
+    </button>
+  );
+};

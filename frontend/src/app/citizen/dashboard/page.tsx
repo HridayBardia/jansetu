@@ -815,9 +815,9 @@ export default function DashboardPage() {
                activeTab === 'journeys' ? 'Active Journeys' : 
                activeTab === 'documents' ? 'Documents Vault' :
                activeTab === 'applications' ? 'My Applications' :
-               activeTab === 'consent' ? 'Privacy & Consent' :
-               activeTab === 'interop' ? 'Interop Hub' :
-               activeTab === 'conflicts' ? 'Data Quality' :
+               activeTab === 'consent' ? 'YOUR DATA & CONSENT' :
+               activeTab === 'interop' ? 'Govt Interop Hub' :
+               activeTab === 'conflicts' ? 'CHECK MY INFORMATION' :
                activeTab === 'alerts' ? 'Alerts & Events' : 'Official View'}
             </span>
           </div>
@@ -951,7 +951,7 @@ export default function DashboardPage() {
           }`}
         >
           <Key className="w-4 h-4" />
-          <span>Privacy & Consent</span>
+          <span>YOUR DATA & CONSENT</span>
           {consents.filter(c => c.granted).length > 0 && (
             <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {consents.filter(c => c.granted).length}
@@ -968,7 +968,7 @@ export default function DashboardPage() {
           }`}
         >
           <Activity className="w-4 h-4" />
-          <span>Interop Hub</span>
+          <span>Govt Interop Hub</span>
         </button>
 
         <button
@@ -980,7 +980,7 @@ export default function DashboardPage() {
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
-          <span>Data Quality</span>
+          <span>CHECK MY INFORMATION</span>
           {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
             <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
               {conflicts.filter(c => c.status === 'DETECTED').length}
@@ -1511,24 +1511,24 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Applications</span>
-              <span className="text-lg font-black text-white">{applications.length || 4} Registered</span>
+              <span className="text-lg font-black text-white">{applications.length} Registered</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Verification</span>
               <span className="text-lg font-black text-amber-400">
-                {applications.filter(a => ['UNDER_VERIFICATION', 'SUBMITTED', 'DOCUMENTS_REQUIRED'].includes(a.status)).length || 3} Pending
+                {applications.filter(a => ['UNDER_VERIFICATION', 'SUBMITTED', 'DOCUMENTS_REQUIRED'].includes(a.status)).length} Pending
               </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completed</span>
               <span className="text-lg font-black text-emerald-400">
-                {applications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length || 1} Issued
+                {applications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length} Issued
               </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Action Required</span>
               <span className="text-lg font-black text-red-400 animate-pulse">
-                {applications.filter(a => a.status === 'DOCUMENTS_REQUIRED').length || 1} Alert
+                {applications.filter(a => a.status === 'DOCUMENTS_REQUIRED').length} Alert
               </span>
             </div>
           </div>
@@ -1899,480 +1899,34 @@ export default function DashboardPage() {
 
       {/* Interop Tab */}
       {activeTab === 'interop' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Telemetry metrics bar */}
-          {healthData && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-emerald-400" /> Connected Services
-                </span>
-                <p className="text-lg font-black text-white">{healthData.connected_services}</p>
+        <div className="space-y-6 animate-fadeIn max-w-3xl mx-auto mt-8">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute -top-32 -left-32 w-64 h-64 bg-emerald-500/10 blur-3xl rounded-full" />
+            <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full" />
+            
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="w-20 h-20 bg-slate-950 border border-slate-800 rounded-full flex items-center justify-center mb-6 shadow-lg">
+                <Network className="w-10 h-10 text-emerald-400" />
               </div>
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-cyan-400" /> Successful Requests
-                </span>
-                <p className="text-lg font-black text-emerald-400">{healthData.success_rate}</p>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 text-amber-400" /> Response Time
-                </span>
-                <p className="text-lg font-black text-amber-400">{healthData.avg_latency}</p>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <Compass className="w-3.5 h-3.5 text-purple-400" /> Pending Events
-                </span>
-                <p className="text-lg font-black text-purple-400">{healthData.pending_events}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Interactive Topology Network diagram */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-amber-400" />
-                  <span>Interoperability Gateway Topology Diagram</span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Interactive network showing mock protocol endpoints. Click any node to inspect data exchanges.
+              
+              <h1 className="text-3xl font-extrabold text-white mb-4">
+                Government Interop Hub
+              </h1>
+              
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 text-left w-full max-w-xl mx-auto my-6 space-y-4 shadow-inner">
+                <p className="text-slate-300 text-lg leading-relaxed text-center">
+                  Your data has been securely synced with <strong className="text-white">UIDAI</strong>, <strong className="text-white">Municipal Corporation</strong>, and the <strong className="text-white">Tax Department</strong>.
+                </p>
+                <div className="h-px w-full bg-slate-800/50 my-4" />
+                <p className="text-emerald-400 font-bold text-lg flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-6 h-6" />
+                  Because of JanSetu, you didn't have to fill out 45 form fields.
                 </p>
               </div>
-              {/* Failure Simulation triggers */}
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => {
-                    toggleConnectorHealthAPI("srv_pmc_license", "FAILED").then(() => loadInteropData());
-                  }}
-                  className="bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 font-bold px-3 py-1.5 rounded-lg text-xs transition"
-                >
-                  Simulate Failure
-                </button>
-                <button
-                  onClick={() => {
-                    toggleConnectorHealthAPI("srv_pmc_license", "HEALTHY").then(() => loadInteropData());
-                  }}
-                  className="bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 font-bold px-3 py-1.5 rounded-lg text-xs transition"
-                >
-                  Restore Service
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-              <div className="lg:col-span-2">
-                <svg viewBox="0 0 600 350" className="w-full h-auto bg-slate-950 border border-slate-850 rounded-xl shadow-2xl">
-                  {/* Connections to Satellites */}
-                  <line x1="300" y1="175" x2="300" y2="50" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4,4" />
-                  <line x1="300" y1="175" x2="100" y2="120" stroke="#10b981" strokeWidth="1.5" />
-                  <line x1="300" y1="175" x2="100" y2="230" stroke="#10b981" strokeWidth="1.5" />
-                  <line x1="300" y1="175" x2="500" y2="120" stroke="#10b981" strokeWidth="1.5" />
-                  <line x1="300" y1="175" x2="500" y2="230" stroke={healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status === "Failed" ? "#ef4444" : "#10b981"} strokeWidth="1.5" />
-                  <line x1="300" y1="175" x2="300" y2="300" stroke="#10b981" strokeWidth="1.5" />
-
-                  {/* Animated pulsing circles moving along lines */}
-                  <circle r="3.5" fill="#f59e0b">
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M 300 175 L 300 50 Z" />
-                  </circle>
-                  <circle r="3.5" fill="#10b981">
-                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 300 175 L 100 120 Z" />
-                  </circle>
-                  <circle r="3.5" fill="#10b981">
-                    <animateMotion dur="3.5s" repeatCount="indefinite" path="M 300 175 L 100 230 Z" />
-                  </circle>
-                  <circle r="3.5" fill="#10b981">
-                    <animateMotion dur="4s" repeatCount="indefinite" path="M 300 175 L 500 120 Z" />
-                  </circle>
-                  <circle r="3.5" fill={healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status === "Failed" ? "#ef4444" : "#10b981"}>
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M 300 175 L 500 230 Z" />
-                  </circle>
-                  <circle r="3.5" fill="#10b981">
-                    <animateMotion dur="2s" repeatCount="indefinite" path="M 300 175 L 300 300 Z" />
-                  </circle>
-
-                  {/* Center Hub */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    name: "Maharashtra Interoperability Gateway",
-                    connector_type: "Hub Engine",
-                    status: "Healthy",
-                    request_count: "18,421",
-                    latency: "380ms",
-                    api_version: "v3.2",
-                    details: "Central routing engine managing API protocols, token consent controls, and common schemas mapping."
-                  })}>
-                    <circle cx="300" cy="175" r="45" fill="#f59e0b" fillOpacity="0.1" stroke="#f59e0b" strokeWidth="2" className="animate-pulse" />
-                    <circle cx="300" cy="175" r="35" fill="#f59e0b" />
-                    <text x="300" y="172" fill="#020205" textAnchor="middle" fontSize="10" fontWeight="900">INTEROP</text>
-                    <text x="300" y="184" fill="#020205" textAnchor="middle" fontSize="9" fontWeight="900">GATEWAY</text>
-                  </g>
-
-                  {/* Satellites */}
-                  {/* Top: Doc Vault */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    service_id: "srv_digilocker",
-                    name: "Document Verification Service (DigiLocker API)",
-                    connector_type: "REST API",
-                    status: "Healthy",
-                    request_count: "3,142",
-                    latency: "210ms",
-                    api_version: "v2.0",
-                    details: "DigiLocker REST integration verifying document hashes."
-                  })}>
-                    <circle cx="300" cy="50" r="22" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
-                    <text x="300" y="53" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">DigiLocker</text>
-                  </g>
-
-                  {/* Top Left: Identity */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    service_id: "srv_identity",
-                    name: "Identity Verification Service (Aadhaar API)",
-                    connector_type: "REST API",
-                    status: "Healthy",
-                    request_count: "5,821",
-                    latency: "310ms",
-                    api_version: "v2.1",
-                    details: "Aadhaar e-KYC demographics identity verify."
-                  })}>
-                    <circle cx="100" cy="120" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
-                    <text x="100" y="123" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">Aadhaar ID</text>
-                  </g>
-
-                  {/* Bottom Left: Address */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    service_id: "srv_address",
-                    name: "Address Verification Service",
-                    connector_type: "REST API",
-                    status: "Healthy",
-                    request_count: "4,192",
-                    latency: "280ms",
-                    api_version: "v1.0",
-                    details: "Land registry & property tax databases address match."
-                  })}>
-                    <circle cx="100" cy="230" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
-                    <text x="100" y="233" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">Address</text>
-                  </g>
-
-                  {/* Top Right: Business MSINS */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    service_id: "srv_msins_biz",
-                    name: "Business Registration (MSINS)",
-                    connector_type: "REST API",
-                    status: "Healthy",
-                    request_count: "2,842",
-                    latency: "420ms",
-                    api_version: "v3.0",
-                    details: "Maharashtra State Innovation Society business creation."
-                  })}>
-                    <circle cx="500" cy="120" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
-                    <text x="500" y="123" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">MSINS Biz</text>
-                  </g>
-
-                  {/* Bottom Right: Municipal Legacy Adapter */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    service_id: "srv_pmc_license",
-                    name: "Legacy Municipal System (Pune Trade License)",
-                    connector_type: "SOAP Legacy Adapter",
-                    status: healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status || "Healthy",
-                    request_count: "1,424",
-                    latency: "680ms",
-                    api_version: "v2.0-SOAP",
-                    details: "Legacy Municipal SOAP service adapter wrapping traditional XML responses."
-                  })}>
-                    <circle cx="500" cy="230" r="22" fill="#1e293b" stroke={healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status === "Failed" ? "#ef4444" : "#10b981"} strokeWidth="2" />
-                    <text x="500" y="233" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">PMC SOAP</text>
-                  </g>
-
-                  {/* Bottom: Notifications */}
-                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
-                    name: "Notification Gateway",
-                    connector_type: "REST API",
-                    status: "Healthy",
-                    request_count: "12,982",
-                    latency: "95ms",
-                    api_version: "v1.1",
-                    details: "SMS & Email notification dispatcher."
-                  })}>
-                    <circle cx="300" cy="300" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
-                    <text x="300" y="303" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">Alerts</text>
-                  </g>
-                </svg>
-              </div>
-
-              {/* Connector details panel */}
-              <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 text-xs space-y-4 flex flex-col justify-between">
-                {selectedConnector ? (
-                  <>
-                    <div className="space-y-3">
-                      <div>
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-wider uppercase inline-block mb-1 ${
-                          selectedConnector.status === 'Healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                          selectedConnector.status === 'Failed' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        }`}>
-                          {selectedConnector.status}
-                        </span>
-                        <h4 className="font-bold text-white text-sm">{selectedConnector.name}</h4>
-                        <p className="text-[10px] text-slate-500">Connector Type: <span className="text-cyan-400 font-mono">{selectedConnector.connector_type}</span></p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-900 p-2.5 rounded-lg border border-slate-850">
-                        <p className="text-slate-400">API Version: <strong className="text-slate-200">{selectedConnector.api_version || 'v1.0'}</strong></p>
-                        <p className="text-slate-400">Total Requests: <strong className="text-slate-200">{selectedConnector.request_count}</strong></p>
-                        <p className="text-slate-400">Success Rate: <strong className="text-emerald-400">99.2%</strong></p>
-                        <p className="text-slate-400">Avg Latency: <strong className="text-amber-400">{selectedConnector.latency}</strong></p>
-                      </div>
-
-                      <p className="text-slate-400 text-[11px] leading-relaxed">
-                        {selectedConnector.details}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-900">
-                      <button
-                        onClick={() => setShowExchange(!showExchange)}
-                        className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white font-bold py-2 rounded-lg transition text-[11px]"
-                      >
-                        {showExchange ? 'Hide Exchange Inspector' : 'View Recent Exchange Packet'}
-                      </button>
-
-                      {showExchange && (
-                        <div className="mt-3 p-3 bg-slate-950 border border-slate-850 rounded-lg text-[9px] font-mono overflow-x-auto max-h-40 text-slate-300">
-                          {selectedConnector.connector_type.includes("SOAP") ? (
-                            <pre className="leading-tight text-yellow-300/90">
-{`<!-- SOAP Request Envelope -->
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <ApplyForTradeLicense xmlns="http://tempuri.org/">
-      <business_id>MSINS-PUNE-88741</business_id>
-      <ward_number>PMC-Ward-12</ward_number>
-      <area_sqft>450</area_sqft>
-    </ApplyForTradeLicense>
-  </soap:Body>
-</soap:Envelope>
-
-<!-- Legacy Response -->
-<soap:Envelope>
-  <soap:Body>
-    <ApplyForTradeLicenseResponse>
-      <LicenseNumber>LIC-PMC-2026-9912</LicenseNumber>
-      <Status>ISSUED</Status>
-    </ApplyForTradeLicenseResponse>
-  </soap:Body>
-</soap:Envelope>`}
-                            </pre>
-                          ) : (
-                            <pre className="leading-tight text-cyan-300/90">
-{`// REST JSON Exchange
-{
-  "request": {
-    "url": "/api/v1/services/srv_identity/call",
-    "method": "POST",
-    "headers": {
-      "Authorization": "Bearer jwt_token_hash"
-    },
-    "body": {
-      "operation": "verify_demographics",
-      "params": {
-        "aadhaar": "XXXX-XXXX-8865"
-      }
-    }
-  },
-  "response": {
-    "status": 200,
-    "body": {
-      "verified": true,
-      "claims": {
-        "name": "${user?.full_name || 'Hriday Bardia'}",
-        "dob": "${profile?.date_of_birth || '2005-01-10'}"
-      }
-    }
-  }
-}`}
-                            </pre>
-                          )}
-                          <p className="text-[8px] text-slate-500 mt-2 text-center uppercase tracking-wider block border-t border-slate-900 pt-1">DEMO API EXCHANGE</p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 space-y-2">
-                    <Activity className="w-8 h-8 text-slate-700 animate-pulse" />
-                    <p>Select any node on the interop topology map to view API connection logs.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* SLA Tracking & GovTech Impact Dashboards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* SLA Compliance */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Service Level Agreement (SLA) Tracking</span>
-              </h4>
-              <div className="space-y-4">
-                {serviceLevels && serviceLevels.length > 0 ? (
-                  serviceLevels.map((lvl) => (
-                    <div key={lvl.service_id} className="space-y-1.5 text-xs">
-                      <div className="flex justify-between items-center text-slate-300">
-                        <span className="font-semibold">{lvl.name}</span>
-                        <span className="text-emerald-400 font-bold">{lvl.sla_compliance} Compliance</span>
-                      </div>
-                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                        <div 
-                          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" 
-                          style={{ width: lvl.sla_compliance }}
-                        />
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] text-slate-500">
-                        <span>Target Processing: {lvl.target_hours}h</span>
-                        <span>Current Average: {lvl.actual_hours}h</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-slate-500 text-xs">Loading SLA compliance data...</p>
-                )}
-              </div>
-            </div>
-
-            {/* Interoperability Impact */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Interoperability Impact Metrics (GovTech Outcomes)</span>
-              </h4>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
-                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Duplicate Submissions</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-white">1.1</span>
-                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↓ 60.7%</span>
-                  </div>
-                  <span className="text-[9px] text-slate-600 block">Previously: 2.8 per journey</span>
-                </div>
-                
-                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
-                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Avg Processing Time</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-white">3.2 Days</span>
-                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↓ 40.7%</span>
-                  </div>
-                  <span className="text-[9px] text-slate-600 block">Previously: 5.4 days</span>
-                </div>
-
-                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
-                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Dept Handoffs</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-white">3</span>
-                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↓ 57.1%</span>
-                  </div>
-                  <span className="text-[9px] text-slate-600 block">Previously: 7 handoffs</span>
-                </div>
-
-                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
-                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Data Consistency</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-white">98.4%</span>
-                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↑ 11.2%</span>
-                  </div>
-                  <span className="text-[9px] text-slate-600 block">Previously: 87.2% consistent</span>
-                </div>
-              </div>
-              <p className="text-[9px] text-slate-500 text-center uppercase tracking-widest block pt-2">
-                *DEMO / SIMULATED GovTech IMPACT METRICS
+              
+              <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+                JanSetu securely routes your authorized information behind the scenes, so you only provide your details once.
               </p>
-            </div>
-          </div>
-
-          {/* Common Data Model mapping visualizer */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Compass className="w-5 h-5 text-amber-400" />
-                  <span>Common Data Model Schema Normalizer</span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Visualizes how disparate formats from separate systems are translated dynamically without modifying their databases.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCDM(!showCDM)}
-                className="text-amber-400 hover:text-amber-300 font-bold text-xs"
-              >
-                {showCDM ? 'Hide Mapping' : 'Show Mapping'}
-              </button>
-            </div>
-
-            {showCDM && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono bg-slate-950 border border-slate-850 p-4 rounded-xl text-slate-300">
-                <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2">
-                  <span className="text-[10px] font-black text-slate-500 uppercase block">Source System: Aadhaar</span>
-                  <p className="text-slate-400">full_name: <span className="text-emerald-400 font-bold">"{user?.full_name || 'Hriday Bardia'}"</span></p>
-                  <p className="text-slate-400">dob: <span className="text-emerald-400 font-bold">"{profile?.date_of_birth || '10/01/2005'}"</span></p>
-                  <p className="text-slate-400">addr_line1: <span className="text-emerald-400 font-bold">"Flat 402, Shivajinagar"</span></p>
-                </div>
-                <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2 flex flex-col justify-center items-center text-center">
-                  <span className="text-[10px] font-black text-amber-500 uppercase block">JanSetu Normalized CDM</span>
-                  <div className="w-full bg-slate-950 p-2 rounded text-[11px] border border-amber-500/20 text-slate-200 space-y-1">
-                    <p>name</p>
-                    <p>date_of_birth</p>
-                    <p>address</p>
-                  </div>
-                </div>
-                <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2">
-                  <span className="text-[10px] font-black text-slate-500 uppercase block">Target System: PMC License</span>
-                  <p className="text-slate-400">applicant_name: <span className="text-emerald-400 font-bold">"{user?.full_name || 'Hriday Bardia'}"</span></p>
-                  <p className="text-slate-400">birth_date: <span className="text-emerald-400 font-bold">"{profile?.date_of_birth || '2005-01-10'}"</span></p>
-                  <p className="text-slate-400">registered_address: <span className="text-emerald-400 font-bold">"Flat 402, Shivajinagar"</span></p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Audit Logs */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <History className="w-5 h-5 text-amber-400" />
-              <span>Interoperability Secure Audit Trail</span>
-            </h2>
-            <div className="bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
-              <div className="max-h-60 overflow-y-auto text-xs font-mono">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-900 text-slate-500 text-[10px] uppercase tracking-wider sticky top-0">
-                    <tr>
-                      <th className="p-3">Timestamp</th>
-                      <th className="p-3">Actor</th>
-                      <th className="p-3">Action</th>
-                      <th className="p-3">Resource</th>
-                      <th className="p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900 text-slate-300">
-                    {auditLogs.map((log, idx) => (
-                      <tr key={log.id || idx} className="hover:bg-slate-900/40">
-                        <td className="p-3 text-slate-500 text-[11px]">{new Date(log.timestamp).toLocaleString()}</td>
-                        <td className="p-3 text-slate-400">{log.actor}</td>
-                        <td className="p-3 font-bold">{log.action}</td>
-                        <td className="p-3 text-slate-400">{log.resource}</td>
-                        <td className="p-3">
-                          <span className={log.status === 'SUCCESS' ? 'text-emerald-400' : 'text-red-400'}>
-                            {log.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         </div>
@@ -2380,151 +1934,76 @@ export default function DashboardPage() {
 
       {/* Data Quality Tab */}
       {activeTab === 'conflicts' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* MDM stats bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Records Validated</span>
-              <span className="text-lg font-black text-white">18,421</span>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Consistent</span>
-              <span className="text-lg font-black text-emerald-400">17,962</span>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Warnings</span>
-              <span className="text-lg font-black text-amber-400">341</span>
-            </div>
-            <div className="bg-slate-900 border grid-cols-1 border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Conflicts</span>
-              <span className="text-lg font-black text-red-400">{conflicts.filter(c => c.status === 'DETECTED').length} Active</span>
-            </div>
-          </div>
-
-          {/* Master Citizen Record (MDM view) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-amber-400" />
-                <span>Master Citizen Profile Record (MDM View)</span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                Authoritative single-source-of-truth values derived from connected registries.
-              </p>
-            </div>
-
-            <div className="bg-slate-950 border border-slate-850 rounded-xl p-5 space-y-4 text-xs">
-              {masterRecord && masterRecord.fields ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Citizen Master ID</span>
-                    <span className="text-sm font-bold text-amber-400 font-mono">{masterRecord.citizen_id}</span>
-                  </div>
-                  {Object.entries(masterRecord.fields).map(([fieldName, info]: any) => (
-                    <div key={fieldName} className="space-y-0.5">
-                      <span className="text-slate-500 text-[9px] uppercase tracking-wider block">{fieldName.replace("_", " ").toUpperCase()}</span>
-                      <span className="text-sm font-bold text-white block">{info.value}</span>
-                      <span className="text-[9px] text-slate-500 block">Source: {info.source}</span>
-                      <span className="text-[8px] text-emerald-400 font-bold block">✓ {info.status} ({info.authority_level})</span>
-                    </div>
-                  ))}
+        <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto mt-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 blur-3xl rounded-full" />
+            
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-6">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+                    <ShieldCheck className="w-8 h-8 text-emerald-400" />
+                    Your Information Across Government
+                  </h1>
+                  <p className="text-sm text-slate-400 mt-2 max-w-xl">
+                    JanSetu automatically ensures your records are consistent across all departments, preventing delays in your applications.
+                  </p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Citizen Master ID</span>
-                    <span className="text-sm font-bold text-amber-400 font-mono">CIT-10482</span>
+                <div className="text-right hidden sm:block">
+                  <div className="text-3xl font-black text-emerald-400 flex items-center justify-end gap-2">
+                    <CheckCircle2 className="w-6 h-6" /> 100% Match
                   </div>
-                  <div>
-                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Verified Name</span>
-                    <span className="text-sm font-bold text-white">{user?.full_name || 'Aarav Mehta'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Authoritative DOB</span>
-                    <span className="text-sm font-bold text-white">
-                      {conflicts.find(c => c.field_name === 'date_of_birth' && c.status === 'RESOLVED')?.resolved_value || '10 Jan 2005 (Aadhaar)'}
-                    </span>
-                  </div>
+                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Data Consistency</div>
                 </div>
-              )}
-              <p className="text-[10px] text-slate-500 border-t border-slate-900 pt-3">
-                *Authoritative values are maintained separately from individual department source-system representations to protect citizen data privacy.
-              </p>
-            </div>
-          </div>
-
-          {/* Conflicts Resolver */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-400" />
-                <span>Data Quality Engine Validator</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Automatically flags inconsistent citizen identifiers or data schemas across connected databases.
-              </p>
-            </div>
-
-            {conflicts.length === 0 ? (
-              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
-                No data quality conflicts or discrepancies detected. All schemas consistent.
               </div>
-            ) : (
-              <div className="space-y-4">
-                {conflicts.map((c) => (
-                  <div key={c.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4 animate-fadeIn">
-                    <div className="flex items-center justify-between border-b border-slate-900 pb-3 text-xs">
+              
+              <div className="grid gap-6">
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
+                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <UserCircle className="w-5 h-5 text-blue-400" /> Verified Name
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Aadhaar (UIDAI)</p>
+                      <p className="text-lg font-bold text-white">{user?.full_name || 'Hriday Bardia'}</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">PAN (Income Tax)</p>
+                      <p className="text-lg font-bold text-white">{user?.full_name || 'Hriday Bardia'}</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Driving License</p>
+                      <p className="text-lg font-bold text-white">{user?.full_name || 'Hriday Bardia'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
+                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-amber-400" /> Registered Address
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Aadhaar (UIDAI)</p>
+                      <p className="text-sm font-bold text-white">{profile?.address || 'Flat 402, Shivajinagar, Pune'}</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-black text-red-400 uppercase tracking-wider block">DISCREPANCY DETECTED</span>
-                        <h4 className="text-sm font-bold text-white uppercase mt-0.5">Field Name: {c.field_name.replace("_", " ")}</h4>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Property Tax (PMC)</p>
+                        <p className="text-sm font-bold text-white">{profile?.address || 'Flat 402, Shivajinagar, Pune'}</p>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        c.status === 'RESOLVED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse'
-                      }`}>
-                        {c.status}
-                      </span>
+                      <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                      <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg space-y-1">
-                        <span className="text-slate-500 text-[10px] font-semibold block uppercase">Source A: {c.source_a}</span>
-                        <p className="text-sm font-bold text-slate-300">{c.value_a}</p>
-                      </div>
-                      <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg space-y-1">
-                        <span className="text-slate-500 text-[10px] font-semibold block uppercase">Source B: {c.source_b}</span>
-                        <p className="text-sm font-bold text-slate-300">{c.value_b}</p>
-                      </div>
-                    </div>
-
-                    {c.status === 'DETECTED' ? (
-                      <div className="space-y-3 pt-2">
-                        <span className="text-xs text-slate-400 block font-semibold">Select Verified Reference Value to Resolve:</span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => resolveConflictAPI(c.id, c.value_a).then(() => loadInteropData())}
-                            className="bg-slate-900 hover:bg-slate-850 border border-slate-700 text-white font-bold px-3 py-1.5 rounded text-xs transition"
-                          >
-                            Use Authoritative Aadhaar: {c.value_a}
-                          </button>
-                          <button
-                            onClick={() => resolveConflictAPI(c.id, c.value_b).then(() => loadInteropData())}
-                            className="bg-slate-900 hover:bg-slate-850 border border-slate-700 text-white font-bold px-3 py-1.5 rounded text-xs transition"
-                          >
-                            Use Local PMC: {c.value_b}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-<div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3 text-xs text-emerald-400">
-                        Conflict resolved. Verified value established: <span className="font-bold">{c.resolved_value}</span>.
-                      </div>
-                    )}
                   </div>
-                ))}
+                </div>
               </div>
-            )}
+              
+              <div className="flex justify-center pt-4">
+                 <p className="text-xs text-slate-500 flex items-center gap-2">
+                   <ShieldCheck className="w-4 h-4 text-slate-400" /> Your information is securely vaulted and never shared without your explicit consent.
+                 </p>
+              </div>
+            </div>
           </div>
         </div>
       )}

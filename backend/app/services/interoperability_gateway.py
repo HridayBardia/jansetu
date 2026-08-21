@@ -846,26 +846,55 @@ class ApplicationTracker:
         apps = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == user_id).all()
         if not apps:
             import random
-            defaults = [
-                ("srv_kar_municipal", "DOCUMENTS_REQUIRED", "Bruhat Bengaluru Mahanagara Palike", "Trade License – BBMP", [
-                    {"status": "SUBMITTED", "title": "Application Created", "description": "Form submitted via single-window.", "timestamp": "2026-08-20T10:00:00Z"},
-                    {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Please upload a Fire NOC layout document.", "timestamp": "2026-08-21T09:00:00Z"}
-                ], [{"type": "UPLOAD_DOCUMENT", "document_type": "FIRE_NOC", "label": "Upload Fire NOC Certificate"}]),
-                
-                ("srv_central_tax", "APPROVED", "GSTN Central Board of Indirect Taxes", "GST Registration – Central", [
-                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Sent via GST Common Portal.", "timestamp": "2026-08-18T11:00:00Z"},
-                    {"status": "APPROVED", "title": "GSTIN Issued", "description": "GSTIN generated: 29AAAAA0000A1Z5.", "timestamp": "2026-08-19T14:30:00Z"}
-                ], []),
-                
-                ("srv_kar_biz", "UNDER_VERIFICATION", "Karnataka Labour Department", "Shop Establishment – Karnataka Labour Dept", [
-                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Form v2.1 submitted.", "timestamp": "2026-08-19T10:00:00Z"},
-                    {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Local inspector review scheduled.", "timestamp": "2026-08-20T14:30:00Z"}
-                ], []),
-
-                ("srv_dbt_schemes", "SUBMITTED", "Food Safety and Standards Authority of India", "Food License – FSSAI", [
-                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Food safety registration fee paid.", "timestamp": "2026-08-21T10:00:00Z"}
-                ], [])
-            ]
+            if user_id == "user_hriday_bardia":
+                defaults = [
+                    ("srv_kar_municipal", "DOCUMENTS_REQUIRED", "Bruhat Bengaluru Mahanagara Palike", "Trade License – BBMP", [
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Form submitted via single-window.", "timestamp": "2026-08-20T10:00:00Z"},
+                        {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Please upload a Fire NOC layout document.", "timestamp": "2026-08-21T09:00:00Z"}
+                    ], [{"type": "UPLOAD_DOCUMENT", "document_type": "FIRE_NOC", "label": "Upload Fire NOC Certificate"}]),
+                    ("srv_central_tax", "APPROVED", "GSTN Central Board of Indirect Taxes", "GST Registration – Central", [
+                        {"status": "SUBMITTED", "title": "Application Submitted", "description": "Sent via GST Common Portal.", "timestamp": "2026-08-18T11:00:00Z"},
+                        {"status": "APPROVED", "title": "GSTIN Issued", "description": "GSTIN generated: 29AAAAA0000A1Z5.", "timestamp": "2026-08-19T14:30:00Z"}
+                    ], []),
+                    ("srv_kar_biz", "UNDER_VERIFICATION", "Karnataka Labour Department", "Shop Establishment – Karnataka Labour Dept", [
+                        {"status": "SUBMITTED", "title": "Application Submitted", "description": "Form v2.1 submitted.", "timestamp": "2026-08-19T10:00:00Z"},
+                        {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Local inspector review scheduled.", "timestamp": "2026-08-20T14:30:00Z"}
+                    ], []),
+                    ("srv_dbt_schemes", "SUBMITTED", "Food Safety and Standards Authority of India", "Food License – FSSAI", [
+                        {"status": "SUBMITTED", "title": "Application Submitted", "description": "Food safety registration fee paid.", "timestamp": "2026-08-21T10:00:00Z"}
+                    ], [])
+                ]
+            elif user_id == "user_varad_kanade":
+                defaults = [
+                    ("srv_edu_nos", "APPROVED", "Ministry of Social Justice", "National Overseas Scholarship", [
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Submitted application.", "timestamp": "2026-07-20T10:00:00Z"},
+                        {"status": "APPROVED", "title": "Scholarship Approved", "description": "Scholarship awarded for overseas study.", "timestamp": "2026-08-10T09:00:00Z"}
+                    ], []),
+                    ("srv_edu_loan", "UNDER_VERIFICATION", "Ministry of Education", "PM Vidyalaxmi Education Loan", [
+                        {"status": "SUBMITTED", "title": "Application Submitted", "description": "Loan request submitted.", "timestamp": "2026-08-19T10:00:00Z"},
+                        {"status": "UNDER_VERIFICATION", "title": "Bank Verification", "description": "SBI is verifying the application.", "timestamp": "2026-08-20T14:30:00Z"}
+                    ], [])
+                ]
+            elif user_id == "user_ayuh_citizen":
+                defaults = [
+                    ("srv_rto_dl", "UNDER_VERIFICATION", "Ministry of Road Transport", "Driving Licence Learner", [
+                        {"status": "SUBMITTED", "title": "Application Submitted", "description": "Application submitted.", "timestamp": "2026-08-19T10:00:00Z"},
+                        {"status": "UNDER_VERIFICATION", "title": "RTO Verification", "description": "RTO verifying Aadhaar details.", "timestamp": "2026-08-20T14:30:00Z"}
+                    ], [])
+                ]
+            elif user_id == "user_satwik_citizen":
+                defaults = [
+                    ("srv_agri_pmkisan", "APPROVED", "Ministry of Agriculture", "PM-KISAN Samman Nidhi", [
+                        {"status": "SUBMITTED", "title": "Application Submitted", "description": "Application submitted via CSC.", "timestamp": "2026-05-19T10:00:00Z"},
+                        {"status": "APPROVED", "title": "DBT Active", "description": "Beneficiary verified and DBT activated.", "timestamp": "2026-06-20T14:30:00Z"}
+                    ], []),
+                    ("srv_agri_kcc", "DOCUMENTS_REQUIRED", "Ministry of Agriculture", "Kisan Credit Card (KCC)", [
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Application created.", "timestamp": "2026-08-20T10:00:00Z"},
+                        {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Please upload recent Khasra/Khatoni.", "timestamp": "2026-08-21T09:00:00Z"}
+                    ], [{"type": "UPLOAD_DOCUMENT", "document_type": "LAND_RECORD", "label": "Upload Land Record"}])
+                ]
+            else:
+                defaults = []
             for s_id, status, dept_name, service_name, timeline, actions in defaults:
                 app_id = f"APP-{random.randint(100000, 999999)}"
                 db.add(ApplicationDB(
