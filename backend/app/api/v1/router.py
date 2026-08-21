@@ -20,7 +20,8 @@ from app.models.schemas import (
 from app.models.db_models import (
     UserDB, JourneyDB, JourneyStepDB, StepDependencyDB,
     GovernmentSourceDB, UserDocumentDB, UserConsentDB, SystemAlertDB, SchemeDB,
-    CitizenProfileDB, DocumentConsistencyDB
+    CitizenProfileDB, DocumentConsistencyDB, ServiceRegistryDB, ApplicationDB,
+    ConsentRecordDB, AuditLogDB, ConnectorHealthDB, NotificationDB, DataConflictDB
 )
 
 from app.ai.orchestrator import ai_orchestrator
@@ -1219,5 +1220,309 @@ async def dev_log(request: Request):
     except Exception as e:
         print(f"Error parsing dev log: {e}")
     return {"status": "ok"}
+
+
+from app.services.interoperability_gateway import (
+    AuditLogger, ConsentManager, ConnectorHealthMonitor,
+    DataQualityEngine, ServiceRegistry, ConnectorManager,
+    ApplicationTracker, NotificationManager
+)
+
+@api_v1_router.get("/services")
+def list_services(
+    request: Request,
+    query: Optional[str] = Query(None),
+    jurisdiction: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    services = ServiceRegistry.list_services(db, query, jurisdiction)
+    return success_response(services, request)
+
+@api_v1_router.get("/services/{service_id}")
+def get_service_details(service_id: str, request: Request, db: Session = Depends(get_db)):
+    service = db.query(ServiceRegistryDB).filter(ServiceRegistryDB.service_id == service_id).first()
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    return success_response({
+        "id": service.id,
+        "service_id": service.service_id,
+        "department": service.department,
+        "name": service.name,
+        "description": service.description,
+        "jurisdiction": service.jurisdiction,
+        "connector": service.connector,
+        "api_version": service.api_version,
+        "health_status": service.health_status,
+        "supported_operations": service.supported_operations,
+        "data_requirements": service.data_requirements
+    }, request)
+
+@api_v1_router.post("/services/{service_id}/call")
+def call_service_endpoint(
+    service_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    operation = payload.get("operation")
+    params = payload.get("params", {})
+    if not operation:
+        raise HTTPException(status_code=400, detail="Missing operation parameter")
+    
+    # Check consent if required
+    if service_id not in ["srv_identity", "srv_digilocker"]:
+        has_consent = ConsentManager.check_consent(db, current_user.id, service_id.split("_")[1], f"Call service {operation}")
+        if not has_consent:
+            return success_response({
+                "success": False,
+                "error": "CONSENT_REQUIRED",
+                "message": f"Consent is required to share information with {service_id}.",
+                "consent_prompt": {
+                    "department_id": service_id.split("_")[1],
+                    "purpose": f"Access data for {operation}",
+                    "requested_fields": list(params.keys())
+                }
+            }, request)
+    
+    try:
+        res = ConnectorManager.call_service(db, current_user.id, service_id, operation, params)
+        return success_response(res, request)
+    except Exception as e:
+        return success_response({
+            "success": False,
+            "error": "SERVICE_FAILURE",
+            "message": f"We couldn't connect to the service. Details: {str(e)}"
+        }, request)
+
+@api_v1_router.get("/applications")
+def list_applications(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    apps = ApplicationTracker.list_applications(db, current_user.id)
+    return success_response(apps, request)
+
+@api_v1_router.post("/applications")
+def create_application(
+    payload: Dict[str, Any],
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    service_id = payload.get("service_id")
+    documents = payload.get("documents", [])
+    if not service_id:
+        raise HTTPException(status_code=400, detail="Missing service_id")
+    
+    app = ApplicationTracker.create_application(db, current_user.id, service_id, documents)
+    return success_response({
+        "id": app.id,
+        "application_id": app.application_id,
+        "service_id": app.service_id,
+        "status": app.status,
+        "submitted_at": app.submitted_at.isoformat()
+    }, request)
+
+@api_v1_router.get("/applications/{application_id}")
+def get_application_details(
+    application_id: str,
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    app = db.query(ApplicationDB).filter(
+        ApplicationDB.application_id == application_id,
+        ApplicationDB.citizen_id == current_user.id
+    ).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return success_response({
+        "id": app.id,
+        "application_id": app.application_id,
+        "service_id": app.service_id,
+        "department_name": app.department_name,
+        "service_name": app.service_name,
+        "status": app.status,
+        "submitted_at": app.submitted_at.isoformat(),
+        "updated_at": app.updated_at.isoformat(),
+        "timeline": app.timeline,
+        "required_actions": app.required_actions,
+        "documents": app.documents
+    }, request)
+
+@api_v1_router.post("/applications/{application_id}/status")
+def update_app_status(
+    application_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    status = payload.get("status")
+    details = payload.get("details")
+    if not status:
+        raise HTTPException(status_code=400, detail="Missing status parameter")
+    
+    app = ApplicationTracker.update_application_status(db, application_id, status, details)
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return success_response({"status": "updated", "application_id": application_id}, request)
+
+@api_v1_router.get("/consents")
+def list_consents(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    consents = db.query(ConsentRecordDB).filter(ConsentRecordDB.user_id == current_user.id).all()
+    if not consents:
+        ConsentManager.create_consent(
+            db, current_user.id, "msins", "Maharashtra State Innovation Society",
+            ["full_name", "date_of_birth", "gender"], "Business Formation Verification", access_type="ALWAYS"
+        )
+        ConsentManager.create_consent(
+            db, current_user.id, "pmc", "Pune Municipal Corporation",
+            ["address", "pincode"], "Trade Licensing Verification", access_type="ONCE"
+        )
+        consents = db.query(ConsentRecordDB).filter(ConsentRecordDB.user_id == current_user.id).all()
+
+    return success_response([
+        {
+            "id": c.id,
+            "consent_id": c.consent_id,
+            "department_id": c.department_id,
+            "department_name": c.department_name,
+            "requested_fields": c.requested_fields,
+            "purpose": c.purpose,
+            "granted": c.granted,
+            "granted_at": c.granted_at.isoformat(),
+            "access_type": c.access_type
+        }
+        for c in consents
+    ], request)
+
+@api_v1_router.post("/consents")
+def create_consent_record(
+    payload: Dict[str, Any],
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    dept_id = payload.get("department_id")
+    dept_name = payload.get("department_name")
+    fields = payload.get("requested_fields", [])
+    purpose = payload.get("purpose")
+    access_type = payload.get("access_type", "ONCE")
+    
+    if not dept_id or not dept_name or not purpose:
+        raise HTTPException(status_code=400, detail="Missing required parameters")
+    
+    consent = ConsentManager.create_consent(
+        db, current_user.id, dept_id, dept_name, fields, purpose, access_type=access_type
+    )
+    return success_response({
+        "consent_id": consent.consent_id,
+        "status": "granted"
+    }, request)
+
+@api_v1_router.post("/consents/{consent_id}/revoke")
+def revoke_consent_record(
+    consent_id: str,
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    success = ConsentManager.revoke_consent(db, current_user.id, consent_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Consent record not found")
+    return success_response({"status": "revoked"}, request)
+
+@api_v1_router.get("/notifications")
+def get_notifications_list(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    notifs = NotificationManager.get_notifications(db, current_user.id)
+    return success_response(notifs, request)
+
+@api_v1_router.get("/connectors")
+def list_connectors(request: Request, db: Session = Depends(get_db)):
+    metrics = ConnectorHealthMonitor.get_health_metrics(db)
+    return success_response(metrics["services"], request)
+
+@api_v1_router.get("/connectors/health")
+def get_connectors_health_metrics(request: Request, db: Session = Depends(get_db)):
+    metrics = ConnectorHealthMonitor.get_health_metrics(db)
+    return success_response(metrics, request)
+
+@api_v1_router.get("/audit-logs")
+def list_audit_logs(request: Request, db: Session = Depends(get_db)):
+    logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).limit(100).all()
+    if not logs:
+        AuditLogger.log(db, "system_gateway", "API_REQUEST", "ServiceRegistry seeded")
+        AuditLogger.log(db, "demo_citizen_hriday", "LOGIN", "Citizen logged in")
+        logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).all()
+        
+    return success_response([
+        {
+            "id": l.id,
+            "timestamp": l.timestamp.isoformat(),
+            "actor": l.actor,
+            "action": l.action,
+            "resource": l.resource,
+            "status": l.status,
+            "correlation_id": l.correlation_id
+        }
+        for l in logs
+    ], request)
+
+@api_v1_router.get("/conflicts")
+def list_conflicts(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    conflicts = db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).all()
+    if not conflicts:
+        DataQualityEngine.check_for_conflicts(
+            db, current_user.id, "date_of_birth",
+            source_a="Aadhaar ID Registry", val_a="2005-01-10",
+            source_b="Pune Municipal Corporation", val_b="2005-01-11"
+        )
+        conflicts = db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).all()
+        
+    return success_response([
+        {
+            "id": c.id,
+            "field_name": c.field_name,
+            "source_a": c.source_a,
+            "value_a": c.value_a,
+            "source_b": c.source_b,
+            "value_b": c.value_b,
+            "status": c.status,
+            "resolved_value": c.resolved_value,
+            "created_at": c.created_at.isoformat()
+        }
+        for c in conflicts
+    ], request)
+
+@api_v1_router.post("/conflicts/{conflict_id}/resolve")
+def resolve_data_conflict(
+    conflict_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    resolved_value = payload.get("resolved_value")
+    if not resolved_value:
+        raise HTTPException(status_code=400, detail="Missing resolved_value parameter")
+    
+    success = DataQualityEngine.resolve_conflict(db, conflict_id, resolved_value)
+    if not success:
+        raise HTTPException(status_code=404, detail="Conflict not found")
+    return success_response({"status": "resolved"}, request)
 
 

@@ -888,4 +888,84 @@ export async function fetchJourneyAnalysisAPI(journeyId: string): Promise<any | 
   }
 }
 
+// Interoperability Gateway API Wrappers
+export async function fetchServicesAPI(query?: string, jurisdiction?: string): Promise<any[] | null> {
+  const params: string[] = [];
+  if (query) params.push(`query=${encodeURIComponent(query)}`);
+  if (jurisdiction) params.push(`jurisdiction=${encodeURIComponent(jurisdiction)}`);
+  const queryString = params.length > 0 ? `?${params.join('&')}` : '';
+  return await apiFetch<any[]>(`/services${queryString}`);
+}
+
+export async function callServiceAPI(serviceId: string, operation: string, params: Record<string, any>): Promise<any | null> {
+  return await apiFetch<any>(`/services/${serviceId}/call`, {
+    method: 'POST',
+    body: JSON.stringify({ operation, params })
+  });
+}
+
+export async function fetchApplicationsAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/applications`);
+}
+
+export async function createApplicationAPI(serviceId: string, documents: string[]): Promise<any | null> {
+  return await apiFetch<any>(`/applications`, {
+    method: 'POST',
+    body: JSON.stringify({ service_id: serviceId, documents })
+  });
+}
+
+export async function fetchApplicationDetailsAPI(applicationId: string): Promise<any | null> {
+  return await apiFetch<any>(`/applications/${applicationId}`);
+}
+
+export async function updateApplicationStatusAPI(applicationId: string, status: string, details?: string): Promise<any | null> {
+  return await apiFetch<any>(`/applications/${applicationId}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status, details })
+  });
+}
+
+export async function fetchConsentsAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/consents`);
+}
+
+export async function createConsentAPI(
+  departmentId: string, departmentName: string, requestedFields: string[], purpose: string, accessType: string = 'ONCE'
+): Promise<any | null> {
+  return await apiFetch<any>(`/consents`, {
+    method: 'POST',
+    body: JSON.stringify({ department_id: departmentId, department_name: departmentName, requested_fields: requestedFields, purpose, access_type: accessType })
+  });
+}
+
+export async function revokeConsentAPI(consentId: string): Promise<any | null> {
+  return await apiFetch<any>(`/consents/${consentId}/revoke`, {
+    method: 'POST'
+  });
+}
+
+export async function fetchNotificationsAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/notifications`);
+}
+
+export async function fetchConnectorHealthAPI(): Promise<any | null> {
+  return await apiFetch<any>(`/connectors/health`);
+}
+
+export async function fetchAuditLogsAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/audit-logs`);
+}
+
+export async function fetchConflictsAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/conflicts`);
+}
+
+export async function resolveConflictAPI(conflictId: string, resolvedValue: string): Promise<any | null> {
+  return await apiFetch<any>(`/conflicts/${conflictId}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ resolved_value: resolvedValue })
+  });
+}
+
 

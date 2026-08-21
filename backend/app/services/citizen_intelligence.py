@@ -1065,6 +1065,8 @@ class CitizenIntelligenceEngine:
         start_time = datetime.utcnow()
         warnings = []
         
+        logger.info(f"[DEBUG TRACE] REQUEST: goal={query!r}, domicileState={domicile!r}, userId={current_user.id if current_user else 'None'}")
+        
         # 1. Query Normalization
         query_normalized = QueryNormalizer.normalize(query)
         
@@ -1079,6 +1081,8 @@ class CitizenIntelligenceEngine:
         obj = analysis["object"]
         domains = analysis["domains"]
         sub_goals = analysis["subGoals"]
+        
+        logger.info(f"[DEBUG TRACE] GOAL UNDERSTANDING: normalizedGoal={query_normalized!r}, primaryIntent={primary_intent!r}, secondaryIntents={secondary_intents!r}, targetState={target_state!r}, targetCity={target_city!r}, destination={dest_country!r}")
         
         # Legacy Categories mapping for frontend rendering & pytest compatibility
         category_map = {
@@ -1266,6 +1270,8 @@ class CitizenIntelligenceEngine:
                     "sourceURL": r_def["sourceURL"]
                 })
                 
+        logger.info(f"[DEBUG TRACE] DOCUMENT RETRIEVAL & MATCHING: combined_reqs={[req['type'] for req in combined_reqs]}, available={[doc['type'] for doc in available_docs]}, missing={[doc['type'] for doc in needed_docs]})")
+
         # 6. Government Scheme Matching & Ranking
         ranked_schemes = SchemeMatcher.match(
             db,
@@ -1291,6 +1297,8 @@ class CitizenIntelligenceEngine:
             else:
                 state_list.append(s)
                 
+        logger.info(f"[DEBUG TRACE] SCHEME RETRIEVAL & SCHEME RANKING: retrieved_schemes_count={len(ranked_schemes)}, central={[s['id'] for s in central_list]}, state={[s['id'] for s in state_list]}, targetLocation={[s['id'] for s in target_loc_list]}")
+
         if not central_list and not state_list and not target_loc_list:
             warnings.append("No highly matched scheme was found for this goal.")
             
@@ -1462,6 +1470,8 @@ class CitizenIntelligenceEngine:
         journey.status = "COMPLETE"
         journey.result_json = result_payload
         db.commit()
+        
+        logger.info(f"[DEBUG TRACE] FINAL JOURNEY: success=True, goal_title={goal_title!r}")
         
         return result_payload
 

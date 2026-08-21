@@ -234,3 +234,102 @@ class SystemAlertDB(Base):
     journey_category = Column(String, default="business") # business, education, general
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class ServiceRegistryDB(Base):
+    __tablename__ = "service_registry"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    service_id = Column(String, unique=True, index=True, nullable=False)
+    department = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    jurisdiction = Column(String, default="MAHARASHTRA") # MAHARASHTRA, CENTRAL, etc.
+    connector = Column(String, default="modern_rest_connector") # modern_rest_connector, legacy_soap_connector
+    api_version = Column(String, default="v1")
+    health_status = Column(String, default="HEALTHY") # HEALTHY, DEGRADED, FAILED
+    supported_operations = Column(JSON, default=list)
+    data_requirements = Column(JSON, default=dict)
+    last_health_check = Column(DateTime, default=datetime.utcnow)
+
+class ApplicationDB(Base):
+    __tablename__ = "applications"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    application_id = Column(String, unique=True, index=True, nullable=False)
+    citizen_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    service_id = Column(String, nullable=False, index=True)
+    department_id = Column(String, nullable=False)
+    department_name = Column(String, nullable=False)
+    service_name = Column(String, nullable=False)
+    status = Column(String, default="SUBMITTED") # SUBMITTED, UNDER_VERIFICATION, DOCUMENTS_REQUIRED, APPROVED, REJECTED
+    submitted_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    documents = Column(JSON, default=list)
+    timeline = Column(JSON, default=list)
+    required_actions = Column(JSON, default=list)
+
+class ConsentRecordDB(Base):
+    __tablename__ = "consent_records"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    consent_id = Column(String, unique=True, index=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    department_id = Column(String, nullable=False)
+    department_name = Column(String, nullable=False)
+    requested_fields = Column(JSON, default=list)
+    purpose = Column(String, nullable=False)
+    application_id = Column(String, nullable=True)
+    granted = Column(Boolean, default=True)
+    granted_at = Column(DateTime, default=datetime.utcnow)
+    access_type = Column(String, default="ONCE") # ONCE, ALWAYS, REVOKED
+    ip_address = Column(String, default="127.0.0.1")
+
+class AuditLogDB(Base):
+    __tablename__ = "audit_logs"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    actor = Column(String, nullable=False, index=True)
+    action = Column(String, nullable=False, index=True) # LOGIN, DATA_ACCESS, DATA_SHARING, CONSENT_GRANT, CONSENT_REVOKE, API_REQUEST, API_RESPONSE
+    resource = Column(String, nullable=False)
+    status = Column(String, default="SUCCESS") # SUCCESS, FAILURE, CONFLICT
+    correlation_id = Column(String, nullable=True, index=True)
+
+class ConnectorHealthDB(Base):
+    __tablename__ = "connector_health"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    service_name = Column(String, unique=True, index=True, nullable=False)
+    connector_type = Column(String, default="REST") # REST, SOAP
+    health_status = Column(String, default="Healthy") # Healthy, Degraded, Failed
+    request_count = Column(Integer, default=0)
+    failure_count = Column(Integer, default=0)
+    latency_ms = Column(Integer, default=0)
+    last_success = Column(DateTime, default=datetime.utcnow)
+    last_failure = Column(DateTime, nullable=True)
+
+class NotificationDB(Base):
+    __tablename__ = "notifications"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    category = Column(String, default="general") # APPLICATION_SUBMITTED, DOCUMENT_VERIFIED, etc.
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class DataConflictDB(Base):
+    __tablename__ = "data_conflicts"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    field_name = Column(String, nullable=False)
+    source_a = Column(String, nullable=False)
+    value_a = Column(String, nullable=False)
+    source_b = Column(String, nullable=False)
+    value_b = Column(String, nullable=False)
+    status = Column(String, default="DETECTED") # DETECTED, RESOLVED
+    resolved_value = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+

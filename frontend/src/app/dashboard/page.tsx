@@ -11,7 +11,21 @@ import {
   matchDocumentRequirementsAPI,
   analyzeJourneyAPI,
   fetchStatesAPI,
-  logoutAPI
+  logoutAPI,
+  fetchServicesAPI,
+  callServiceAPI,
+  fetchApplicationsAPI,
+  createApplicationAPI,
+  fetchApplicationDetailsAPI,
+  updateApplicationStatusAPI,
+  fetchConsentsAPI,
+  createConsentAPI,
+  revokeConsentAPI,
+  fetchNotificationsAPI,
+  fetchConnectorHealthAPI,
+  fetchAuditLogsAPI,
+  fetchConflictsAPI,
+  resolveConflictAPI
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
@@ -34,7 +48,15 @@ import {
   AlertCircle,
   CheckCircle2,
   HelpCircle,
-  Globe
+  Globe,
+  ShieldAlert,
+  Key,
+  Activity,
+  Bell,
+  History,
+  Plus,
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 
 const INDIAN_STATES_AND_UTS = [
@@ -77,7 +99,7 @@ const INDIAN_STATES_AND_UTS = [
   { name: "Puducherry", code: "PY", type: "UNION_TERRITORY", official_name: "Union Territory of Puducherry" }
 ];
 
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 
 function groupMatchedSchemes(matched: any[], domicile: string, targetState: string) {
   const central = matched.filter(s => s.level === 'CENTRAL');
@@ -398,6 +420,7 @@ export default function DashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   const [goalInput, setGoalInput] = useState('');
+  const latestRequestIdRef = React.useRef<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [journeyAnalysis, setJourneyAnalysis] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -413,6 +436,27 @@ export default function DashboardPage() {
   const [generationStage, setGenerationStage] = useState(0);
   const [activeJourneys, setActiveJourneys] = useState<any[]>([]);
   const [userDocs, setUserDocs] = useState<any[]>([]);
+
+  const [activeTab, setActiveTab] = useState<'planner' | 'applications' | 'consent' | 'interop' | 'conflicts'>('planner');
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [consents, setConsents] = useState<any[]>([]);
+  const [healthData, setHealthData] = useState<any>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadInteropData = () => {
+    setIsRefreshing(true);
+    fetchApplicationsAPI().then((data) => setApplications(data || []));
+    fetchConsentsAPI().then((data) => setConsents(data || []));
+    fetchConnectorHealthAPI().then((data) => setHealthData(data || null));
+    fetchAuditLogsAPI().then((data) => setAuditLogs(data || []));
+    fetchConflictsAPI().then((data) => setConflicts(data || []));
+    fetchNotificationsAPI().then((data) => setNotifications(data || []));
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   const [detectedLocation, setDetectedLocation] = useState<{
     city?: string;
@@ -436,6 +480,7 @@ export default function DashboardPage() {
           setStatesList(data);
         }
       });
+      loadInteropData();
     }
   }, [isAuthenticated]);
 
@@ -471,6 +516,14 @@ export default function DashboardPage() {
       return;
     }
 
+    latestRequestIdRef.current += 1;
+    const currentRequestId = latestRequestIdRef.current;
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem("citizenJourney");
+      sessionStorage.removeItem("activeCitizenJourney");
+    }
+
     setJourneyAnalysis(null);
     setIsAnalyzing(true);
     setGenerationStage(0);
@@ -500,6 +553,8 @@ export default function DashboardPage() {
       }
 
       await new Promise(resolve => setTimeout(resolve, 1100));
+
+      if (currentRequestId !== latestRequestIdRef.current) return;
 
       clearTimeout(timer1);
       clearTimeout(timer2);
@@ -539,6 +594,14 @@ export default function DashboardPage() {
     try {
       console.log("[Journey] User query:", trimmedGoal);
       const res = await analyzeJourneyAPI(trimmedGoal, domicileState);
+      
+      if (currentRequestId !== latestRequestIdRef.current) {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        return;
+      }
+      
       console.log("[Journey] API response:", res);
       clearTimeout(timer1);
       clearTimeout(timer2);
@@ -568,6 +631,7 @@ export default function DashboardPage() {
         throw new Error("Journey was not created.");
       }
     } catch (err) {
+      if (currentRequestId !== latestRequestIdRef.current) return;
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
@@ -628,7 +692,43 @@ export default function DashboardPage() {
           </div>
           <span className="text-xs font-black text-slate-400 tracking-widest uppercase">AI Citizen Journey Engine</span>
         </div>
-        <div className="flex items-center gap-4 text-xs font-medium text-slate-400">
+        <div className="flex items-center gap-4 text-xs font-medium text-slate-400 relative">
+          {/* Notifications Bell */}
+          <div className="relative">
+            <button
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="p-1.5 bg-slate-900 border border-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition relative"
+            >
+              <Bell className="w-4.5 h-4.5" />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border border-slate-950 animate-pulse" />
+              )}
+            </button>
+            
+            {isNotificationsOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 z-50 space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                  <span className="font-bold text-white uppercase tracking-wider">Notifications Center</span>
+                  <span className="text-[10px] text-slate-500">{notifications.length} alerts</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {notifications.map((n, idx) => (
+                    <div key={n.id || idx} className="p-2 bg-slate-950 border border-slate-850 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-300">{n.title}</span>
+                        <span className="text-[9px] text-slate-500">{new Date(n.created_at).toLocaleTimeString()}</span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">{n.message}</p>
+                    </div>
+                  ))}
+                  {notifications.length === 0 && (
+                    <p className="text-slate-500 text-center py-4">No recent notifications.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <span className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800/60 text-[10px] uppercase font-bold text-slate-300">
             ✓ Secure Gate
           </span>
@@ -687,8 +787,88 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main Goal Input Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+      {/* Interoperability Tabs Switcher */}
+      <div className="flex border-b border-slate-800 gap-1 overflow-x-auto pb-px shrink-0">
+        <button
+          onClick={() => setActiveTab('planner')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'planner'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <Compass className="w-4 h-4" />
+          <span>Goal Planner</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('applications'); loadInteropData(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap relative ${
+            activeTab === 'applications'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <Briefcase className="w-4 h-4" />
+          <span>My Applications</span>
+          {applications.length > 0 && (
+            <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
+              {applications.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('consent'); loadInteropData(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'consent'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <Key className="w-4 h-4" />
+          <span>Consent Center</span>
+          {consents.filter(c => c.granted).length > 0 && (
+            <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
+              {consents.filter(c => c.granted).length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('interop'); loadInteropData(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'interop'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Interop Hub</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveTab('conflicts'); loadInteropData(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'conflicts'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4" />
+          <span>Data Quality</span>
+          {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
+            <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
+              {conflicts.filter(c => c.status === 'DETECTED').length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'planner' && (
+        <>
+          {/* Main Goal Input Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
         <form onSubmit={handleAnalyzeGoal} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1 md:col-span-1 relative">
@@ -1109,6 +1289,341 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {/* Applications Tab */}
+      {activeTab === 'applications' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-amber-400" />
+                  <span>Unified Government Application Tracking</span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Cross-department status, timelines, and required actions under Government of Maharashtra.
+                </p>
+              </div>
+              <button
+                onClick={loadInteropData}
+                disabled={isRefreshing}
+                className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-white rounded-lg transition"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {applications.length === 0 ? (
+              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
+                No active applications found. Use the Goal Planner to start a journey and register services.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {applications.map((app) => (
+                  <div key={app.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-900 pb-3 text-xs">
+                      <div>
+                        <span className="text-[10px] font-black text-slate-500 tracking-wider block uppercase">{app.department_name}</span>
+                        <h3 className="text-sm font-bold text-white mt-0.5">{app.service_name}</h3>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Application Reference: <span className="font-mono text-amber-400 font-bold">{app.application_id}</span></p>
+                      </div>
+
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider text-center shrink-0 ${
+                        app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                        app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                        app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                        'bg-slate-900 text-slate-400 border border-slate-800'
+                      }`}>
+                        {app.status.replace("_", " ")}
+                      </span>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="space-y-3">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Timeline & Logs</span>
+                      <div className="relative border-l border-slate-850 ml-1.5 pl-4 space-y-4 py-1 text-xs">
+                        {app.timeline.map((evt: any, idx: number) => (
+                          <div key={idx} className="relative">
+                            <div className={`absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full border ${
+                              evt.status === 'APPROVED' ? 'bg-emerald-400 border-emerald-500' :
+                              evt.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-400 border-red-500' :
+                              'bg-amber-400 border-amber-500'
+                            }`} />
+                            <h4 className="font-bold text-slate-300">{evt.title}</h4>
+                            <p className="text-slate-400 text-[11px] mt-0.5">{evt.description}</p>
+                            <span className="text-[10px] text-slate-500 block mt-1">{new Date(evt.timestamp).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action Items */}
+                    {app.required_actions && app.required_actions.length > 0 && (
+                      <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+                          <div>
+                            <span className="font-bold text-red-400 block">Department Action Item Required</span>
+                            <p className="text-slate-400">Please provide the missing document layout validation to proceed.</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            updateApplicationStatusAPI(app.application_id, "UNDER_VERIFICATION", "Fire NOC uploaded. Re-initiating interop checklist.").then(() => loadInteropData());
+                          }}
+                          className="bg-red-500 hover:bg-red-400 text-white font-bold px-3 py-1.5 rounded text-[11px] shrink-0 transition"
+                        >
+                          Resolve & Upload
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Consent Tab */}
+      {activeTab === 'consent' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Key className="w-5 h-5 text-amber-400" />
+                <span>Consent Center</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Citizen Privacy Dashboard. View active data-sharing consents and revoke access where applicable.
+              </p>
+            </div>
+
+            {consents.length === 0 ? (
+              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
+                No active data sharing permissions logged.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {consents.map((c) => (
+                  <div key={c.id} className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4 text-xs">
+                    <div>
+                      <h4 className="font-bold text-white">{c.department_name}</h4>
+                      <p className="text-slate-400 mt-0.5">Purpose: {c.purpose}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Requested Fields: <span className="font-mono text-cyan-400 font-bold">{c.requested_fields.join(", ")}</span>
+                      </p>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">Granted: {new Date(c.granted_at).toLocaleString()}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        c.granted && c.access_type !== 'REVOKED'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {c.granted && c.access_type !== 'REVOKED' ? `Active (${c.access_type})` : 'Revoked'}
+                      </span>
+                      
+                      {c.granted && c.access_type !== 'REVOKED' && (
+                        <button
+                          onClick={() => revokeConsentAPI(c.consent_id).then(() => loadInteropData())}
+                          className="text-red-400 hover:text-red-300 font-bold hover:bg-red-500/10 border border-transparent hover:border-red-500/20 px-2 py-1 rounded transition"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Interop Tab */}
+      {activeTab === 'interop' && (
+        <div className="space-y-6 animate-fadeIn">
+          {healthData && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-emerald-400" /> Connected Services
+                </span>
+                <p className="text-lg font-black text-white">{healthData.connected_services}</p>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" /> Successful Requests
+                </span>
+                <p className="text-lg font-black text-emerald-400">{healthData.success_rate}</p>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 text-amber-400" /> Response Time
+                </span>
+                <p className="text-lg font-black text-amber-400">{healthData.avg_latency}</p>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 text-purple-400" /> Pending Events
+                </span>
+                <p className="text-lg font-black text-purple-400">{healthData.pending_events}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Activity className="w-5 h-5 text-amber-400" />
+                <span>Interoperability Command Center (Registry Connectors)</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Real-time status of Modern REST APIs and Legacy SOAP Adapters.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {healthData?.services?.map((svc: any, idx: number) => (
+                <div key={idx} className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex justify-between items-center gap-3">
+                  <div>
+                    <h4 className="font-bold text-white">{svc.name}</h4>
+                    <p className="text-slate-500 text-[10px] mt-0.5">Protocol: <span className="font-mono text-cyan-400">{svc.connector_type} Protocol</span></p>
+                    <p className="text-slate-500 text-[10px]">Requests: {svc.request_count} | Latency: {svc.latency}</p>
+                  </div>
+
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    svc.status === 'Healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                    svc.status === 'Degraded' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                    'bg-red-500/10 text-red-400 border border-red-500/20'
+                  }`}>
+                    {svc.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <History className="w-5 h-5 text-amber-400" />
+              <span>Interoperability Secure Audit Trail</span>
+            </h2>
+            <div className="bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+              <div className="max-h-60 overflow-y-auto text-xs font-mono">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-900 text-slate-500 text-[10px] uppercase tracking-wider sticky top-0">
+                    <tr>
+                      <th className="p-3">Timestamp</th>
+                      <th className="p-3">Actor</th>
+                      <th className="p-3">Action</th>
+                      <th className="p-3">Resource</th>
+                      <th className="p-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-300">
+                    {auditLogs.map((log, idx) => (
+                      <tr key={log.id || idx} className="hover:bg-slate-900/40">
+                        <td className="p-3 text-slate-500 text-[11px]">{new Date(log.timestamp).toLocaleString()}</td>
+                        <td className="p-3 text-slate-400">{log.actor}</td>
+                        <td className="p-3 font-bold">{log.action}</td>
+                        <td className="p-3 text-slate-400">{log.resource}</td>
+                        <td className="p-3">
+                          <span className={log.status === 'SUCCESS' ? 'text-emerald-400' : 'text-red-400'}>
+                            {log.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Data Quality Tab */}
+      {activeTab === 'conflicts' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
+                <span>Data Quality Engine Validator</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Automatically flags inconsistent citizen identifiers or data schemas across connected databases.
+              </p>
+            </div>
+
+            {conflicts.length === 0 ? (
+              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
+                No data quality conflicts or discrepancies detected. All schemas consistent.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {conflicts.map((c) => (
+                  <div key={c.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-900 pb-3 text-xs">
+                      <div>
+                        <span className="text-[10px] font-black text-red-400 uppercase tracking-wider block">DISCREPANCY DETECTED</span>
+                        <h4 className="text-sm font-bold text-white uppercase mt-0.5">Field Name: {c.field_name.replace("_", " ")}</h4>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        c.status === 'RESOLVED'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse'
+                      }`}>
+                        {c.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg space-y-1">
+                        <span className="text-slate-500 text-[10px] font-semibold block uppercase">Source A: {c.source_a}</span>
+                        <p className="text-sm font-bold text-slate-300">{c.value_a}</p>
+                      </div>
+                      <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-lg space-y-1">
+                        <span className="text-slate-500 text-[10px] font-semibold block uppercase">Source B: {c.source_b}</span>
+                        <p className="text-sm font-bold text-slate-300">{c.value_b}</p>
+                      </div>
+                    </div>
+
+                    {c.status === 'DETECTED' ? (
+                      <div className="space-y-3 pt-2">
+                        <span className="text-xs text-slate-400 block font-semibold">Select Verified Reference Value to Resolve:</span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => resolveConflictAPI(c.id, c.value_a).then(() => loadInteropData())}
+                            className="bg-slate-900 hover:bg-slate-850 border border-slate-700 text-white font-bold px-3 py-1.5 rounded text-xs transition"
+                          >
+                            Use Aadhaar: {c.value_a}
+                          </button>
+                          <button
+                            onClick={() => resolveConflictAPI(c.id, c.value_b).then(() => loadInteropData())}
+                            className="bg-slate-900 hover:bg-slate-850 border border-slate-700 text-white font-bold px-3 py-1.5 rounded text-xs transition"
+                          >
+                            Use PMC: {c.value_b}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3 text-xs text-emerald-400">
+                        Conflict resolved. Verified value established: <span className="font-bold">{c.resolved_value}</span>.
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

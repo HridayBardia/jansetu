@@ -78,7 +78,13 @@ export default function JourneyPreviewPage() {
 
   const schemesList = Array.isArray(activeJourney?.schemes) 
     ? activeJourney.schemes 
-    : [];
+    : [
+        ...(activeJourney?.schemes?.central || []),
+        ...(activeJourney?.schemes?.state || []),
+        ...(activeJourney?.schemes?.targetLocation || []),
+        ...(activeJourney?.schemes?.domicileState || []),
+        ...(activeJourney?.schemes?.targetState || [])
+      ].filter((v, idx, self) => self.findIndex(t => (t.id === v.id || t.name === v.name)) === idx);
 
   return (
     <div className="min-h-screen bg-[#020205] text-slate-100 py-10 px-4 md:px-8 font-sans">
