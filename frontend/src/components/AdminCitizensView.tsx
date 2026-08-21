@@ -117,7 +117,8 @@ export const AdminCitizensView = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950/50 text-xs uppercase text-slate-500">
               <tr>
@@ -177,6 +178,58 @@ export const AdminCitizensView = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-slate-800/50">
+          {filteredCitizens.map((citizen) => (
+            <div key={citizen.id} className="p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2 font-medium text-slate-200">
+                  <UserCircle className="w-5 h-5 text-slate-500" />
+                  {citizen.name}
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
+                  citizen.accountStatus === 'Verified' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`}>
+                  {citizen.accountStatus}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Citizen ID</span>
+                  <span className="font-mono text-slate-400">{citizen.id}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Location</span>
+                  <span className="text-slate-300">{citizen.location}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center pt-2">
+                <div className="flex gap-2">
+                  <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-500/20">
+                    {citizen.activeJourneys} Journeys
+                  </span>
+                  <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-500/20">
+                    {citizen.applications} Apps
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setSelectedCitizen(citizen)}
+                  className="text-blue-400 hover:text-blue-300 text-[11px] font-bold bg-blue-500/10 px-3 py-1.5 rounded"
+                >
+                  View Profile
+                </button>
+              </div>
+            </div>
+          ))}
+          {filteredCitizens.length === 0 && (
+            <div className="p-8 text-center text-slate-500 text-sm">
+              No citizens found matching your search.
+            </div>
+          )}
         </div>
       </div>
 

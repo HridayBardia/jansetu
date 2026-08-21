@@ -135,13 +135,14 @@ export const AdminInteropView = () => {
       </div>
 
       {/* Interactive Topology Diagram */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row relative">
         
         {/* Canvas Area */}
-        <div className="flex-1 p-8 relative min-h-[400px] border-b md:border-b-0 md:border-r border-slate-800 flex items-center justify-center bg-[#05050a]">
+        <div className="flex-1 p-8 relative min-h-[400px] border-b md:border-b-0 md:border-r border-slate-800 flex items-center justify-center bg-[#05050a] overflow-x-auto">
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+          <div className="md:hidden absolute top-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center w-full">Tap a node for details</div>
           
-          <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-xl">
+          <div className="relative z-10 flex flex-col items-center gap-8 min-w-[360px] max-w-xl mx-auto py-8">
             {/* Top Row: Client */}
             <NodeButton node={mockNodes[0]} onClick={() => setSelectedNode(mockNodes[0])} selected={selectedNode?.id === 'citizen'} />
             
@@ -177,8 +178,8 @@ export const AdminInteropView = () => {
           `}} />
         </div>
 
-        {/* Node Inspection Panel */}
-        <div className="w-full md:w-80 bg-slate-950 p-6 flex flex-col">
+        {/* Node Inspection Panel (Desktop) */}
+        <div className="hidden md:flex w-80 bg-slate-950 p-6 flex-col">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Node Inspector</h3>
           
           {!selectedNode ? (
@@ -188,54 +189,77 @@ export const AdminInteropView = () => {
             </div>
           ) : (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  {selectedNode.demo && <span className="bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold border border-amber-500/20">Demo / Simulated</span>}
-                  {!selectedNode.demo && <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold border border-emerald-500/20">Live System</span>}
-                </div>
-                <h4 className="text-lg font-bold text-white">{selectedNode.label}</h4>
-                <p className="text-xs text-slate-400 font-mono mt-1">ID: net.{selectedNode.id}.jansetu.gov</p>
-              </div>
-
-              <div className="space-y-3 bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Status</span>
-                  <span className={selectedNode.status === 'Active' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>{selectedNode.status}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Protocol</span>
-                  <span className="text-slate-200 font-mono text-xs">{selectedNode.protocol}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Latency</span>
-                  <span className="text-slate-200">{selectedNode.latency}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Success Rate</span>
-                  <span className="text-emerald-400">{selectedNode.successRate}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-800">
-                <h5 className="text-xs font-bold text-slate-300 mb-2">Recent Exchange Log</h5>
-                <div className="bg-[#05050a] border border-slate-800 rounded p-2 font-mono text-[10px] text-slate-500 break-all h-24 overflow-y-auto">
-                  [14:22:01] REQ_ID: a7f8-99b2<br/>
-                  [14:22:01] TYPE: Schema validation<br/>
-                  [14:22:01] AUTH: Validated JWT<br/>
-                  [14:22:02] RES: 200 OK<br/>
-                  [14:22:02] PAYLOAD_SIZE: 1.2kb<br/>
-                  [14:22:05] REQ_ID: c1a2-88d3<br/>
-                  [14:22:05] RES: 200 OK
-                </div>
-              </div>
+              <NodeTelemetry selectedNode={selectedNode} />
             </div>
           )}
         </div>
+
+        {/* Node Inspection Panel (Mobile Bottom Sheet) */}
+        {selectedNode && (
+          <div className="md:hidden fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 backdrop-blur-sm p-0">
+            <div className="bg-slate-900 border-t border-slate-800 rounded-t-2xl w-full max-h-[85vh] overflow-y-auto p-6 pb-safe shadow-2xl relative animate-in slide-in-from-bottom-full duration-300">
+              <button 
+                onClick={() => setSelectedNode(null)} 
+                className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-400 p-2 rounded-full transition"
+              >
+                ✕
+              </button>
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Node Inspector</h3>
+              <NodeTelemetry selectedNode={selectedNode} />
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
   );
 };
+
+// Extracted Telemetry View Component
+const NodeTelemetry = ({ selectedNode }: { selectedNode: any }) => (
+  <>
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        {selectedNode.demo && <span className="bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold border border-amber-500/20">Demo / Simulated</span>}
+        {!selectedNode.demo && <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded uppercase font-bold border border-emerald-500/20">Live System</span>}
+      </div>
+      <h4 className="text-lg font-bold text-white">{selectedNode.label}</h4>
+      <p className="text-xs text-slate-400 font-mono mt-1">ID: net.{selectedNode.id}.jansetu.gov</p>
+    </div>
+
+    <div className="space-y-3 bg-slate-900 border border-slate-800 p-4 rounded-xl text-sm">
+      <div className="flex justify-between items-center">
+        <span className="text-slate-400">Status</span>
+        <span className={selectedNode.status === 'Active' ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>{selectedNode.status}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-slate-400">Protocol</span>
+        <span className="text-slate-200 font-mono text-xs">{selectedNode.protocol}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-slate-400">Latency</span>
+        <span className="text-slate-200">{selectedNode.latency}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-slate-400">Success Rate</span>
+        <span className="text-emerald-400">{selectedNode.successRate}</span>
+      </div>
+    </div>
+
+    <div className="pt-4 border-t border-slate-800">
+      <h5 className="text-xs font-bold text-slate-300 mb-2">Recent Exchange Log</h5>
+      <div className="bg-[#05050a] border border-slate-800 rounded p-2 font-mono text-[10px] text-slate-500 break-all h-24 overflow-y-auto">
+        [14:22:01] REQ_ID: a7f8-99b2<br/>
+        [14:22:01] TYPE: Schema validation<br/>
+        [14:22:01] AUTH: Validated JWT<br/>
+        [14:22:02] RES: 200 OK<br/>
+        [14:22:02] PAYLOAD_SIZE: 1.2kb<br/>
+        [14:22:05] REQ_ID: c1a2-88d3<br/>
+        [14:22:05] RES: 200 OK
+      </div>
+    </div>
+  </>
+);
 
 // Helper Components
 const UserIcon = () => <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center"><UserCircleIcon /></div>;

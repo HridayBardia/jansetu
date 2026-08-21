@@ -83,35 +83,60 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <JanSetuLogo size="md" variant="full" />
+          
+          {/* Logo Section */}
+          <Link href="/" className="flex items-center gap-3 shrink-0">
+            {/* Desktop Logo */}
+            <div className="hidden md:block">
+              <JanSetuLogo size="md" variant="full" />
+            </div>
+            {/* Mobile Logo */}
+            <div className="md:hidden">
+              <JanSetuLogo size="sm" variant="compact" />
+            </div>
           </Link>
 
-          {/* Controls: Language Selector, User Profile & Auth Button */}
-          <div className="flex items-center gap-3">
-            {/* Language Selector */}
-            <LanguageSelector />
+          {/* Mobile Contextual Title */}
+          <div className="md:hidden flex-1 px-4 text-center">
+            <span className="text-xs font-bold text-slate-300 truncate block">
+              {navItems.find(item => isActive(item.href))?.label || 'JanSetu'}
+            </span>
+          </div>
 
-            {/* Authenticated Citizen Profile / Login Button */}
+          {/* Controls */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Language Selector (Hidden on strict mobile to save space) */}
+            <div className="hidden sm:block">
+              <LanguageSelector />
+            </div>
+
+            {/* Authenticated User Controls */}
             {isAuthenticated && user ? (
-              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2 bg-slate-950/50 md:bg-slate-950 md:border md:border-slate-800 px-1 md:px-3 py-1.5 rounded-xl">
+                
+                {/* Mobile Notification Icon (Only on mobile header, desktop has it in the dashboard) */}
+                <div className="md:hidden mr-1">
+                  <Bell className="w-5 h-5 text-slate-400" />
+                </div>
+
                 <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-500/30 shrink-0">
                   {user.full_name.charAt(0).toUpperCase()}
                 </div>
+                
                 <div className="hidden sm:block text-left">
                   <p className="text-xs font-bold text-slate-200 leading-none">{user.full_name}</p>
                   <p className="text-[10px] text-slate-400 font-mono leading-none mt-0.5">@{user.username}</p>
                 </div>
 
                 {/* Role label instead of switcher */}
-                <div className="bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
+                <div className="hidden md:block bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
                   {user.role === 'ADMIN' || user.role === 'admin' ? 'ADMIN' : 'CITIZEN'}
                 </div>
 
                 <button
                   onClick={logout}
                   title="Logout"
-                  className="ml-1 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition shrink-0"
+                  className="hidden md:flex ml-1 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition shrink-0"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -155,26 +180,39 @@ export const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 text-slate-300 px-2 py-2">
-        <div className="flex items-center justify-around">
-          {navItems.slice(0, 5).map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg transition ${
-                  active ? 'text-amber-400 font-bold bg-amber-500/10' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px]">{item.label}</span>
-              </Link>
-            );
-          })}
+      {isAuthenticated && user && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950 border-t border-slate-800 text-slate-300 px-2 py-2 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-around h-14">
+            {navItems.slice(0, 5).map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              
+              // Simplistic naming for bottom nav limits string lengths
+              let shortLabel = item.label;
+              if (item.label === 'Goal Planner') shortLabel = 'Home';
+              if (item.label === 'My Applications') shortLabel = 'Apps';
+              if (item.label === 'Privacy & Consent') shortLabel = 'Consent';
+              if (item.label === 'Documents Vault') shortLabel = 'Docs';
+              if (item.label === 'System Overview') shortLabel = 'Overview';
+              if (item.label === 'Interop Hub') shortLabel = 'Interop';
+              if (item.label === 'Data Quality') shortLabel = 'Quality';
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center gap-1 w-16 h-full rounded-xl transition ${
+                    active ? 'text-amber-400 font-bold bg-amber-500/10' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 ${active ? 'fill-amber-500/20' : ''}`} />
+                  <span className="text-[10px] truncate w-full text-center">{shortLabel}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };

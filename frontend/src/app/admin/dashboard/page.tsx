@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-amber-500/30 font-sans">
-      <main className="max-w-7xl mx-auto px-4 py-8 relative">
+      <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8 relative">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
         <div className="absolute top-20 left-0 w-96 h-96 bg-gradient-to-tr from-amber-500/5 to-transparent blur-3xl pointer-events-none" />
 

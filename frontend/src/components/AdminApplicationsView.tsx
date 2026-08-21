@@ -98,7 +98,8 @@ export const AdminApplicationsView = () => {
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950/50 text-xs uppercase text-slate-500">
               <tr>
@@ -155,6 +156,58 @@ export const AdminApplicationsView = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-slate-800/50">
+          {filteredApps.map(app => (
+            <div key={app.id} className="p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-bold text-slate-200">{app.service}</div>
+                  <div className="text-[10px] font-mono text-slate-400">{app.id}</div>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                  app.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                  app.status === 'Action Required' ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse' :
+                  'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`}>
+                  {app.status}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Citizen</span>
+                  <span className="text-slate-300">{app.citizen}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">State</span>
+                  <span className="text-slate-300">{app.state}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center pt-2">
+                <span className={`flex items-center gap-1 text-[11px] font-bold ${
+                  app.sla.includes('Breach') ? 'text-red-400' : 'text-emerald-400'
+                }`}>
+                  {app.sla.includes('Breach') ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                  {app.sla}
+                </span>
+                <button 
+                  onClick={() => setSelectedApp(app)}
+                  className="text-purple-400 hover:text-purple-300 text-[11px] font-bold bg-purple-500/10 px-3 py-1.5 rounded"
+                >
+                  Inspect Workflow
+                </button>
+              </div>
+            </div>
+          ))}
+          {filteredApps.length === 0 && (
+            <div className="p-8 text-center text-slate-500 text-sm">
+              No applications match your filter.
+            </div>
+          )}
         </div>
       </div>
 

@@ -738,7 +738,7 @@ export default function DashboardPage() {
   const nationalSchemes = schemes.filter(s => s.level === 'CENTRAL' || s.level === 'NATIONAL');
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 py-6 px-4">
+    <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6">
       {/* Brand Header */}
       <div className="flex items-center justify-between border-b border-slate-900 pb-5">
         <div className="flex items-center gap-2">
@@ -879,8 +879,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Interoperability Tabs Switcher */}
-      <div className="flex border-b border-slate-800 gap-1 overflow-x-auto pb-px shrink-0">
+      {/* Interoperability Tabs Switcher (Hidden on Mobile) */}
+      <div className="hidden md:flex border-b border-slate-800 gap-1 overflow-x-auto pb-px shrink-0">
         <button
           onClick={() => setActiveTab('planner')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
@@ -1121,28 +1121,28 @@ export default function DashboardPage() {
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                 What are you looking to accomplish?
               </label>
-              <div className="relative">
+              <div className="relative flex flex-col md:block">
                 <textarea
                   rows={2}
                   value={goalInput}
                   onChange={(e) => setGoalInput(e.target.value)}
-                  placeholder="Tell us what you're trying to do... e.g. 'I want to study in Australia' or 'I want to start a business'..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 pr-40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-sm resize-none"
+                  placeholder="Tell us what you're trying to do... e.g. 'I want to start a business'..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 md:pr-40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-base md:text-sm resize-none min-h-[80px]"
                 />
                 <button
                   type="submit"
                   disabled={isAnalyzing}
-                  className="absolute bottom-3 right-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-lg disabled:opacity-50 transition"
+                  className="mt-2 md:mt-0 md:absolute md:bottom-3 md:right-3 w-full md:w-auto justify-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-4 py-3 md:py-2 rounded-lg text-sm md:text-xs flex items-center gap-2 shadow-lg disabled:opacity-50 transition"
                 >
                   {isAnalyzing ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>UNDERSTANDING YOUR GOAL...</span>
+                      <Loader2 className="w-4 h-4 md:w-3.5 md:h-3.5 animate-spin" />
+                      <span>UNDERSTANDING...</span>
                     </>
                   ) : (
                     <>
                       <span>Understand Goal</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4 md:w-3.5 md:h-3.5" />
                     </>
                   )}
                 </button>
@@ -1510,7 +1510,7 @@ export default function DashboardPage() {
       {activeTab === 'applications' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Applications Stats Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Applications</span>
               <span className="text-lg font-black text-white">{applications.length} Registered</span>
@@ -1780,10 +1780,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 justify-end border-t border-slate-900 pt-3">
+                  <div className="flex flex-col sm:flex-row gap-2 justify-end border-t border-slate-900 pt-3">
                     <button
                       onClick={() => setSelectedConsent(c)}
-                      className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 font-bold px-3 py-1.5 rounded text-[11px] transition"
+                      className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
                     >
                       View Details
                     </button>
@@ -1791,26 +1791,26 @@ export default function DashboardPage() {
                       <>
                         <button
                           onClick={() => {
-                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ONCE").then(() => loadInteropData());
+                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ALWAYS").then(() => loadInteropData());
                           }}
-                          className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold px-3 py-1.5 rounded text-[11px] hover:from-amber-400 hover:to-orange-400 transition"
+                          className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
                         >
-                          Allow Once
+                          Allow Always
                         </button>
                         <button
                           onClick={() => {
-                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ALWAYS").then(() => loadInteropData());
+                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ONCE").then(() => loadInteropData());
                           }}
-                          className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-1.5 rounded text-[11px] transition"
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] hover:from-amber-400 hover:to-orange-400 transition text-center min-h-[44px] sm:min-h-0"
                         >
-                          Allow Always
+                          Allow Once
                         </button>
                       </>
                     )}
                     {c.granted && c.access_type !== 'REVOKED' && (
                       <button
                         onClick={() => revokeConsentAPI(c.consent_id).then(() => loadInteropData())}
-                        className="text-red-400 hover:text-red-300 font-bold hover:bg-red-500/10 border border-transparent hover:border-red-500/20 px-3 py-1.5 rounded text-[11px] transition"
+                        className="text-red-400 hover:text-red-300 font-bold bg-red-500/5 sm:bg-transparent hover:bg-red-500/10 border border-red-500/10 sm:border-transparent hover:border-red-500/20 px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
                       >
                         Revoke Access
                       </button>
