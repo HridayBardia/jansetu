@@ -61,7 +61,9 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  BarChart2
+  BarChart2,
+  Network,
+  UserCircle
 } from 'lucide-react';
 
 const INDIAN_STATES_AND_UTS = [
@@ -1985,12 +1987,12 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
                       <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Aadhaar (UIDAI)</p>
-                      <p className="text-sm font-bold text-white">{profile?.address || 'Flat 402, Shivajinagar, Pune'}</p>
+                      <p className="text-sm font-bold text-white">{(user as any)?.address || 'Flat 402, Shivajinagar, Pune'}</p>
                     </div>
                     <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
                       <div>
                         <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Property Tax (PMC)</p>
-                        <p className="text-sm font-bold text-white">{profile?.address || 'Flat 402, Shivajinagar, Pune'}</p>
+                        <p className="text-sm font-bold text-white">{(user as any)?.address || 'Flat 402, Shivajinagar, Pune'}</p>
                       </div>
                       <CheckCircle2 className="w-6 h-6 text-emerald-400" />
                     </div>
