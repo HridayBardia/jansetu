@@ -452,6 +452,7 @@ export default function DashboardPage() {
   const [selectedConsent, setSelectedConsent] = useState<any | null>(null);
   const [selectedConnector, setSelectedConnector] = useState<any | null>(null);
   const [showExchange, setShowExchange] = useState<boolean>(false);
+  const [showCDM, setShowCDM] = useState<boolean>(false);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
