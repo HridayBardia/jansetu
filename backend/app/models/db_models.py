@@ -261,7 +261,7 @@ class ApplicationDB(Base):
     
     id = Column(String, primary_key=True, default=generate_uuid)
     application_id = Column(String, unique=True, index=True, nullable=False)
-    citizen_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     service_id = Column(String, nullable=False, index=True)
     department_id = Column(String, nullable=False)
     department_name = Column(String, nullable=False)

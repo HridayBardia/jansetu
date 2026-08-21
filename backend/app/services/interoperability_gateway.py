@@ -262,7 +262,7 @@ class DataQualityEngine:
         dob = conflict.resolved_value if conflict else "10 Jan 2005"
         
         return {
-            "citizen_id": f"CIT-{user_id[-5:].upper() if user_id else '10482'}",
+            "user_id": f"CIT-{user_id[-5:].upper() if user_id else '10482'}",
             "fields": {
                 "name": {
                     "value": name,
@@ -442,7 +442,7 @@ class ServiceRegistry:
             "connector": "modern_rest_connector",
             "api_version": "v2.0",
             "supported_operations": ["fetch_document_list", "verify_document_hash"],
-            "data_requirements": {"citizen_id": "string", "document_type": "string"}
+            "data_requirements": {"user_id": "string", "document_type": "string"}
         },
         {
             "service_id": "srv_central_tax",
@@ -476,7 +476,7 @@ class ServiceRegistry:
             "connector": "modern_rest_connector",
             "api_version": "v1.1",
             "supported_operations": ["check_central_eligibility", "submit_dbt_claim"],
-            "data_requirements": {"citizen_id": "string", "income": "float"}
+            "data_requirements": {"user_id": "string", "income": "float"}
         },
         # Karnataka Services
         {
@@ -810,15 +810,44 @@ class ApplicationTracker:
             }
         ]
 
+        # Capability 3: MASTER-DATA MANAGEMENT
+        # Enforce that submitted documents are verified from the central vault (UserDocumentDB)
+        from app.models.db_models import UserDocumentDB
+        verified_docs = []
+        if documents:
+            db_docs = db.query(UserDocumentDB).filter(
+                UserDocumentDB.user_id == user_id,
+                UserDocumentDB.document_type.in_(documents)
+            ).all()
+            doc_map = {d.document_type: d for d in db_docs}
+            for doc_type in documents:
+                if doc_type in doc_map:
+                    d = doc_map[doc_type]
+                    verified_docs.append({
+                        "type": doc_type,
+                        "verified": d.is_verified,
+                        "source": d.verification_source,
+                        "reference_id": d.document_number_masked or f"DOC-{d.id[:6]}"
+                    })
+                else:
+                    verified_docs.append({
+                        "type": doc_type,
+                        "verified": False,
+                        "source": "Self-Declared",
+                        "reference_id": "PENDING"
+                    })
+        else:
+            verified_docs = documents
+
         app = ApplicationDB(
             application_id=app_id,
-            citizen_id=user_id,
+            user_id=user_id,
             service_id=service_id,
             department_id=dept_id,
             department_name=service.department if service else "Government Department",
             service_name=service.name if service else "Government Service",
             status="SUBMITTED",
-            documents=documents,
+            documents=verified_docs,
             timeline=timeline_events,
             required_actions=[]
         )
@@ -843,7 +872,7 @@ class ApplicationTracker:
 
     @staticmethod
     def list_applications(db: Session, user_id: str) -> List[Dict[str, Any]]:
-        apps = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == user_id).all()
+        apps = db.query(ApplicationDB).filter(ApplicationDB.user_id == user_id).all()
         if not apps:
             import random
             if user_id == "user_hriday_bardia":
@@ -899,7 +928,7 @@ class ApplicationTracker:
                 app_id = f"APP-{random.randint(100000, 999999)}"
                 db.add(ApplicationDB(
                     application_id=app_id,
-                    citizen_id=user_id,
+                    user_id=user_id,
                     service_id=s_id,
                     department_id=s_id.split("_")[1] if "_" in s_id else s_id,
                     department_name=dept_name,
@@ -910,7 +939,7 @@ class ApplicationTracker:
                     required_actions=actions
                 ))
             db.commit()
-            apps = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == user_id).all()
+            apps = db.query(ApplicationDB).filter(ApplicationDB.user_id == user_id).all()
 
         return [
             {
@@ -953,7 +982,7 @@ class ApplicationTracker:
             db.commit()
             
             NotificationManager.notify(
-                db, user_id=app.citizen_id,
+                db, user_id=app.user_id,
                 title=f"Application Update: {app.service_name}",
                 message=details or f"Your application ({app.application_id}) status was updated to {status}.",
                 category="APPLICATION_STATUS_CHANGED"

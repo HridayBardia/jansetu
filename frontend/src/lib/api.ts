@@ -466,6 +466,11 @@ export async function fetchSourceHealthAPI(): Promise<any> {
   return await apiFetch('/sources/health');
 }
 
+export async function fetchNodeLogsAPI(nodeId: string): Promise<string[]> {
+  const data = await apiFetch<string[]>(`/interop/topology/${nodeId}/logs`);
+  return data || [];
+}
+
 // Demo Mode Citizen Switcher API Helpers
 export async function listDemoCitizensAPI(): Promise<any[]> {
   const data = await apiFetch<any[]>('/demo/citizens');
@@ -960,4 +965,6 @@ export async function fetchMasterDataRecordAPI(): Promise<any | null> {
   return await apiFetch<any>(`/data-quality/master`);
 }
 
-
+export async function fetchCitizensAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/admin/citizens`);
+}

@@ -9,6 +9,8 @@ import { AdminCitizensView } from '@/components/AdminCitizensView';
 import { AdminApplicationsView } from '@/components/AdminApplicationsView';
 import { AdminInteropView } from '@/components/AdminInteropView';
 import { AdminDataQualityView } from '@/components/AdminDataQualityView';
+import { AdminWorkflowView } from '@/components/AdminWorkflowView';
+
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -77,6 +79,7 @@ export default function AdminDashboardPage() {
           {tab === 'citizens' && <AdminCitizensView />}
           {tab === 'applications' && <AdminApplicationsView />}
           {tab === 'interop' && <AdminInteropView />}
+          {tab === 'workflow' && <AdminWorkflowView />}
           {tab === 'data_quality' && <AdminDataQualityView />}
         </div>
       </main>

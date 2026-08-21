@@ -1548,7 +1548,7 @@ class CitizenIntelligenceEngine:
             ServiceRegistry.seed_services(db)
 
             # Clear previous demo items for this user
-            db.query(ApplicationDB).filter(ApplicationDB.citizen_id == current_user.id).delete()
+            db.query(ApplicationDB).filter(ApplicationDB.user_id == current_user.id).delete()
             db.query(ConsentRecordDB).filter(ConsentRecordDB.user_id == current_user.id).delete()
             db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).delete()
             db.query(NotificationDB).filter(NotificationDB.user_id == current_user.id).delete()
@@ -1616,7 +1616,7 @@ class CitizenIntelligenceEngine:
             for app_item in apps_data:
                 db.add(ApplicationDB(
                     application_id=app_item["application_id"],
-                    citizen_id=current_user.id,
+                    user_id=current_user.id,
                     service_id=app_item["service_id"],
                     department_id=app_item["department_id"],
                     department_name=app_item["department_name"],

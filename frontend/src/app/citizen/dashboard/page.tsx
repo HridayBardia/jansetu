@@ -1821,6 +1821,39 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Audit Log Section */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <History className="w-4 h-4 text-amber-400" />
+                <span>Immutable Data Access Audit Trail</span>
+              </h3>
+              <span className="text-xs text-slate-400 font-mono">256-bit Encrypted Logs</span>
+            </div>
+            <div className="divide-y divide-slate-800/80 text-xs max-h-64 overflow-y-auto">
+              {auditLogs.length === 0 ? (
+                <div className="p-6 text-center text-slate-500">
+                  <p>No audit events yet. Consent actions will be logged here.</p>
+                </div>
+              ) : auditLogs.map((log: any) => (
+                <div key={log.id} className="p-4 hover:bg-slate-800/40 transition flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-amber-400 px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px]">
+                        {log.action}
+                      </span>
+                      <span className="font-semibold text-slate-200">{log.resource}</span>
+                    </div>
+                    <p className="text-slate-400">{log.status || 'SUCCESS'}</p>
+                  </div>
+                  <span className="text-[11px] text-slate-500 shrink-0 font-mono">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Consent Details Modal */}
           {selectedConsent && (
             <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">

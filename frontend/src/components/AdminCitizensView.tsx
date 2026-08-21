@@ -51,17 +51,32 @@ const mockCitizens = [
 ];
 
 import { useAuth } from '@/context/AuthContext';
+import { fetchCitizensAPI } from '@/lib/api';
 
 export const AdminCitizensView = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCitizen, setSelectedCitizen] = useState<any>(null);
+  const [adminCitizens, setAdminCitizens] = useState<any[]>([]);
 
-  const adminCitizens = user?.username === 'dishita' 
-    ? mockCitizens.filter(c => ['CIT-8921-HRD', 'CIT-4412-VRD'].includes(c.id))
-    : user?.username === 'jyoti'
-    ? mockCitizens.filter(c => ['CIT-7734-AYH', 'CIT-1198-STW'].includes(c.id))
-    : mockCitizens;
+  React.useEffect(() => {
+    fetchCitizensAPI().then(data => {
+      if (data) {
+        setAdminCitizens(data.map((c: any) => ({
+          id: `CIT-${c.id.substring(0, 4).toUpperCase()}`,
+          rawId: c.id,
+          name: c.full_name,
+          location: c.city ? `${c.city}, ${c.state}` : 'Location unknown',
+          activeJourneys: c.journeys || 0,
+          applications: c.applications || 0,
+          accountStatus: 'Verified',
+          lastActivity: new Date(c.created_at).toLocaleDateString(),
+          consentStatus: 'Granted',
+          identityDoc: 'Verified (Aadhaar)'
+        })));
+      }
+    });
+  }, []);
 
   const filteredCitizens = adminCitizens.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 

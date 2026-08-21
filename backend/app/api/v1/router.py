@@ -52,6 +52,11 @@ def get_request_id(request: Request) -> str:
 def success_response(data: Any, request: Request):
     return APIResponse(success=True, data=data, request_id=get_request_id(request))
 
+def log_audit(db: Session, actor: str, action: str, resource: str, status: str = "SUCCESS"):
+    log_entry = AuditLogDB(actor=actor, action=action, resource=resource, status=status)
+    db.add(log_entry)
+    db.commit()
+
 @api_v1_router.post("/dev/log")
 async def dev_log(req: Request):
     try:
@@ -1058,6 +1063,8 @@ def toggle_consent(
         consent.granted_at = datetime.utcnow()
         db.commit()
         db.refresh(consent)
+        action_name = "CONSENT_GRANT" if granted else "CONSENT_REVOKE"
+        log_audit(db, actor=current_user.id, action=action_name, resource=purpose)
         return success_response({
             "consent_id": consent.consent_id,
             "purpose": consent.purpose,
@@ -1384,7 +1391,7 @@ def list_applications(
                 "id": a.id,
                 "application_id": a.application_id,
                 "service_id": a.service_id,
-                "citizen_id": a.citizen_id,
+                "user_id": a.user_id,
                 "status": a.status,
                 "submitted_at": a.submitted_at.isoformat()
             } for a in apps
@@ -1423,7 +1430,7 @@ def get_application_details(
 ):
     app = db.query(ApplicationDB).filter(
         ApplicationDB.application_id == application_id,
-        ApplicationDB.citizen_id == current_user.id
+        ApplicationDB.user_id == current_user.id
     ).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -1741,9 +1748,17 @@ def get_connectors_health_metrics(request: Request, db: Session = Depends(get_db
     return success_response(metrics, request)
 
 @api_v1_router.get("/audit-logs")
-def list_audit_logs(request: Request, db: Session = Depends(get_db)):
-    logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).limit(100).all()
-    if not logs:
+def list_audit_logs(
+    request: Request, 
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role in ['ADMIN', 'admin']:
+        logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).limit(100).all()
+    else:
+        logs = db.query(AuditLogDB).filter(AuditLogDB.actor == current_user.id).order_by(AuditLogDB.timestamp.desc()).limit(50).all()
+        
+    if not logs and current_user.role in ['ADMIN', 'admin']:
         AuditLogger.log(db, "system_gateway", "API_REQUEST", "ServiceRegistry seeded")
         AuditLogger.log(db, "demo_citizen_hriday", "LOGIN", "Citizen logged in")
         logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).all()
@@ -1942,7 +1957,7 @@ def get_all_citizens(request: Request, current_user: UserDB = Depends(get_curren
     for c in citizens:
         profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == c.id).first()
         active_journeys = db.query(JourneyDB).filter(JourneyDB.user_id == c.id).count()
-        applications = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == c.id).count()
+        applications = db.query(ApplicationDB).filter(ApplicationDB.user_id == c.id).count()
         res.append({
             "id": c.id,
             "name": c.full_name,
@@ -1953,32 +1968,25 @@ def get_all_citizens(request: Request, current_user: UserDB = Depends(get_curren
         })
     return success_response(res, request)
 
-@api_v1_router.get("/admin/citizens/{citizen_id}")
+@api_v1_router.get("/admin/citizens/{user_id}")
 def get_citizen_details(
-    citizen_id: str, 
+    user_id: str, 
     request: Request, 
     reason: str = Query("Admin Review", description="Reason for access"),
     current_user: UserDB = Depends(get_current_admin), 
     db: Session = Depends(get_db)
 ):
-    c = db.query(UserDB).filter(UserDB.id == citizen_id).first()
+    c = db.query(UserDB).filter(UserDB.id == user_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Citizen not found")
         
     profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == c.id).first()
     active_journeys = db.query(JourneyDB).filter(JourneyDB.user_id == c.id).count()
-    applications = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == c.id).count()
+    applications = db.query(ApplicationDB).filter(ApplicationDB.user_id == c.id).count()
     documents = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == c.id).count()
     
     # Audit log the access
-    audit_log = AuditLogDB(
-        id=str(uuid.uuid4()),
-        actor=current_user.id,
-        action="Viewed Citizen Profile",
-        resource=f"Citizen Profile: {citizen_id}"
-    )
-    db.add(audit_log)
-    db.commit()
+    log_audit(db, actor=current_user.id, action="ADMIN_ACCESS", resource=f"Citizen Profile: {user_id}")
     
     return success_response({
         "id": c.id,
@@ -2061,3 +2069,42 @@ async def trigger_api_test(
     db.commit()
     
     return success_response(result, request)
+
+@api_v1_router.get("/interop/topology/{node_id}/logs")
+def get_node_logs(
+    node_id: str,
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    import random
+    from datetime import datetime, timedelta
+    
+    # Mocking real-time payloads based on node type
+    logs = []
+    base_time = datetime.utcnow()
+    
+    for i in range(5):
+        t = base_time - timedelta(seconds=random.randint(1, 60))
+        req_id = f"{random.randint(1000, 9999):x}-{random.randint(1000, 9999):x}"
+        
+        if node_id == 'consent':
+            logs.extend([
+                f"[{t.strftime('%H:%M:%S')}] REQ_ID: {req_id}",
+                f"[{t.strftime('%H:%M:%S')}] ACTION: VerifyConsent",
+                f"[{(t + timedelta(milliseconds=12)).strftime('%H:%M:%S')}] RES: 200 OK"
+            ])
+        elif node_id == 'gateway':
+            logs.extend([
+                f"[{t.strftime('%H:%M:%S')}] REQ_ID: {req_id}",
+                f"[{t.strftime('%H:%M:%S')}] ROUTE: -> {random.choice(['uidai', 'mca', 'municipal'])}",
+                f"[{(t + timedelta(milliseconds=5)).strftime('%H:%M:%S')}] RES: 200 OK (Proxied)"
+            ])
+        else:
+            logs.extend([
+                f"[{t.strftime('%H:%M:%S')}] REQ_ID: {req_id}",
+                f"[{t.strftime('%H:%M:%S')}] PAYLOAD: {random.randint(500, 2500)} bytes",
+                f"[{(t + timedelta(milliseconds=random.randint(50, 300))).strftime('%H:%M:%S')}] RES: 200 OK"
+            ])
+            
+    return success_response(logs, request)

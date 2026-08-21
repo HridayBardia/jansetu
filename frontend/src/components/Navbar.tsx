@@ -20,7 +20,11 @@ import {
   User,
   LogOut,
   LogIn,
-  Briefcase
+  Briefcase,
+  Activity,
+  Menu,
+  X,
+  GitMerge
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -63,6 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         { label: t('citizens', 'Citizens'), href: '/admin/dashboard?tab=citizens', icon: User },
         { label: t('applications', 'Applications'), href: '/admin/dashboard?tab=applications', icon: Briefcase },
         { label: t('interopHub', 'Interop Hub'), href: '/admin/dashboard?tab=interop', icon: Radio },
+        { label: t('workflowRules', 'Workflow Rules'), href: '/admin/dashboard?tab=workflow', icon: GitMerge },
         { label: t('dataQuality', 'Data Quality'), href: '/admin/dashboard?tab=data_quality', icon: BarChart2 },
       ];
     } else {
@@ -72,6 +77,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         { label: t('myDocuments', 'Documents Vault'), href: '/citizen/dashboard?tab=documents', icon: FileText },
         { label: t('myApplications', 'My Applications'), href: '/citizen/dashboard?tab=applications', icon: Briefcase },
         { label: t('privacy', 'Privacy & Consent'), href: '/citizen/dashboard?tab=consent', icon: ShieldCheck },
+        { label: t('interopHub', 'Interop Hub'), href: '/citizen/dashboard?tab=interop', icon: Radio },
+        { label: t('dataQuality', 'Data Quality'), href: '/citizen/dashboard?tab=conflicts', icon: BarChart2 },
         { label: t('alerts', 'Alerts'), href: '/citizen/dashboard?tab=alerts', icon: Bell }
       ];
     }

@@ -319,6 +319,41 @@ export default function LoginPage() {
               {isSubmitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : 'Login Securely'}
               {!isSubmitting && <ArrowRight size={18} />}
             </button>
+            
+            {loginType === 'CITIZEN' && (
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                  <span style={{ color: '#64748b', fontSize: '12px', fontWeight: 500 }}>OR</span>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+                </div>
+                <button
+                  onClick={() => {
+                    // Mock Federated SSO - autofill HRIDAY's demo credentials
+                    setUsername('hriday');
+                    const pin = '123456';
+                    setPinDigits(pin.split(''));
+                    setTimeout(() => {
+                      // Trigger login after state updates
+                      handleLogin();
+                    }, 500);
+                  }}
+                  disabled={isSubmitting}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.03)', color: '#e2e8f0',
+                    fontSize: '14px', fontWeight: 500, cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                >
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/DigiLocker_Logo.png" alt="DigiLocker" style={{ height: '20px', objectFit: 'contain' }} onError={(e) => {e.currentTarget.style.display = 'none'}} />
+                  <span>Sign in via DigiLocker (Federated SSO)</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
