@@ -330,11 +330,11 @@ class JourneyAnalyzeRequest(PydanticBaseModel):
     domicileState: Optional[str] = None
     user_id: Optional[str] = None
     session_id: Optional[str] = None
-def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Session, journey: JourneyDB):
+async def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Session, journey: JourneyDB):
     from app.services.citizen_intelligence import CitizenIntelligenceEngine
-    return CitizenIntelligenceEngine.analyze_journey(query, domicile, current_user, db, journey)
+    return await CitizenIntelligenceEngine.analyze_journey(query, domicile, current_user, db, journey)
 @api_v1_router.post("/journey/analyze")
-def analyze_journey(
+async def analyze_journey(
     req: JourneyAnalyzeRequest,
     request: Request,
     current_user: UserDB = Depends(get_current_user),
@@ -372,14 +372,14 @@ def analyze_journey(
         state="IN_PROGRESS"
     )
     db.add(journey)
-    db.commit()
-    db.refresh(journey)
-
+    # Generate AI plan natively using the refactored unified engine
     try:
-        result = _do_analyze_journey(query, domicile, current_user, db, journey)
-        return success_response(result, request)
+        plan = await _do_analyze_journey(query, domicile, current_user, db, journey)
+        db.commit()
+        db.refresh(journey)
+        return success_response(plan, request)
     except Exception as e:
-        print(f"[ERROR] analyze_journey failed: {e}")
+        logger.error(f"Error analyzing journey: {str(e)}", exc_info=True)
         db.rollback()
         try:
             fallback_payload = {
@@ -1735,14 +1735,205 @@ def get_admin_metrics(
         "departments": [
             {"name": "UIDAI Central Registry", "uptime": 100.0, "latency": 45, "sla": 99.9},
             {"name": "GSTN Indirect Taxes", "uptime": 99.95, "latency": 112, "sla": 98.4},
+@api_v1_router.get("/connectors/health")
+def get_connectors_health_metrics(request: Request, db: Session = Depends(get_db)):
+    metrics = ConnectorHealthMonitor.get_health_metrics(db)
+    return success_response(metrics, request)
+
+@api_v1_router.get("/audit-logs")
+def list_audit_logs(request: Request, db: Session = Depends(get_db)):
+    logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).limit(100).all()
+    if not logs:
+        AuditLogger.log(db, "system_gateway", "API_REQUEST", "ServiceRegistry seeded")
+        AuditLogger.log(db, "demo_citizen_hriday", "LOGIN", "Citizen logged in")
+        logs = db.query(AuditLogDB).order_by(AuditLogDB.timestamp.desc()).all()
+        
+    return success_response([
+        {
+            "id": l.id,
+            "timestamp": l.timestamp.isoformat(),
+            "actor": l.actor,
+            "action": l.action,
+            "resource": l.resource,
+            "status": l.status,
+            "correlation_id": l.correlation_id
+        }
+        for l in logs
+    ], request)
+
+@api_v1_router.get("/conflicts")
+def list_conflicts(
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    conflicts = db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).all()
+    if not conflicts:
+        DataQualityEngine.check_for_conflicts(
+            db, current_user.id, "date_of_birth",
+            source_a="Aadhaar ID Registry", val_a="2005-01-10",
+            source_b="Pune Municipal Corporation", val_b="2005-01-11"
+        )
+        conflicts = db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).all()
+        
+    return success_response([
+        {
+            "id": c.id,
+            "field_name": c.field_name,
+            "source_a": c.source_a,
+            "value_a": c.value_a,
+            "source_b": c.source_b,
+            "value_b": c.value_b,
+            "status": c.status,
+            "resolved_value": c.resolved_value,
+            "created_at": c.created_at.isoformat()
+        }
+        for c in conflicts
+    ], request)
+
+@api_v1_router.post("/conflicts/{conflict_id}/resolve")
+def resolve_data_conflict(
+    conflict_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    resolved_value = payload.get("resolved_value")
+    if not resolved_value:
+        raise HTTPException(status_code=400, detail="Missing resolved_value parameter")
+    
+    success = DataQualityEngine.resolve_conflict(db, conflict_id, resolved_value)
+    if not success:
+        raise HTTPException(status_code=404, detail="Conflict not found")
+    return success_response({"status": "resolved"}, request)
+
+@api_v1_router.post("/connectors/{service_id}/health")
+def update_connector_health_status(
+    service_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    status = payload.get("status", "HEALTHY")
+    service = db.query(ServiceRegistryDB).filter(ServiceRegistryDB.service_id == service_id).first()
+    if service:
+        service.health_status = status
+        db.commit()
+        
+        from app.models.db_models import ConnectorHealthDB
+        health_rec = db.query(ConnectorHealthDB).filter(
+            ConnectorHealthDB.service_name.contains("Licensing") if "license" in service_id else ConnectorHealthDB.service_name.contains("Municipal")
+        ).first()
+        if health_rec:
+            health_rec.health_status = "Failed" if status == "FAILED" else "Degraded" if status == "DEGRADED" else "Healthy"
+            db.commit()
+            
+        AuditLogger.log(
+            db, actor="SYSTEM_ADMIN", action="CONNECTOR_HEALTH_CHANGE",
+            resource=f"Service: {service_id}, Status: {status}",
+            status="SUCCESS"
+        )
+        return success_response({"status": status}, request)
+    raise HTTPException(status_code=404, detail="Service registry not found")
+
+@api_v1_router.get("/metrics")
+def get_interoperability_metrics(request: Request):
+    return success_response({
+        "duplicate_submissions": {
+            "before": 2.8,
+            "after": 1.1,
+            "reduction_percentage": "60.7%"
+        },
+        "average_processing_time": {
+            "before": "5.4 days",
+            "after": "3.2 days",
+            "reduction_percentage": "40.7%"
+        },
+        "cross_dept_handoffs": {
+            "before": 7,
+            "after": 3,
+            "reduction_percentage": "57.1%"
+        },
+        "data_consistency": {
+            "before": "87.2%",
+            "after": "98.4%",
+            "improvement_points": "+11.2%"
+        }
+    }, request)
+
+@api_v1_router.get("/service-levels")
+def get_service_levels(request: Request):
+    return success_response([
+        {
+            "service_id": "srv_msins_biz",
+            "name": "Maharashtra Business Registration",
+            "target_hours": 48,
+            "actual_hours": 31,
+            "sla_compliance": "96.4%"
+        },
+        {
+            "service_id": "srv_kar_biz",
+            "name": "Karnataka Business Registration",
+            "target_hours": 48,
+            "actual_hours": 29,
+            "sla_compliance": "97.1%"
+        },
+        {
+            "service_id": "srv_pmc_license",
+            "name": "Pune Trade License Service",
+            "target_hours": 72,
+            "actual_hours": 61,
+            "sla_compliance": "91.2%"
+        },
+        {
+            "service_id": "srv_kar_municipal",
+            "name": "Bengaluru Trade License Service",
+            "target_hours": 72,
+            "actual_hours": 58,
+            "sla_compliance": "92.8%"
+        },
+        {
+            "service_id": "srv_central_scholarship",
+            "name": "Central DBT & Scholarship",
+            "target_hours": 360,
+            "actual_hours": 274,
+            "sla_compliance": "94.7%"
+        }
+    ], request)
+
+@api_v1_router.get("/data-quality/master")
+def get_master_data_record(
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    record = DataQualityEngine.get_master_citizen_record(db, current_user.id)
+    return success_response(record, request)
+
+@api_v1_router.get("/metrics")
+def get_admin_metrics(
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    # Enforce administrative access check
+    if current_user.role not in ("SYSTEM_ADMIN", "DEPARTMENT_ADMIN"):
+        raise HTTPException(status_code=403, detail="Forbidden: Administrative access required.")
+        
+    return success_response({
+        "uptime_percentage": 99.98,
+        "latency_average_ms": 118,
+        "failed_transactions_count": 8,
+        "sla_compliance_rate": 97.4,
+        "departments": [
+            {"name": "UIDAI Central Registry", "uptime": 100.0, "latency": 45, "sla": 99.9},
+            {"name": "GSTN Indirect Taxes", "uptime": 99.95, "latency": 112, "sla": 98.4},
             {"name": "Bruhat Bengaluru Mahanagara Palike", "uptime": 99.82, "latency": 210, "sla": 92.5},
             {"name": "Karnataka Labour Department", "uptime": 99.91, "latency": 140, "sla": 96.8},
             {"name": "Food Safety & Standards Authority", "uptime": 99.97, "latency": 95, "sla": 97.2}
         ]
     }, request)
-
-
-
 
 @api_v1_router.get("/admin/citizens")
 def get_all_citizens(request: Request, current_user: UserDB = Depends(get_current_admin), db: Session = Depends(get_db)):
@@ -1782,11 +1973,9 @@ def get_citizen_details(
     # Audit log the access
     audit_log = AuditLogDB(
         id=str(uuid.uuid4()),
-        citizen_id=citizen_id,
+        actor=current_user.id,
         action="Viewed Citizen Profile",
-        resource="Citizen Profile",
-        details=f"Admin: {current_user.full_name} | Reason: {reason}",
-        timestamp=datetime.utcnow()
+        resource=f"Citizen Profile: {citizen_id}"
     )
     db.add(audit_log)
     db.commit()
@@ -1801,3 +1990,74 @@ def get_citizen_details(
         "applications": applications,
         "documents": documents
     }, request)
+
+# API Registry & Health Endpoints
+@api_v1_router.get("/admin/apis")
+def get_all_registered_apis(
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.models.db_models import APIRegistryDB, APIHealthLogDB
+    apis = db.query(APIRegistryDB).all()
+    res = []
+    for api in apis:
+        # Get latest health log
+        latest_log = db.query(APIHealthLogDB).filter(APIHealthLogDB.api_id == api.id).order_by(APIHealthLogDB.checked_at.desc()).first()
+        res.append({
+            "id": api.id,
+            "name": api.name,
+            "category": api.category,
+            "official_url": api.official_url,
+            "status": api.status,
+            "response_time_ms": latest_log.response_time_ms if latest_log else 0,
+            "last_checked": latest_log.checked_at.isoformat() if latest_log else None,
+            "country": api.country,
+            "requires_key": api.requires_key
+        })
+    return success_response(res, request)
+
+@api_v1_router.post("/admin/apis/discover")
+async def trigger_api_discovery(
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin)
+):
+    import subprocess
+    import os
+    
+    # Run the discovery script in the background
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../scripts/discover_apis.py"))
+    subprocess.Popen(["python", script_path])
+    
+    return success_response({"message": "API discovery started in the background."}, request)
+
+@api_v1_router.post("/admin/apis/{api_id}/test")
+async def trigger_api_test(
+    api_id: str,
+    request: Request,
+    current_user: UserDB = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    from app.services.api_health_monitor import api_health_monitor
+    from app.models.db_models import APIRegistryDB, APIHealthLogDB
+    import aiohttp
+    
+    api = db.query(APIRegistryDB).filter(APIRegistryDB.id == api_id).first()
+    if not api:
+        raise HTTPException(status_code=404, detail="API not found")
+        
+    async with aiohttp.ClientSession() as session:
+        result = await api_health_monitor.check_api_health(session, api)
+        
+    api.status = result["status"]
+    log = APIHealthLogDB(
+        api_id=api.id,
+        status=result["status"],
+        http_status=result["http_status"],
+        response_time_ms=result["latency"],
+        error_message=result["error"]
+    )
+    db.add(log)
+    db.commit()
+    
+    return success_response(result, request)

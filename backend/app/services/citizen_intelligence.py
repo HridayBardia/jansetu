@@ -1053,7 +1053,7 @@ class CitizenIntelligenceEngine:
     """Universal Citizen Intelligence Engine coordinating the multi-stage query normalization, classification, matching, and retrieval."""
     
     @classmethod
-    def analyze_journey(
+    async def analyze_journey(
         cls,
         query: str,
         domicile: str,
@@ -1273,7 +1273,9 @@ class CitizenIntelligenceEngine:
         logger.info(f"[DEBUG TRACE] DOCUMENT RETRIEVAL & MATCHING: combined_reqs={[req['type'] for req in combined_reqs]}, available={[doc['type'] for doc in available_docs]}, missing={[doc['type'] for doc in needed_docs]})")
 
         # 6. Government Scheme Matching & Ranking
-        ranked_schemes = SchemeMatcher.match(
+        import asyncio
+        ranked_schemes = await asyncio.to_thread(
+            SchemeMatcher.match,
             db,
             primary_intent,
             secondary_intents,

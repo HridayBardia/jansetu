@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node src/tests/redirection.test.js"
+    "test": "node src/tests/redirection.test.js",
+    "discover-apis": "cd ../backend && python -m app.scripts.discover_apis"
   },
   "dependencies": {
     "lucide-react": "^1.31.0",
