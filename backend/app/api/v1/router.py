@@ -318,248 +318,159 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     import time
     import json
     from app.core.config import settings
-    from app.services.document_engine import DocumentRequirementMatcher
+    from app.services.location_engine import LocationEngine, STATES_AND_UTS
+    from sqlalchemy import or_, and_
+    from datetime import datetime
+
     warnings = []
     start_time = time.time()
 
-    # 1. Goal & Jurisdiction Extraction (LLM + Fallback Rules)
-    extracted = {
-        "goal": query,
-        "goal_category": "OTHER",
-        "sub_category": "General Inquiry",
-        "user_domicile": domicile,
-        "current_residence": domicile,
-        "district": None,
-        "current_city": None,
-        "target_location": None,
-        "working_location": None,
-        "business_location": None,
-        "destination_country": None,
-        "destination_state": None,
-        "required_authorities": [],
-        "relevant_jurisdictions": [domicile]
-    }
-
-    # Format LLM Prompt
-    prompt = f"""
-    Analyze this citizen goal query: "{query}"
-    The user selected domicile state: "{domicile}"
+    # 1. Natural Language Intent Parsing & Location Extraction
+    query_lower = query.lower().strip()
     
-    Extract the following variables as a strict JSON object:
-    - goal: summary of the goal
-    - goal_category: category must be exactly one of: EDUCATION, EMPLOYMENT, BUSINESS, LICENSING, IDENTITY, TRAVEL, IMMIGRATION, HEALTH, HOUSING, AGRICULTURE, FINANCE, TAX, VEHICLE, PROPERTY, CERTIFICATES, SOCIAL_SECURITY, WELFARE, LEGAL_REGISTRATION, INTERNATIONAL_EDUCATION, INTERNATIONAL_WORK, OTHER
-    - sub_category: specific sub-category
-    - user_domicile: domicile state (default to "{domicile}" if not specified)
-    - current_residence: current residence state (default to user_domicile if not specified)
-    - district: district/city name if mentioned
-    - current_city: current city name if mentioned
-    - target_location: target state/country if mentioned
-    - working_location: target working state if mentioned
-    - business_location: target business state if mentioned
-    - destination_country: target country for study/work if abroad
-    - destination_state: target state if mentioned
-    - required_authorities: list of regulatory authorities (e.g. ["UIDAI", "FSSAI", "MEA", "VMC"])
-    - relevant_jurisdictions: list of all state/city/country names mentioned in query
-    
-    Return ONLY a raw valid JSON object. No markdown, no backticks, no comments, no extra text.
-    """
-
-    llm_success = False
-    if settings.AI_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            res = model.generate_content(prompt)
-            text = res.text.strip()
-            if text.startswith("```"):
-                text = text.split("```json")[-1].split("```")[0].strip()
-            data = json.loads(text)
-            for k in extracted.keys():
-                if k in data and data[k] is not None:
-                    extracted[k] = data[k]
-            llm_success = True
-        except Exception as e:
-            print(f"[WARN] Gemini extraction failed: {e}")
-            warnings.append(f"LLM analysis failed. Using rule-based fallback engine.")
-            
-    elif settings.AI_PROVIDER == "openai" and settings.OPENAI_API_KEY:
-        try:
-            import openai
-            client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-            res = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0
-            )
-            text = res.choices[0].message.content.strip()
-            if text.startswith("```"):
-                text = text.split("```json")[-1].split("```")[0].strip()
-            data = json.loads(text)
-            for k in extracted.keys():
-                if k in data and data[k] is not None:
-                    extracted[k] = data[k]
-            llm_success = True
-        except Exception as e:
-            print(f"[WARN] OpenAI extraction failed: {e}")
-            warnings.append(f"LLM analysis failed. Using rule-based fallback engine.")
-
-    # Rules Extractor (Always runs to refine/supplement or fallback)
-    query_lower = query.lower()
-    
-    # Target Country Extraction
-    dest_country = extracted["destination_country"]
-    for country in ["australia", "canada", "uk", "united kingdom", "usa", "united states", "foreign", "abroad"]:
+    # Check for international destination country
+    dest_country = None
+    for country in ["australia", "canada", "uk", "united kingdom", "usa", "united states", "germany", "ireland", "new zealand", "abroad", "foreign"]:
         if country in query_lower:
             if country in ["uk", "united kingdom"]:
                 dest_country = "United Kingdom"
             elif country in ["usa", "united states"]:
                 dest_country = "United States"
-            elif country == "foreign" or country == "abroad":
+            elif country in ["abroad", "foreign"]:
                 dest_country = "Abroad"
             else:
                 dest_country = country.title()
             break
-            
-    if dest_country:
-        extracted["destination_country"] = dest_country
-        extracted["target_location"] = dest_country
-        if dest_country not in extracted["relevant_jurisdictions"]:
-            extracted["relevant_jurisdictions"].append(dest_country)
 
-    # Found Indian States
-    found_states = []
-    from app.services.location_engine import STATES_AND_UTS
-    for code, info in STATES_AND_UTS.items():
-        state_name = info["name"]
-        if state_name.lower() in query_lower:
-            found_states.append(state_name)
-            if state_name not in extracted["relevant_jurisdictions"]:
-                extracted["relevant_jurisdictions"].append(state_name)
-                
-    # Domicile parsing from query
-    query_domicile = None
-    if "live in" in query_lower or "domicile is" in query_lower or "resident of" in query_lower:
-        for st in found_states:
-            if f"live in {st.lower()}" in query_lower or f"domicile is {st.lower()}" in query_lower or f"resident of {st.lower()}" in query_lower:
-                query_domicile = st
-                break
-            
-    if query_domicile:
-        extracted["user_domicile"] = query_domicile
-        extracted["current_residence"] = query_domicile
-    else:
-        extracted["user_domicile"] = domicile
-        extracted["current_residence"] = domicile
-
-    # Target state different from Domicile
+    # Extract target Indian state/city
     target_state = None
-    for st in found_states:
-        if st.lower() != extracted["user_domicile"].lower():
-            target_state = st
-            break
-
-    # City/District parsing
-    cities = {
-        "udaipur": ("Udaipur", "Rajasthan"),
-        "jaipur": ("Jaipur", "Rajasthan"),
-        "bangalore": ("Bengaluru", "Karnataka"),
-        "bengaluru": ("Bengaluru", "Karnataka"),
-        "vadodara": ("Vadodara", "Gujarat"),
-        "pune": ("Pune", "Maharashtra"),
-        "mumbai": ("Mumbai", "Maharashtra"),
-        "delhi": ("Delhi", "Delhi"),
-        "gandhinagar": ("Gandhinagar", "Gujarat"),
-        "ahmedabad": ("Ahmedabad", "Gujarat")
-    }
+    target_city = None
     
-    found_city = None
-    found_city_state = None
-    for c_key, (c_name, c_state) in cities.items():
-        if c_key in query_lower:
-            found_city = c_name
-            found_city_state = c_state
-            extracted["district"] = c_name
-            extracted["current_city"] = c_name
-            if c_name not in extracted["relevant_jurisdictions"]:
-                extracted["relevant_jurisdictions"].append(c_name)
-            if c_state not in extracted["relevant_jurisdictions"]:
-                extracted["relevant_jurisdictions"].append(c_state)
+    # 1. Direct State Match
+    for code, info in STATES_AND_UTS.items():
+        if info["name"].lower() in query_lower:
+            target_state = info["name"]
+            break
+            
+    # 2. City Match
+    city_state_map = {
+        "bangalore": "Karnataka",
+        "bengaluru": "Karnataka",
+        "jaipur": "Rajasthan",
+        "udaipur": "Rajasthan",
+        "vadodara": "Gujarat",
+        "pune": "Maharashtra",
+        "mumbai": "Maharashtra",
+        "delhi": "Delhi",
+        "ahmedabad": "Gujarat",
+        "guwahati": "Assam",
+        "dispur": "Assam"
+    }
+    for city, state in city_state_map.items():
+        if city in query_lower:
+            target_city = city.title()
+            target_state = state
             break
 
-    # Business/Working Location mapping
-    if any(w in query_lower for w in ["business", "shop", "restaurant", "startup", "company", "clothing", "manufacturing"]):
-        if found_city_state:
-            extracted["business_location"] = found_city_state
-        elif target_state:
-            extracted["business_location"] = target_state
-        elif len(found_states) > 0:
-            extracted["business_location"] = found_states[-1]
-        else:
-            extracted["business_location"] = extracted["user_domicile"]
-    elif any(w in query_lower for w in ["work", "job", "migrate"]):
-        if found_city_state:
-            extracted["working_location"] = found_city_state
-        elif target_state:
-            extracted["working_location"] = target_state
-        elif len(found_states) > 0:
-            extracted["working_location"] = found_states[-1]
-        else:
-            extracted["working_location"] = extracted["user_domicile"]
-
-    # Category matching (mapping user intent to legacy category keys to pass tests)
+    # Intent Classification
     legacy_intent_primary = "GENERAL"
     legacy_intent_sub = "General Assistance"
     legacy_category = "general"
+    goal_category_full = "OTHER"
     
     if any(w in query_lower for w in ["study", "masters", "master", "university", "college", "school", "abroad", "graduation"]):
         legacy_intent_primary = "STUDY_ABROAD"
         legacy_intent_sub = f"Masters education in {dest_country}" if dest_country and "master" in query_lower else f"Higher education in {dest_country}" if dest_country else "Higher education abroad"
         legacy_category = "education"
-        extracted["goal_category"] = "INTERNATIONAL_EDUCATION" if dest_country else "EDUCATION"
-    elif any(w in query_lower for w in ["scholarship", "fellowship"]):
+        goal_category_full = "INTERNATIONAL_EDUCATION" if dest_country else "EDUCATION"
+    elif any(w in query_lower for w in ["scholarship", "fellowship", "stipend"]):
         legacy_intent_primary = "SCHOLARSHIP"
         legacy_intent_sub = "Apply for student financial aid"
         legacy_category = "education"
-        extracted["goal_category"] = "EDUCATION"
-    elif any(w in query_lower for w in ["business", "shop", "restaurant", "manufacturing", "trade", "company", "startup", "register", "clothing"]):
+        goal_category_full = "EDUCATION"
+    elif any(w in query_lower for w in ["hospital", "clinic", "healthcare facility"]):
+        legacy_intent_primary = "HEALTHCARE_FACILITY"
+        legacy_intent_sub = "Establish and register a healthcare facility"
+        legacy_category = "business"
+        goal_category_full = "BUSINESS"
+    elif any(w in query_lower for w in ["land", "plot", "property registry", "buy land", "purchase land"]):
+        if any(w in query_lower for w in ["farmer", "farming", "kisan", "agriculture"]):
+            legacy_intent_primary = "FARMER_BENEFITS"
+            legacy_intent_sub = "Apply for agricultural support"
+            legacy_category = "agriculture"
+            goal_category_full = "AGRICULTURE"
+        else:
+            legacy_intent_primary = "LAND_PURCHASE"
+            legacy_intent_sub = "Purchase land or real estate property"
+            legacy_category = "business"
+            goal_category_full = "PROPERTY"
+    elif any(w in query_lower for w in ["business", "shop", "restaurant", "manufacturing", "trade", "company", "startup", "register", "clothing", "factory"]):
         legacy_intent_primary = "BUSINESS_REGISTRATION"
         legacy_intent_sub = "Register business and obtain license"
         legacy_category = "business"
-        extracted["goal_category"] = "BUSINESS"
+        goal_category_full = "BUSINESS"
     elif any(w in query_lower for w in ["driving", "licence", "license", "dl"]):
         legacy_intent_primary = "DRIVING_LICENCE"
         legacy_intent_sub = "Renew or apply for driving licence"
         legacy_category = "documents"
-        extracted["goal_category"] = "LICENSING"
-    elif any(w in query_lower for w in ["passport", "visa"]):
+        goal_category_full = "LICENSING"
+    elif any(w in query_lower for w in ["passport", "travel document"]):
         legacy_intent_primary = "TRAVEL"
         legacy_intent_sub = "Apply for passport"
         legacy_category = "documents"
-        extracted["goal_category"] = "TRAVEL"
-    elif any(w in query_lower for w in ["farmer", "farming", "agricultural", "agriculture", "land", "kisan"]):
+        goal_category_full = "TRAVEL"
+    elif any(w in query_lower for w in ["farmer", "farming", "agricultural", "agriculture", "kisan"]):
         legacy_intent_primary = "FARMER_BENEFITS"
         legacy_intent_sub = "Apply for agricultural support"
         legacy_category = "agriculture"
-        extracted["goal_category"] = "AGRICULTURE"
+        goal_category_full = "AGRICULTURE"
     elif any(w in query_lower for w in ["caste", "category"]):
         legacy_intent_primary = "DOMICILE_CERTIFICATE"
         legacy_intent_sub = "Apply for caste certificate"
         legacy_category = "documents"
-        extracted["goal_category"] = "CERTIFICATES"
+        goal_category_full = "CERTIFICATES"
     elif any(w in query_lower for w in ["income certificate", "aay praman"]):
         legacy_intent_primary = "DOMICILE_CERTIFICATE"
         legacy_intent_sub = "Apply for income certificate"
         legacy_category = "documents"
-        extracted["goal_category"] = "CERTIFICATES"
+        goal_category_full = "CERTIFICATES"
     elif any(w in query_lower for w in ["domicile certificate", "residence certificate"]):
         legacy_intent_primary = "DOMICILE_CERTIFICATE"
         legacy_intent_sub = "Apply for state domicile certificate"
         legacy_category = "documents"
-        extracted["goal_category"] = "CERTIFICATES"
+        goal_category_full = "CERTIFICATES"
+    elif any(w in query_lower for w in ["school", "build school", "open school"]):
+        legacy_intent_primary = "SCHOOL_CONSTRUCTION"
+        legacy_intent_sub = "Build and establish a school"
+        legacy_category = "business"
+        goal_category_full = "BUSINESS"
+    elif any(w in query_lower for w in ["house", "buy house", "home loan", "awas yojana", "pmay"]):
+        legacy_intent_primary = "HOUSING"
+        legacy_intent_sub = "Purchase a house / Home Loan"
+        legacy_category = "general"
+        goal_category_full = "HOUSING"
 
-    # Set sub_category
-    extracted["sub_category"] = legacy_intent_sub
+    # Setup extracted metadata dictionary to keep compatibility with other backend layers
+    extracted = {
+        "goal": query,
+        "goal_category": goal_category_full,
+        "sub_category": legacy_intent_sub,
+        "user_domicile": domicile,
+        "current_residence": domicile,
+        "district": target_city,
+        "current_city": target_city,
+        "target_location": dest_country or target_state,
+        "working_location": target_state if "work" in query_lower else None,
+        "business_location": target_state if any(w in query_lower for w in ["business", "shop", "restaurant", "startup", "company", "clothing", "manufacturing", "hospital", "clinic", "land", "school"]) else None,
+        "destination_country": dest_country,
+        "destination_state": target_state if dest_country is None else None,
+        "required_authorities": [],
+        "relevant_jurisdictions": [domicile]
+    }
+    if target_state and target_state not in extracted["relevant_jurisdictions"]:
+        extracted["relevant_jurisdictions"].append(target_state)
+    if dest_country and dest_country not in extracted["relevant_jurisdictions"]:
+        extracted["relevant_jurisdictions"].append(dest_country)
 
     # Determine required authorities
     authorities = []
@@ -569,38 +480,49 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             authorities.append(f"Department of Home Affairs, {dest_country}")
     elif legacy_intent_primary == "BUSINESS_REGISTRATION":
         authorities = ["GST Network (GSTN)", "Ministry of Micro, Small & Medium Enterprises (MSME)"]
-        biz_state = extracted["business_location"] or extracted["user_domicile"] or "Karnataka"
-        if found_city:
-            authorities.append(f"{found_city} Municipal Corporation")
+        biz_state = target_state or domicile
+        if target_city:
+            authorities.append(f"{target_city} Municipal Corporation")
         else:
             authorities.append(f"Local Municipal Authority, {biz_state}")
         if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
             authorities.extend(["Food Safety and Standards Authority of India (FSSAI)", f"{biz_state} Fire Department"])
+    elif legacy_intent_primary == "HEALTHCARE_FACILITY":
+        biz_state = target_state or domicile
+        authorities = ["State Ministry of Health & Family Welfare", f"{biz_state} Pollution Control Board", f"{biz_state} Fire Department"]
+        if target_city:
+            authorities.append(f"{target_city} Municipal Corporation")
+    elif legacy_intent_primary == "LAND_PURCHASE":
+        biz_state = target_state or domicile
+        authorities = [f"{biz_state} Revenue Department", f"{biz_state} Stamps & Registration Department"]
     elif legacy_intent_primary == "DRIVING_LICENCE":
-        dl_state = extracted["user_domicile"] or "Karnataka"
+        dl_state = domicile
         authorities = ["Ministry of Road Transport and Highways (MoRTH)", f"{dl_state} Regional Transport Office (RTO)"]
     elif legacy_intent_primary == "FARMER_BENEFITS":
-        authorities = ["Ministry of Agriculture & Farmers Welfare", f"{extracted['user_domicile']} Revenue Department"]
+        authorities = ["Ministry of Agriculture & Farmers Welfare", f"{domicile} Revenue Department"]
     elif legacy_intent_primary == "DOMICILE_CERTIFICATE":
-        authorities = [f"{extracted['user_domicile']} Revenue Department", "Tehsildar Office"]
+        authorities = [f"{domicile} Revenue Department", "Tehsildar Office"]
     else:
         authorities = ["National Portal of India"]
-        
     extracted["required_authorities"] = authorities
 
     # Determine Goal Title
     goal_title = query.title()
     if len(query) > 40:
         if "restaurant" in query_lower:
-            goal_title = f"Open Restaurant in {found_city}" if found_city else "Open Restaurant"
+            goal_title = f"Open Restaurant in {target_city}" if target_city else "Open Restaurant"
         elif "clothing" in query_lower:
-            goal_title = f"Start Clothing Business in {extracted['business_location']}"
+            goal_title = f"Start Clothing Business in {target_state}" if target_state else "Start Clothing Business"
+        elif "hospital" in query_lower or "clinic" in query_lower:
+            goal_title = f"Build Hospital in {target_city}" if target_city else "Healthcare Facility Setup"
+        elif "land" in query_lower:
+            goal_title = f"Land Purchase in {target_city}" if target_city else "Land Purchase Journey"
         elif "business" in query_lower or "shop" in query_lower:
-            goal_title = f"Start Business in {found_city}" if found_city else "Business Registration"
+            goal_title = f"Start Business in {target_city}" if target_city else "Business Registration"
         elif legacy_intent_primary == "STUDY_ABROAD":
             goal_title = f"Study in {dest_country}" if dest_country else "Study Abroad"
         elif legacy_intent_primary == "DRIVING_LICENCE":
-            goal_title = f"Driving Licence ({extracted['user_domicile']})"
+            goal_title = f"Driving Licence ({domicile})"
         elif legacy_intent_primary == "TRAVEL":
             goal_title = "Passport Application"
         else:
@@ -610,15 +532,15 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     def normalize_document_type(doc_type: str, doc_name: str = "") -> str:
         val = (doc_type or "").strip().upper()
         name = (doc_name or "").strip().lower()
-        if val in ["AADHAAR", "AADHAAR CARD", "AADHAR", "AADHAR CARD"]:
+        if val in ["AADHAAR", "AADHAAR CARD", "AADHAR", "AADHAR CARD", "DEMO_AADHAAR"]:
             return "AADHAAR"
-        if val in ["PAN", "PAN CARD"]:
+        if val in ["PAN", "PAN CARD", "DEMO_PAN"]:
             return "PAN"
-        if val in ["CLASS_10_MARKSHEET", "10TH_MARKSHEET", "10TH MARKSHEET", "10TH CERTIFICATE", "SSC MARKSHEET", "CLASS 10 MARKSHEET"]:
+        if val in ["CLASS_10_MARKSHEET", "10TH_MARKSHEET", "10TH MARKSHEET", "10TH CERTIFICATE", "SSC MARKSHEET", "CLASS 10 MARKSHEET", "CLASS_10_MARKSHEET"]:
             return "10TH_MARKSHEET"
-        if val in ["CLASS_12_MARKSHEET", "12TH_MARKSHEET", "12TH MARKSHEET", "12TH CERTIFICATE", "HSC MARKSHEET", "CLASS 12 MARKSHEET"]:
+        if val in ["CLASS_12_MARKSHEET", "12TH_MARKSHEET", "12TH MARKSHEET", "12TH CERTIFICATE", "HSC MARKSHEET", "CLASS 12 MARKSHEET", "CLASS_12_MARKSHEET"]:
             return "12TH_MARKSHEET"
-        if val in ["DEGREE_CERTIFICATE", "DEGREE CERTIFICATE", "GRADUATION CERTIFICATE", "UNIVERSITY DEGREE", "DEGREE/UNIVERSITY MARKSHEET"]:
+        if val in ["DEGREE_CERTIFICATE", "DEGREE CERTIFICATE", "GRADUATION CERTIFICATE", "UNIVERSITY DEGREE", "DEGREE/UNIVERSITY MARKSHEET", "MARKSHEET", "EDUCATION CERTIFICATE (B.TECH)", "EDUCATION CERTIFICATE (M.SC)"]:
             return "MARKSHEET"
         if val in ["RENT_AGREEMENT", "LEASE_AGREEMENT", "RENT AGREEMENT", "LEASE AGREEMENT"]:
             return "RENT_AGREEMENT"
@@ -626,46 +548,46 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             return "DRIVING_LICENCE"
         if val in ["INCOME_CERTIFICATE", "INCOME CERTIFICATE"]:
             return "INCOME_CERTIFICATE"
-        if val in ["DOMICILE_CERTIFICATE", "DOMICILE CERTIFICATE"]:
+        if val in ["DOMICILE_CERTIFICATE", "DOMICILE CERTIFICATE", "ADDRESS & RESIDENCE CERTIFICATE", "RESIDENCE_CERTIFICATE"]:
             return "DOMICILE_CERTIFICATE"
-        if val in ["LAND_RECORD", "LAND RECORD", "PATTA", "JAMABANDI"]:
+        if val in ["LAND_RECORD", "LAND RECORD", "PATTA", "JAMABANDI", "LAND OWNERSHIP RECORD"]:
             return "LAND_RECORD"
-        if val in ["BANK_PROOF", "BANK PASSBOOK", "BANK STATEMENT", "BANK_DOCUMENT"]:
+        if val in ["BANK_PROOF", "BANK PASSBOOK", "BANK STATEMENT", "BANK_DOCUMENT", "BANK ACCOUNT PROOF"]:
             return "BANK_PROOF"
-        if val in ["PASSPORT", "PASSPORT CARD"]:
+        if val in ["PASSPORT", "PASSPORT CARD", "INDIAN PASSPORT", "INDIAN REPUBLIC PASSPORT"]:
             return "PASSPORT"
-        if val in ["ENGLISH_TEST", "IELTS", "PTE", "TOEFL"]:
+        if val in ["ENGLISH_TEST", "IELTS", "PTE", "TOEFL", "LANGUAGE_TEST"]:
             return "ENGLISH_TEST"
-        if val in ["TRADE_LICENSE", "TRADE LICENCE", "TRADE LICENSE"]:
+        if val in ["TRADE_LICENSE", "TRADE LICENCE", "TRADE LICENSE", "MUNICIPAL TRADE LICENSE"]:
             return "TRADE_LICENSE"
         if val in ["FSSAI_LICENSE", "FSSAI LICENCE", "FSSAI"]:
             return "FSSAI_LICENSE"
         if val in ["FIRE_NOC", "FIRE SAFETY NOC", "FIRE NOC"]:
             return "FIRE_NOC"
         
-        if "aadhar" in name or "aadhaar" in name:
+        if "aadhar" in name or "aadhaar" in name or "aadhar" in val.lower() or "aadhaar" in val.lower():
             return "AADHAAR"
-        if "pan card" in name or "pan" == name:
+        if "pan card" in name or "pan" == name or "pan" == val.lower():
             return "PAN"
         if "10th" in name or "class 10" in name or "ssc" in name:
             return "10TH_MARKSHEET"
         if "12th" in name or "class 12" in name or "hsc" in name:
             return "12TH_MARKSHEET"
-        if "degree" in name or "graduation certificate" in name:
+        if "degree" in name or "graduation certificate" in name or "b.tech" in name or "m.sc" in name:
             return "MARKSHEET"
         if "rent" in name or "lease" in name:
             return "RENT_AGREEMENT"
-        if "driving" in name or "dl" in name:
+        if "driving" in name or "dl" in name or "licence" in name:
             return "DRIVING_LICENCE"
-        if "income" in name:
+        if "income" in name or "income" in val.lower():
             return "INCOME_CERTIFICATE"
-        if "domicile" in name:
+        if "domicile" in name or "residence" in name or "domicile" in val.lower() or "residence" in val.lower():
             return "DOMICILE_CERTIFICATE"
-        if "land" in name or "patta" in name or "jamabandi" in name:
+        if "land" in name or "patta" in name or "jamabandi" in name or "land" in val.lower():
             return "LAND_RECORD"
-        if "passbook" in name or "bank" in name:
+        if "passbook" in name or "bank" in name or "bank" in val.lower():
             return "BANK_PROOF"
-        if "passport" in name:
+        if "passport" in name or "passport" in val.lower():
             return "PASSPORT"
         if "ielts" in name or "pte" in name or "english" in name:
             return "ENGLISH_TEST"
@@ -683,12 +605,8 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         warnings.append("Document vault data could not be refreshed right now.")
 
     # Target Document Definitions based on Goal/Category
-    goal_key = DocumentRequirementMatcher.get_goal_key(legacy_intent_primary)
-    req_set = DocumentRequirementMatcher.GOAL_REQUIREMENTS.get(goal_key, DocumentRequirementMatcher.GOAL_REQUIREMENTS["business"])
-
-    # Define all possible target documents with detailed acquisition guidelines
     all_defs = {
-        "AADHAAR": {"name": "Aadhaar Card", "authority": "UIDAI", "reason": "Proof of identity and resident details", "how_to": "Download from UIDAI portal using OTP verification.", "official_source": "https://uidai.gov.in", "processing_time": "Immediate (OTP Download)"},
+        "AADHAAR": {"name": "Aadhaar Card", "authority": "UIDAI", "reason": "Primary identity verification", "how_to": "Download from UIDAI portal using OTP verification.", "official_source": "https://uidai.gov.in", "processing_time": "Immediate (OTP Download)"},
         "PAN": {"name": "PAN Card", "authority": "Income Tax Department", "reason": "Required for financial and tax transactions", "how_to": "Apply online via NSDL e-Gov portal.", "official_source": "https://www.incometax.gov.in", "processing_time": "3-5 days"},
         "PASSPORT": {"name": "Passport", "authority": "Ministry of External Affairs", "reason": "Mandatory for international travel and study visa issuance", "how_to": "Register at Passport Seva online portal and book an appointment.", "official_source": "https://passportindia.gov.in", "processing_time": "30-45 working days"},
         "10TH_MARKSHEET": {"name": "10th Marksheet", "authority": "Secondary Education Board", "reason": "Proof of date of birth and academic credentials", "how_to": "Retrieve from school board or download via DigiLocker.", "official_source": "https://digilocker.gov.in", "processing_time": "Immediate via DigiLocker"},
@@ -697,44 +615,166 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "ACADEMIC_TRANSCRIPTS": {"name": "Academic transcripts", "authority": "University / Institute", "reason": "Consolidated record of all college courses and grades", "how_to": "Apply to university examination controller office.", "official_source": "https://digilocker.gov.in", "processing_time": "15-30 days"},
         "ENGLISH_TEST": {"name": "English proficiency result", "authority": "IDP / Pearson", "reason": "IELTS/PTE/TOEFL score to verify English competence", "how_to": "Register and book a test date at IDP IELTS online.", "official_source": "https://www.ieltsidpindia.com", "processing_time": "5-7 days after test"},
         "FINANCIAL_DOCUMENTS": {"name": "Financial documents", "authority": "Commercial Bank", "reason": "Required to prove sufficient funds for study and living expenses", "how_to": "Obtain certified bank statements and balance certificate from bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "1-2 days"},
-        "PASSPORT_PHOTO": {"name": "Passport-size photographs", "authority": "Applicant", "reason": "Required for application form and visa documentation", "how_to": "Get recent photographs printed meeting visa specifications.", "official_source": "https://passportindia.gov.in", "processing_time": "1 hour"},
         "RENT_AGREEMENT": {"name": "Premises Rent Agreement", "authority": "Applicant & Landlord", "reason": "Commercial lease agreement for business address proof", "how_to": "Execute agreement on stamp paper and register it locally.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-2 days"},
         "GST_CERTIFICATE": {"name": "GSTIN Tax Certificate", "authority": "GST Network", "reason": "Required if turnover exceeds the statutory limit (₹20L/₹40L)", "how_to": "Apply online on the official GST portal.", "official_source": "https://gst.gov.in", "processing_time": "3-5 days"},
-        "UDYAM_CERTIFICATE": {"name": "Udyam MSME Registration", "authority": "Ministry of MSME", "reason": "Enables access to MSME benefits and government credit", "how_to": "Register for free on the Udyam portal using Aadhaar OTP.", "official_source": "https://udyamregistration.gov.in", "processing_time": "Immediate"},
+        "UDYAM_CERTIFICATE": {"name": "Udyam MSME Registration Certificate", "authority": "Ministry of MSME", "reason": "Enables access to MSME benefits and government credit", "how_to": "Register for free on the Udyam portal using Aadhaar OTP.", "official_source": "https://udyamregistration.gov.in", "processing_time": "Immediate"},
         "FSSAI_LICENSE": {"name": "FSSAI Food License", "authority": "FSSAI", "reason": "Mandatory for operating eating establishments", "how_to": "Apply online on FSSAI FoSCoS portal.", "official_source": "https://foscos.fssai.gov.in", "processing_time": "15-30 working days"},
         "TRADE_LICENSE": {"name": "Municipal Trade License", "authority": "Local Municipal Corporation", "reason": "Permission to conduct trade or business at the location", "how_to": "Apply online via municipal e-governance portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 working days"},
         "FIRE_NOC": {"name": "Fire Safety NOC", "authority": "State Fire Department", "reason": "Safety clearance required for public eating houses", "how_to": "Apply online through state single-window investor clearance portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "10-15 days"},
         "DRIVING_LICENCE": {"name": "Driving Licence", "authority": "Regional Transport Office (RTO)", "reason": "Current driving licence for renewal/records", "how_to": "Submit details on Sarathi Parivahan portal.", "official_source": "https://sarathi.parivahan.gov.in", "processing_time": "15 days"},
         "MEDICAL_CERTIFICATE": {"name": "Medical Certificate (Form 1A)", "authority": "Registered Medical Practitioner", "reason": "Mandatory for renewal applicants over 40 years of age", "how_to": "Obtain signed Form 1A from a government-authorized doctor.", "official_source": "https://sarathi.parivahan.gov.in", "processing_time": "1 day"},
-        "LAND_RECORD": {"name": "Land Ownership Record (Patta/Jamabandi)", "authority": "Revenue Department", "reason": "Proof of land ownership to verify farmer status", "how_to": "Retrieve from local patwari or online state land records portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-3 days"},
+        "LAND_RECORD": {"name": "Land Ownership Record (Patta/Jamabandi)", "authority": "Revenue Department", "reason": "Proof of agricultural landholding to verify farmer status", "how_to": "Retrieve from local patwari or online state land records portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-3 days"},
         "BANK_PROOF": {"name": "Bank Passbook", "authority": "Commercial Bank / Post Office", "reason": "Proof of account for direct benefit transfer", "how_to": "Obtain from your bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "Immediate"},
         "INCOME_CERTIFICATE": {"name": "Family Income Certificate", "authority": "Revenue Department", "reason": "Verification of family income eligibility limits", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "10-15 days"},
         "DOMICILE_CERTIFICATE": {"name": "Domicile Certificate", "authority": "Revenue Department", "reason": "Proof of residency for state-specific tuition fee waivers", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 days"},
-        "CASTE_CERTIFICATE": {"name": "Caste Certificate", "authority": "Revenue Department", "reason": "Verification of social category classification", "how_to": "Apply online at state e-district portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 days"},
-        "BIRTH_CERTIFICATE": {"name": "Birth Certificate", "authority": "Municipal Corporation", "reason": "Official record of birth for age validation", "how_to": "Register birth at local municipal office or hospital within 21 days.", "official_source": "https://crsorgi.gov.in", "processing_time": "7-10 days"}
+        "SALE_AGREEMENT": {"name": "Sale Agreement / Draft Sale Deed", "authority": "Applicant & Seller", "reason": "Legally binding transaction agreement between buyer and seller", "how_to": "Draft agreement on stamp paper and obtain notarized signatures.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-2 days"},
+        "STAMP_DUTY_RECEIPT": {"name": "Stamp Duty & Registration Receipt", "authority": "Stamps & Registration Department", "reason": "Proof of payment of statutory stamp duty and registration fees", "how_to": "Pay online via state GRAS/e-stamping portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "1 day"},
+        "PROPERTY_TAX_RECEIPT": {"name": "Property Tax Receipts", "authority": "Municipal Corporation", "reason": "Verify no outstanding tax liabilities on the property", "how_to": "Download from municipal property tax portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "Immediate"},
+        "ENCUMBRANCE_CERTIFICATE": {"name": "Encumbrance Certificate", "authority": "Sub-Registrar Office", "reason": "Proof that the property is free from any liability or legal dispute", "how_to": "Apply online on state land registry portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "3-5 days"},
+        "BUILDING_PLAN_APPROVAL": {"name": "Building Plan Sanction / Approval", "authority": "Local Municipal Corporation", "reason": "Approved commercial construction plan from local municipal authority", "how_to": "Submit architecture layout online to municipal building approval portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "30-45 days"},
+        "CLINICAL_ESTABLISHMENT_REGISTRATION": {"name": "Clinical Establishment Act Registration", "authority": "State Health Department", "reason": "Mandatory regulatory registration for hospitals/clinics", "how_to": "Apply online on state clinical establishments registry portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "15-30 days"},
+        "POLLUTION_CONTROL_NOC": {"name": "Bio-Medical Waste Management NOC", "authority": "State Pollution Control Board", "reason": "Clearance from State Pollution Control Board for waste disposal", "how_to": "Apply online on State Pollution Control Board portal.", "official_source": "https://serviceonline.gov.in", "processing_time": "15-20 days"},
+        "STAFF_REGISTRATION": {"name": "Medical Staff Clinical Registration", "authority": "Medical Council", "reason": "Verification of professional registration of doctors/nurses with respective medical councils", "how_to": "Verify online on state/national medical council registries.", "official_source": "https://nmc.org.in", "processing_time": "Immediate"},
+        "SOCIETY_REGISTRATION": {"name": "School Trust/Society Registration", "authority": "Registrar of Societies", "reason": "Trust or society registration under Societies Registration Act", "how_to": "Draft trust deed and register at sub-registrar office.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-10 days"},
+        "BUILDING_SAFETY_CERTIFICATE": {"name": "Building Safety Certificate", "authority": "Public Works Department", "reason": "Safety clearance for commercial school buildings", "how_to": "Apply to PWD engineer for structural inspection.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-15 days"},
+        "AFFILIATION_CERTIFICATE": {"name": "School Recognition/Affiliation Certificate", "authority": "Education Board / CBSE", "reason": "Official school affiliation from state/national board", "how_to": "Apply on CBSE SARAS portal or state board portal.", "official_source": "https://saras.cbse.gov.in", "processing_time": "30-60 days"},
+        "TITLE_DEED": {"name": "Title Clearance Certificate", "authority": "Revenue Department", "reason": "Establish absolute ownership of the property", "how_to": "Obtain certified copy of title deed from sub-registrar office.", "official_source": "https://serviceonline.gov.in", "processing_time": "2-3 days"},
+        "LOAN_SANCTION_LETTER": {"name": "Home Loan Sanction Letter", "authority": "Commercial Bank", "reason": "Proof of transaction funding from lender", "how_to": "Apply for home loan online or at bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "7-10 days"}
     }
 
+    # Populate current requirements based on intent
     current_reqs = []
-    for req in req_set["mandatory"]:
-        current_reqs.append({"type": req["type"], "priority": "Required"})
-    for req in req_set["conditional"]:
-        current_reqs.append({"type": req["type"], "priority": "Conditional"})
-    for req in req_set.get("optional", []):
-        current_reqs.append({"type": req["type"], "priority": "Recommended"})
-
-    # Dynamic restaurant overrides
-    if legacy_intent_primary == "BUSINESS_REGISTRATION" and ("restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower):
-        current_reqs.extend([
-            {"type": "FSSAI_LICENSE", "priority": "Required"},
+    if legacy_intent_primary == "STUDY_ABROAD":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "PASSPORT", "priority": "Required"},
+            {"type": "10TH_MARKSHEET", "priority": "Required"},
+            {"type": "12TH_MARKSHEET", "priority": "Required"},
+            {"type": "ACADEMIC_TRANSCRIPTS", "priority": "Required"},
+            {"type": "ENGLISH_TEST", "priority": "Conditional"},
+            {"type": "FINANCIAL_DOCUMENTS", "priority": "Conditional"},
+            {"type": "MARKSHEET", "priority": "Recommended"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "LAND_PURCHASE":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "STAMP_DUTY_RECEIPT", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"},
+            {"type": "PROPERTY_TAX_RECEIPT", "priority": "Recommended"},
+            {"type": "ENCUMBRANCE_CERTIFICATE", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "HEALTHCARE_FACILITY":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BUILDING_PLAN_APPROVAL", "priority": "Required"},
+            {"type": "CLINICAL_ESTABLISHMENT_REGISTRATION", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Required"},
+            {"type": "POLLUTION_CONTROL_NOC", "priority": "Required"},
             {"type": "TRADE_LICENSE", "priority": "Required"},
-            {"type": "FIRE_NOC", "priority": "Conditional"}
-        ])
+            {"type": "STAFF_REGISTRATION", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "BUSINESS_REGISTRATION":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ]
+        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
+            current_reqs.extend([
+                {"type": "FSSAI_LICENSE", "priority": "Required"},
+                {"type": "FIRE_NOC", "priority": "Conditional"}
+            ])
+    elif legacy_intent_primary == "DRIVING_LICENCE":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DRIVING_LICENCE", "priority": "Required"},
+            {"type": "MEDICAL_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "TRAVEL":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"},
+            {"type": "PAN", "priority": "Recommended"},
+            {"type": "10TH_MARKSHEET", "priority": "Recommended"},
+            {"type": "PASSPORT", "priority": "Conditional"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "FARMER_BENEFITS":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"},
+            {"type": "PAN", "priority": "Recommended"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "SCHOOL_CONSTRUCTION":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SOCIETY_REGISTRATION", "priority": "Required"},
+            {"type": "BUILDING_SAFETY_CERTIFICATE", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Required"},
+            {"type": "AFFILIATION_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "HOUSING":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "TITLE_DEED", "priority": "Required"},
+            {"type": "LOAN_SANCTION_LETTER", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ]
+    elif legacy_intent_primary == "SCHOLARSHIP":
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "10TH_MARKSHEET", "priority": "Required"},
+            {"type": "12TH_MARKSHEET", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"},
+            {"type": "ADMISSION_LETTER", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ]
+    else:
+        current_reqs = [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+        ]
 
+    # Map required/available/missing docs
     available_docs = []
     needed_docs = []
 
-    # Semantic matcher helper
     def find_user_doc(rtype: str) -> Optional[UserDocumentDB]:
+        from app.services.document_engine import DocumentRequirementMatcher
         satisfying_types = DocumentRequirementMatcher.SATISFYING_TYPES.get(rtype.upper(), [rtype.upper()])
         for t in satisfying_types:
             if t in user_doc_types:
@@ -794,27 +834,12 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                 "official_source": r_def["official_source"]
             })
 
-    # Double-check that we do not have empty required documents list
-    if not available_docs and not needed_docs:
-        needed_docs.append({
-            "name": "Aadhaar Card",
-            "type": "AADHAAR",
-            "status": "MISSING",
-            "reason": "Primary identity verification",
-            "required_by": "UIDAI",
-            "priority": "Required",
-            "how_to": "Download from UIDAI portal.",
-            "processing_time": "Immediate",
-            "authority": "UIDAI",
-            "official_source": "https://uidai.gov.in"
-        })
-
     # 3. Government Scheme Engine (Strict Category & Jurisdiction Mapping)
     def map_goal_to_scheme_categories(intent: str) -> List[str]:
         cat = intent.upper()
         if cat in ["STUDY_ABROAD", "SCHOLARSHIP", "EDUCATION"]:
             return ["education", "general"]
-        elif cat in ["BUSINESS_REGISTRATION", "BUSINESS", "LEGAL_REGISTRATION"]:
+        elif cat in ["BUSINESS_REGISTRATION", "BUSINESS", "LEGAL_REGISTRATION", "HEALTHCARE_FACILITY", "SCHOOL_CONSTRUCTION", "LAND_PURCHASE"]:
             return ["business", "general"]
         elif cat in ["FARMER_BENEFITS", "AGRICULTURE"]:
             return ["agriculture", "general"]
@@ -830,17 +855,10 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
 
     try:
         search_states = ["Central"]
-        if extracted["user_domicile"]:
-            search_states.append(extracted["user_domicile"])
-        
-        # Target state extraction
-        target_state = extracted.get("business_location") or extracted.get("working_location") or extracted.get("target_location") or extracted.get("destination_state")
+        if domicile:
+            search_states.append(domicile)
         if target_state and target_state not in search_states and target_state.lower() not in ["australia", "canada", "uk", "usa"]:
             search_states.append(target_state)
-            
-        for state_item in extracted["relevant_jurisdictions"]:
-            if state_item not in search_states and state_item.lower() not in ["australia", "canada", "uk", "usa"]:
-                search_states.append(state_item)
 
         target_categories = map_goal_to_scheme_categories(legacy_intent_primary)
         
@@ -862,10 +880,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         schemes_query = schemes_query.filter(or_(*state_filters))
         schemes_db = schemes_query.all()
         
-        # Fallback if empty
-        if not schemes_db:
-            schemes_db = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE").filter(or_(*state_filters)).all()
-            
     except Exception as se:
         print(f"[WARN] Failed to query schemes: {se}")
         warnings.append("Government scheme information is temporarily unavailable.")
@@ -882,27 +896,28 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         why_match = []
         is_eligible = True
         missing_info = False
+        incompatibility_reasons = []
         
         # Category check
         if s.category not in target_categories:
             continue
             
         # Jurisdiction match
-        state_match = False
+        jurisdiction_compatible = False
         if s.level == "CENTRAL":
-            state_match = True
+            jurisdiction_compatible = True
             why_match.append("✓ Central Scheme (applicable nationwide)")
         else:
             if domicile and s.state_name.lower() == domicile.lower():
                 why_match.append(f"✓ Domicile Match: Eligible resident of {domicile}")
-                state_match = True
+                jurisdiction_compatible = True
             if target_state and s.state_name.lower() == target_state.lower():
                 why_match.append(f"✓ Target Location Match: Operating/studying in {target_state}")
-                state_match = True
+                jurisdiction_compatible = True
                 
-            if not state_match and s.state_name.lower() not in ["central", "all"]:
-                is_eligible = False
-                why_match.append(f"✗ Jurisdiction: Requires residency or operation in {s.state_name}")
+        # Skip schemes that are not for Central, Domicile state, or Target state
+        if not jurisdiction_compatible:
+            continue
 
         rules = s.eligibility_rules or {}
         
@@ -912,12 +927,12 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             if s.category in ["education", "general"]:
                 if domicile and domicile.lower() != req_state.lower():
                     is_eligible = False
-                    why_match.append(f"✗ Domicile: Requires {req_state} residency")
+                    incompatibility_reasons.append(f"Requires {req_state} residency (your domicile is {domicile})")
             else:
                 loc_state = target_state or domicile
                 if loc_state and loc_state.lower() != req_state.lower():
                     is_eligible = False
-                    why_match.append(f"✗ Location: Requires operations in {req_state}")
+                    incompatibility_reasons.append(f"Requires operations in {req_state} (your location is {loc_state})")
 
         # Income limit rule
         income_limit = rules.get("annual_family_income_max") or rules.get("annual_income_max")
@@ -927,7 +942,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                     why_match.append(f"✓ Income: Family income (₹{user_profile.annual_income/100000:.1f}L) is below the ₹{income_limit/100000:.1f}L limit")
                 else:
                     is_eligible = False
-                    why_match.append(f"✗ Income: Family income exceeds the ₹{income_limit/100000:.1f}L threshold")
+                    incompatibility_reasons.append(f"Family income (₹{user_profile.annual_income/100000:.1f}L) exceeds the ₹{income_limit/100000:.1f}L threshold")
             else:
                 missing_info = True
                 why_match.append(f"⚠ Income Verification: Need to confirm family income is below ₹{income_limit/100000:.1f}L")
@@ -935,12 +950,17 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         # Occupation rule
         req_occ = rules.get("occupation")
         if req_occ:
-            if user_profile and user_profile.occupation:
-                if user_profile.occupation.lower() == req_occ.lower() or req_occ.lower() in user_profile.occupation.lower():
+            implied_occupation = None
+            if "kisan" in query_lower or "farmer" in query_lower or "farming" in query_lower or "agriculture" in query_lower:
+                implied_occupation = "farmer"
+            
+            user_occ = implied_occupation or (user_profile.occupation if user_profile else None)
+            if user_occ:
+                if user_occ.lower() == req_occ.lower() or req_occ.lower() in user_occ.lower():
                     why_match.append(f"✓ Occupation: Targets {req_occ} group")
                 else:
                     is_eligible = False
-                    why_match.append(f"✗ Occupation: Targeted at {req_occ}s")
+                    incompatibility_reasons.append(f"Targeted at {req_occ}s (your occupation is {user_occ})")
             else:
                 missing_info = True
                 why_match.append(f"⚠ Occupation: Targeted at {req_occ}s (verify profile)")
@@ -953,7 +973,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                     why_match.append(f"✓ Age: Applicant age ({user_profile.age}) meets maximum age limit of {age_limit}")
                 else:
                     is_eligible = False
-                    why_match.append(f"✗ Age: Applicant age exceeds maximum limit of {age_limit}")
+                    incompatibility_reasons.append(f"Applicant age exceeds maximum limit of {age_limit}")
             else:
                 missing_info = True
                 why_match.append(f"⚠ Age: Maximum age limit {age_limit} (verify profile)")
@@ -964,9 +984,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                 why_match.append("✓ Course Match: Course involves studies abroad")
             else:
                 is_eligible = False
-
-        if not is_eligible:
-            continue
+                incompatibility_reasons.append("Requires course involving studies abroad")
 
         # Score calculation out of 100
         goal_relevance_score = 0
@@ -982,10 +1000,18 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         category_score = 20 if s.category == legacy_category else 10
         location_score = 10 if s.level == "CENTRAL" else 15
         
-        match_status = "POSSIBLE_MATCH" if missing_info else "HIGH_MATCH"
-        eligibility_score = 15 if match_status == "HIGH_MATCH" else 8
+        if not is_eligible:
+            match_status = "NOT_ELIGIBLE"
+            why_match.append(f"✗ Ineligible: {'; '.join(incompatibility_reasons)}")
+            eligibility_score = 0
+        elif missing_info:
+            match_status = "POSSIBLE_MATCH"
+            eligibility_score = 8
+        else:
+            match_status = "HIGH_MATCH"
+            eligibility_score = 15
+            
         freshness_score = 10 if s.status == "ACTIVE" else 0
-        
         total_relevance = goal_relevance_score + category_score + location_score + eligibility_score + freshness_score
         eligibility_count += 1
         
@@ -1007,7 +1033,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             "eligibility_status": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
             "eligibilitySummary": "All eligibility constraints satisfied." if match_status == "HIGH_MATCH" else "Missing profile parameters to fully verify eligibility.",
             "why_matches": why_match,
-            "whyRelevant": "; ".join([r.replace("✓ ", "").replace("⚠ ", "") for r in why_match]),
+            "whyRelevant": "; ".join([r.replace("✓ ", "").replace("⚠ ", "").replace("✗ ", "").replace("x ", "") for r in why_match]),
             "official_source_url": s.official_source_url,
             "officialUrl": s.official_source_url,
             "source": s.source_type or "Government Ministry",
@@ -1022,47 +1048,93 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     # Sort schemes by relevance score
     ranked_schemes.sort(key=lambda x: x["relevance_score"], reverse=True)
 
-    # For driving licence, return no schemes
+    # For driving licence, return no schemes (retain legacy requirement)
     if legacy_intent_primary == "DRIVING_LICENCE":
         ranked_schemes = []
 
-    # 4. Next Steps
+    # 4. Goal-Specific Next Steps
     if legacy_intent_primary == "STUDY_ABROAD":
         next_steps = [
-            "Check passport status (apply if not available)",
-            "Prepare academic transcripts and marksheets",
-            "Prepare for English proficiency exams (IELTS/PTE/TOEFL)",
-            "Shortlist universities in Australia/destination country offering your course",
-            "Check GTE (Genuine Temporary Entrant) requirements for visa application",
-            "Prepare financial documents and search for scholarships"
+            "Apply for passport immediately at passportindia.gov.in if not already available",
+            "Register and prepare for English proficiency exam (IELTS/PTE/TOEFL) — allow 2–3 months",
+            "Shortlist universities in destination country with your target program",
+            "Prepare Statement of Purpose (SOP), academic transcripts, and Letters of Recommendation (LOR)",
+            "Obtain family income certificate from Mamlatdar/Tahsildar office",
+            "Apply for state-specific study abroad scholarship (e.g., Rajiv Gandhi Scholarship for Rajasthan domicile)",
+            "Apply for National Overseas Scholarship if belonging to SC/ST/Denotified Tribe category",
+            "Apply for student visa after receiving university offer letter"
+        ]
+    elif legacy_intent_primary == "LAND_PURCHASE":
+        next_steps = [
+            "Search and verify the land ownership details (Khasra/Khatauni/Patta) on state land records portal",
+            "Check for encumbrances on the property by applying for an Encumbrance Certificate",
+            "Execute a legally binding Sale Agreement with the seller on non-judicial stamp paper",
+            "Pay state stamp duty and registration fees online on the state registration portal",
+            "Book slot and visit the Sub-Registrar Office with original documents for property registry",
+            "Apply for land mutation (ownership transfer) in revenue records"
+        ]
+    elif legacy_intent_primary == "HEALTHCARE_FACILITY":
+        next_steps = [
+            "Secure commercial land and obtain building plan approval from local municipal corporation",
+            "Register the hospital/clinic under the State Clinical Establishment Act",
+            "Obtain Fire Safety NOC from State Fire Department",
+            "Obtain Bio-Medical Waste Management NOC from State Pollution Control Board",
+            "Apply for local Municipal Trade License / Shop & Establishment Registration",
+            "Verify professional registration of doctors, nurses, and clinical staff with respective councils"
         ]
     elif legacy_intent_primary == "BUSINESS_REGISTRATION":
         next_steps = [
-            "Prepare Aadhaar and PAN documents",
-            "Obtain commercial lease or rent agreement for location proof",
-            "Apply for Udyam MSME Registration on central portal",
-            "Apply for GSTIN Tax Registration (required if turnover exceeds limit)",
-            "Open commercial current bank account using registrations"
+            "Decide on business structure and execute commercial rent/lease agreement for premises",
+            "Apply for free Udyam MSME Registration on central portal",
+            "Register for GSTIN if annual turnover exceeds statutory limits or for inter-state business",
+            "Apply for local Municipal Trade License or Shop & Establishment Act registration",
+            "Open commercial current bank account using registration certificates",
+            "Apply for FSSAI Food Safety License (if food or restaurant business)",
+            "Obtain Fire Safety NOC from State Fire Department (if restaurant or factory)"
         ]
-        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
-            next_steps.extend([
-                "Apply for FSSAI Food License on FoSCoS portal",
-                "Obtain Fire Safety NOC from State Fire Department",
-                "Apply for Municipal Trade License from local Municipal Corporation"
-            ])
     elif legacy_intent_primary == "DRIVING_LICENCE":
         next_steps = [
-            "Confirm current licence details and validity",
-            "Obtain medical certificate Form 1A (if age > 40)",
-            "Submit renewal application on MoRTH Sarathi portal",
-            "Pay fee online and schedule appointment if required"
+            "Submit renewal application on MoRTH Sarathi Parivahan portal",
+            "Book online slot for document verification or test at nearest RTO",
+            "If age > 40, obtain signed Form 1A medical certificate from registered MBBS doctor",
+            "Pay renewal fee online and track application status"
+        ]
+    elif legacy_intent_primary == "TRAVEL":
+        next_steps = [
+            "Register on Passport Seva portal (passportindia.gov.in) and fill online application",
+            "Pay passport fee online (₹1,500 Normal / ₹2,000 Tatkal)",
+            "Book appointment and visit nearest Passport Seva Kendra (PSK) with original documents",
+            "Complete police verification at registered current address",
+            "Track passport delivery by speed post"
+        ]
+    elif legacy_intent_primary == "FARMER_BENEFITS":
+        next_steps = [
+            "Ensure Aadhaar is linked to bank account for PM-KISAN Direct Benefit Transfer (DBT)",
+            "Register on PM-KISAN portal (pmkisan.gov.in) using land records and bank details",
+            "Apply for Kisan Credit Card (KCC) at nearest bank branch for low-interest credit",
+            "Register for PMFBY crop insurance before sowing season cutoff date"
+        ]
+    elif legacy_intent_primary == "SCHOOL_CONSTRUCTION":
+        next_steps = [
+            "Secure land and obtain commercial construction permits from local authority",
+            "Register School Management Trust or Society under Societies Registration Act",
+            "Apply for School Recognition / Affiliation from State Education Board or CBSE",
+            "Obtain Fire Safety NOC and Building Safety Certificate",
+            "Apply for local municipal authority registration"
+        ]
+    elif legacy_intent_primary == "HOUSING":
+        next_steps = [
+            "Check eligibility and register on Pradhan Mantri Awas Yojana (PMAY) portal for subsidy",
+            "Apply for home loan at commercial bank using income and identity proofs",
+            "Execute property Sale Agreement and pay stamp duty on state registry portal",
+            "Schedule registry appointment at Sub-Registrar Office for deed registration"
         ]
     elif legacy_intent_primary == "SCHOLARSHIP":
         next_steps = [
-            "Ensure 10th and 12th marksheets are uploaded to vault",
-            "Obtain family income certificate from Mamlatdar/Tahsildar",
-            "Obtain state domicile certificate",
-            "Submit application on state SSP/MYSY portal using certificates"
+            "Register on State Scholarship Portal (SSP) or National Scholarship Portal (NSP)",
+            "Upload family income certificate and domicile certificate for verification",
+            "Upload college admission fee receipt and marksheet details",
+            "Track application approval and scholarship Direct Benefit Transfer (DBT) credit"
         ]
     else:
         next_steps = [
@@ -1071,13 +1143,24 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             "Check official source portals for service guidelines"
         ]
 
-    # 5. Sources
-    sources = []
+    # 5. Goal-Specific Sources
     if legacy_intent_primary == "STUDY_ABROAD":
         sources = [
-            {"name": "Ministry of External Affairs, Passport Seva", "url": "https://passportindia.gov.in", "last_verified": "19 August 2026"},
-            {"name": "Rajiv Gandhi Scholarship Portal", "url": "https://hte.rajasthan.gov.in/scholarship/rgs", "last_verified": "19 August 2026"},
+            {"name": "Passport Seva — Ministry of External Affairs", "url": "https://passportindia.gov.in", "last_verified": "19 August 2026"},
+            {"name": "Rajiv Gandhi Scholarship — Rajasthan HTE", "url": "https://hte.rajasthan.gov.in/scholarship/rgs", "last_verified": "19 August 2026"},
             {"name": "National Overseas Scholarship Portal", "url": "https://nosmsje.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "LAND_PURCHASE":
+        sources = [
+            {"name": "Kaveri Online Services — Karnataka Department of Stamps and Registration", "url": "https://kaverionline.karnataka.gov.in", "last_verified": "19 August 2026"},
+            {"name": "Apna Khata — Rajasthan Revenue Department", "url": "https://apnakhata.rajasthan.gov.in", "last_verified": "19 August 2026"},
+            {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "HEALTHCARE_FACILITY":
+        sources = [
+            {"name": "Ministry of Health & Family Welfare", "url": "https://mohfw.gov.in", "last_verified": "19 August 2026"},
+            {"name": "Central Pollution Control Board", "url": "https://cpcb.nic.in", "last_verified": "19 August 2026"},
+            {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
         ]
     elif legacy_intent_primary == "BUSINESS_REGISTRATION":
         sources = [
@@ -1088,7 +1171,31 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             sources.append({"name": "FSSAI FoSCoS Portal", "url": "https://foscos.fssai.gov.in", "last_verified": "19 August 2026"})
     elif legacy_intent_primary == "DRIVING_LICENCE":
         sources = [
-            {"name": "Sarathi Parivahan Portal", "url": "https://sarathi.parivahan.gov.in", "last_verified": "19 August 2026"}
+            {"name": "Sarathi Parivahan Portal — MoRTH", "url": "https://sarathi.parivahan.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "TRAVEL":
+        sources = [
+            {"name": "Passport Seva — Ministry of External Affairs", "url": "https://passportindia.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "FARMER_BENEFITS":
+        sources = [
+            {"name": "PM-KISAN Portal", "url": "https://pmkisan.gov.in", "last_verified": "19 August 2026"},
+            {"name": "PMFBY Portal", "url": "https://pmfby.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "SCHOOL_CONSTRUCTION":
+        sources = [
+            {"name": "Central Board of Secondary Education (CBSE)", "url": "https://cbse.gov.in", "last_verified": "19 August 2026"},
+            {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "HOUSING":
+        sources = [
+            {"name": "PMAY Urban Portal", "url": "https://pmay-urban.gov.in", "last_verified": "19 August 2026"},
+            {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
+        ]
+    elif legacy_intent_primary == "SCHOLARSHIP":
+        sources = [
+            {"name": "National Scholarship Portal (NSP)", "url": "https://scholarships.gov.in", "last_verified": "19 August 2026"},
+            {"name": "National Portal of India", "url": "https://india.gov.in", "last_verified": "19 August 2026"}
         ]
     else:
         sources = [
@@ -1119,14 +1226,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             state_list.append(s)
 
     # 7. Formulate structured JSON payload
-    diagnostics = {
-        "retrievedCount": retrieved_count,
-        "afterStatusFilter": active_count,
-        "afterRelevanceFilter": relevance_count,
-        "afterEligibilityFilter": eligibility_count,
-        "finalCount": len(ranked_schemes)
-    }
-
     result_payload = {
         "success": True,
         "journeyId": journey.id,
@@ -1153,67 +1252,29 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "nextSteps": next_steps,
         "sources": sources,
         "warnings": warnings,
-        "diagnostics": diagnostics
+        "diagnostics": {
+            "retrievedCount": retrieved_count,
+            "afterStatusFilter": active_count,
+            "afterRelevanceFilter": relevance_count,
+            "afterEligibilityFilter": eligibility_count,
+            "finalCount": len(ranked_schemes)
+        }
     }
 
-    # Final verification pass
-    checklist = [
-        result_payload["goal"]["title"] is not None,
-        len(result_payload["documents"]["have"]) + len(result_payload["documents"]["need"]) > 0,
-        result_payload["domicile"]["state"] == domicile
-    ]
-    if not all(checklist):
-        warnings.append("Internal verification pass flagged incomplete metadata. Running recovery mapping.")
+    # Prints for development debug logs
+    print(f"GOAL: {query}")
+    print(f"INTENT: {legacy_intent_primary}")
+    print(f"DOMICILE: {domicile}")
+    print(f"TARGET LOCATION: {target_loc_val}")
+    print(f"DOCUMENTS IN VAULT: {list(user_doc_types.keys())}")
+    print(f"RELEVANT DOCUMENTS FOUND: {[d['type'] for d in available_docs]}")
+    print(f"DOCUMENTS MISSING: {[d['type'] for d in needed_docs if d['status'] == 'MISSING']}")
+    print(f"CENTRAL SCHEMES RETRIEVED: {[s['id'] for s in central_list]}")
+    print(f"STATE SCHEMES RETRIEVED: {[s['id'] for s in state_list]}")
+    print(f"TARGET LOCATION RESULTS: {[s['id'] for s in target_loc_list]}")
+    print(f"FINAL RESULT COUNTS: documentsHave = {len(available_docs)} documentsNeed = {len(needed_docs)} centralSchemes = {len(central_list)} stateSchemes = {len(state_list)}")
 
-    # Calculate pre-eligibility retrieved counts
-    central_retrieved_count = sum(1 for s in schemes_db if s.level == "CENTRAL")
-    state_retrieved_count = sum(1 for s in schemes_db if domicile and s.state_name.lower() == domicile.lower())
-    target_location_retrieved_count = sum(1 for s in schemes_db if target_state and s.state_name.lower() == target_state.lower())
-
-    # Format and print development-only diagnostics to the console log
-    trace_msg = f"""
-[JANSETU TRACE START]
-
-REQUEST
-goal = {query}
-domicile = {domicile}
-
-STEP 1 — INTENT
-intent = {legacy_intent_primary}
-targetLocation = {target_state or dest_country or 'None'}
-confidence = 0.95
-
-STEP 2 — USER DOCUMENTS
-documentsFound = {list(user_doc_types.keys())}
-
-STEP 3 — DOCUMENT REQUIREMENTS
-requiredDocuments = {[r["type"] for r in current_reqs]}
-
-STEP 4 — SCHEME DATABASE
-totalSchemesInDatabase = {db.query(SchemeDB).count()}
-
-STEP 5 — SCHEME RETRIEVAL
-centralRetrieved = {central_retrieved_count}
-stateRetrieved = {state_retrieved_count}
-targetLocationRetrieved = {target_location_retrieved_count}
-
-STEP 6 — SCHEME FILTER
-afterStatusFilter = {active_count}
-afterRelevanceFilter = {relevance_count}
-afterEligibilityFilter = {eligibility_count}
-
-STEP 7 — FINAL RESPONSE
-documentsHave = {len(available_docs)}
-documentsNeed = {len(needed_docs)}
-centralSchemes = {len(central_list)}
-stateSchemes = {len(state_list)}
-targetLocationSchemes = {len(target_loc_list)}
-
-[JANSETU TRACE END]
-"""
-    print(trace_msg)
-
-    # Structured timing log (Section 25/30)
+    # Structured timing log
     duration = time.time() - start_time
     print(f"[JANSETU DEV LOG] "
           f"request_id={journey.id} | "
@@ -1222,7 +1283,7 @@ targetLocationSchemes = {len(target_loc_list)}
           f"jurisdiction={extracted} | "
           f"document_match_status=SUCCESS | "
           f"scheme_search_status=SUCCESS | "
-          f"llm_status={'LLM' if llm_success else 'FALLBACK'} | "
+          f"llm_status=FALLBACK | "
           f"validation_status=SUCCESS | "
           f"total_response_time={duration:.3f}s")
 
@@ -1231,8 +1292,8 @@ targetLocationSchemes = {len(target_loc_list)}
     journey.goal_category = extracted["goal_category"]
     journey.life_event = extracted["sub_category"]
     journey.intent = legacy_intent_primary
-    journey.location_state = extracted["business_location"] or extracted["working_location"] or domicile
-    journey.location_city = extracted["current_city"]
+    journey.location_state = target_state or domicile
+    journey.location_city = target_city
     journey.status = "COMPLETE"
     journey.result_json = result_payload
     db.commit()
