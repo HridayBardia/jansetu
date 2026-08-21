@@ -9,7 +9,7 @@ from fastapi import Depends
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.main import app
-from app.api.v1.router import get_current_user, get_db
+from app.api.v1.router import get_current_user, get_db, get_current_admin
 from app.models.db_models import UserDB, ServiceRegistryDB, ApplicationDB, ConsentRecordDB, DataConflictDB
 from app.services.interoperability_gateway import ServiceRegistry
 
@@ -36,9 +36,12 @@ def override_get_current_user(db: Session = Depends(get_db)):
 @pytest.fixture(autouse=True)
 def mock_auth():
     app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_admin] = override_get_current_user
     yield
     if get_current_user in app.dependency_overrides:
         del app.dependency_overrides[get_current_user]
+    if get_current_admin in app.dependency_overrides:
+        del app.dependency_overrides[get_current_admin]
 
 def test_gateway_service_registry():
     res = client.get("/api/v1/services")

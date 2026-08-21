@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Building, Users } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, login } = useAuth();
 
+  const [loginType, setLoginType] = useState<'CITIZEN' | 'ADMIN' | null>(null);
+  
   const [username, setUsername] = useState('');
   const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -26,10 +28,14 @@ export default function LoginPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace('/dashboard');
+    if (!isLoading && isAuthenticated && user) {
+      if (user.role === 'ADMIN') {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/citizen/dashboard');
+      }
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, user, router]);
 
   if (isLoading) {
     return (
@@ -62,17 +68,10 @@ export default function LoginPage() {
     }
   };
 
-  const handlePinPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newDigits = ['', '', '', '', '', ''];
-    for (let i = 0; i < pasted.length; i++) {
-      newDigits[i] = pasted[i];
-    }
-    setPinDigits(newDigits);
-    // Focus the last filled digit or last input
-    const focusIndex = Math.min(pasted.length, 5);
-    pinRefs[focusIndex]?.current?.focus();
+  const autofillDemo = (demoUsername: string) => {
+    setUsername(demoUsername);
+    setPinDigits(['1', '2', '3', '4', '5', '6']);
+    setErrorMsg(null);
   };
 
   const handleLogin = async () => {
@@ -81,10 +80,6 @@ export default function LoginPage() {
 
     if (!trimmedUsername) {
       setErrorMsg('Please enter your username.');
-      return;
-    }
-    if (trimmedUsername.length < 4) {
-      setErrorMsg('Username must be at least 4 characters.');
       return;
     }
     if (pin.length < 6) {
@@ -98,7 +93,11 @@ export default function LoginPage() {
     try {
       const res = await login(trimmedUsername, pin);
       if (res && res.user) {
-        router.replace('/dashboard');
+        if (res.user.role === 'ADMIN' || res.user.role === 'admin') {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/citizen/dashboard');
+        }
       } else {
         setErrorMsg('Invalid username or PIN. Please try again.');
       }
@@ -134,10 +133,10 @@ export default function LoginPage() {
         pointerEvents: 'none'
       }} />
 
-      {/* Login Card */}
+      {/* Main Container */}
       <div style={{
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: loginType ? '420px' : '500px',
         background: 'rgba(15, 23, 42, 0.85)',
         backdropFilter: 'blur(24px)',
         borderRadius: '24px',
@@ -145,9 +144,10 @@ export default function LoginPage() {
         boxShadow: '0 25px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.05)',
         padding: '40px 36px',
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
+        transition: 'all 0.3s ease'
       }}>
-        {/* Logo / Header */}
+        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
           <div style={{
             width: '64px', height: '64px', borderRadius: '16px',
@@ -159,194 +159,211 @@ export default function LoginPage() {
             <ShieldCheck size={32} color="white" />
           </div>
           <h1 style={{
-            fontSize: '24px', fontWeight: 700,
-            background: 'linear-gradient(to right, #e2e8f0, #94a3b8)',
+            fontSize: '26px', fontWeight: 800,
+            background: 'linear-gradient(to right, #ffffff, #94a3b8)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            margin: '0 0 8px'
+            margin: '0 0 8px',
+            letterSpacing: '0.05em'
           }}>
-            Citizen Login
+            JANSETU
           </h1>
-          <p style={{ color: '#64748b', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
-            AI Citizen Journey Engine
+          <p style={{ color: '#94a3b8', fontSize: '15px', fontWeight: 500, margin: '0 0 4px', letterSpacing: '0.1em' }}>
+            PAN-INDIA AI NAVIGATOR
+          </p>
+          <p style={{ color: '#64748b', fontSize: '13px', margin: 0, fontStyle: 'italic' }}>
+            "One citizen. One journey. Connected government."
           </p>
         </div>
 
-        {/* Error Banner */}
-        {errorMsg && (
-          <div style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.25)',
-            borderRadius: '10px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px',
-            animation: 'slideIn 0.2s ease'
-          }}>
-            <AlertCircle size={16} color="#ef4444" style={{ marginTop: '1px', flexShrink: 0 }} />
-            <p style={{ color: '#fca5a5', fontSize: '14px', margin: 0, lineHeight: '1.4' }}>{errorMsg}</p>
+        {/* State 1: Select Login Type */}
+        {!loginType && (
+          <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <h2 style={{ color: '#e2e8f0', fontSize: '16px', fontWeight: 600, marginBottom: '20px', textAlign: 'center' }}>
+              Select Login Type
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <button 
+                onClick={() => setLoginType('CITIZEN')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '20px', borderRadius: '16px', cursor: 'pointer',
+                  transition: 'all 0.2s', textAlign: 'left'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.1)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+              >
+                <div style={{ background: 'rgba(59,130,246,0.2)', padding: '12px', borderRadius: '12px' }}>
+                  <Users size={24} color="#60a5fa" />
+                </div>
+                <div>
+                  <h3 style={{ color: '#f8fafc', margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>Citizen Portal</h3>
+                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '13px' }}>Access your documents, journeys, and services.</p>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => setLoginType('ADMIN')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '16px',
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '20px', borderRadius: '16px', cursor: 'pointer',
+                  transition: 'all 0.2s', textAlign: 'left'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(139,92,246,0.1)'; e.currentTarget.style.borderColor = 'rgba(139,92,246,0.3)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+              >
+                <div style={{ background: 'rgba(139,92,246,0.2)', padding: '12px', borderRadius: '12px' }}>
+                  <Building size={24} color="#a78bfa" />
+                </div>
+                <div>
+                  <h3 style={{ color: '#f8fafc', margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>Government Administration</h3>
+                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '13px' }}>System monitoring, audit logs, and analytics.</p>
+                </div>
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Username Field */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', fontWeight: 500, marginBottom: '8px', letterSpacing: '0.02em' }}>
-            Username
-          </label>
-          <div style={{ position: 'relative' }}>
-            <User size={16} color="#475569" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-            <input
-              id="login-username"
-              type="text"
-              value={username}
-              onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
-              onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
-              placeholder="Enter your username"
-              autoComplete="username"
-              autoFocus
-              style={{
-                width: '100%',
-                padding: '13px 14px 13px 40px',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px',
-                color: '#e2e8f0',
-                fontSize: '15px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-                fontFamily: 'inherit'
-              }}
-              onFocus={e => {
-                e.target.style.borderColor = 'rgba(59,130,246,0.5)';
-                e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)';
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
-        </div>
-
-        {/* PIN Field */}
-        <div style={{ marginBottom: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
-              6-Digit PIN
-            </label>
-            <button
-              onClick={() => setShowPin(!showPin)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
+        {/* State 2: Login Form */}
+        {loginType && (
+          <div style={{ animation: 'fadeIn 0.3s ease' }}>
+            <button 
+              onClick={() => { setLoginType(null); setErrorMsg(null); setUsername(''); setPinDigits(['','','','','','']); }}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px', padding: 0 }}
             >
-              {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
-              <span>{showPin ? 'Hide' : 'Show'}</span>
+              ← Back to role selection
+            </button>
+
+            <h2 style={{ color: '#f8fafc', fontSize: '18px', fontWeight: 600, marginBottom: '20px', textAlign: 'center' }}>
+              {loginType === 'CITIZEN' ? 'Citizen Login' : 'Admin Login'}
+            </h2>
+
+            {/* Demo Accounts List */}
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ color: '#64748b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', fontWeight: 600 }}>Demo Accounts</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {loginType === 'CITIZEN' ? (
+                  <>
+                    <button onClick={() => autofillDemo('hriday')} style={demoBtnStyle}>Hriday</button>
+                    <button onClick={() => autofillDemo('varad')} style={demoBtnStyle}>Varad</button>
+                    <button onClick={() => autofillDemo('ayuh')} style={demoBtnStyle}>Ayuh</button>
+                    <button onClick={() => autofillDemo('satwik')} style={demoBtnStyle}>Satwik</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => autofillDemo('dishita')} style={demoBtnStyle}>Dishita</button>
+                    <button onClick={() => autofillDemo('jyoti')} style={demoBtnStyle}>Jyoti</button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Error Banner */}
+            {errorMsg && (
+              <div style={{
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px',
+                padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px'
+              }}>
+                <AlertCircle size={16} color="#ef4444" style={{ marginTop: '1px', flexShrink: 0 }} />
+                <p style={{ color: '#fca5a5', fontSize: '14px', margin: 0, lineHeight: '1.4' }}>{errorMsg}</p>
+              </div>
+            )}
+
+            {/* Username Field */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', fontWeight: 500, marginBottom: '8px', letterSpacing: '0.02em' }}>
+                Username
+              </label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} color="#475569" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                <input
+                  id="login-username"
+                  type="text"
+                  value={username}
+                  onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
+                  onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
+                  placeholder="Enter your username"
+                  autoComplete="username"
+                  style={{
+                    width: '100%', padding: '13px 14px 13px 40px', background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#e2e8f0',
+                    fontSize: '15px', outline: 'none', boxSizing: 'border-box', transition: 'all 0.2s', fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* PIN Field */}
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
+                  6-Digit PIN
+                </label>
+                <button
+                  onClick={() => setShowPin(!showPin)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
+                >
+                  {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                  <span>{showPin ? 'Hide' : 'Show'}</span>
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                {pinDigits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={pinRefs[i]}
+                    type={showPin ? "text" : "password"}
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handlePinInput(i, e.target.value)}
+                    onKeyDown={e => handlePinKeyDown(i, e)}
+                    style={{
+                      width: '45px', height: '52px', textAlign: 'center', fontSize: '20px', fontWeight: 600,
+                      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '12px', color: '#fff', outline: 'none', transition: 'all 0.2s'
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleLogin}
+              disabled={isSubmitting}
+              style={{
+                width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, #2563eb, #4f46e5)', color: 'white',
+                fontSize: '15px', fontWeight: 600, cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s', opacity: isSubmitting ? 0.7 : 1
+              }}
+            >
+              {isSubmitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : 'Login Securely'}
+              {!isSubmitting && <ArrowRight size={18} />}
             </button>
           </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            {pinDigits.map((digit, i) => (
-              <input
-                key={i}
-                ref={pinRefs[i]}
-                id={`pin-digit-${i}`}
-                type={showPin ? 'text' : 'password'}
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={e => handlePinInput(i, e.target.value)}
-                onKeyDown={e => handlePinKeyDown(i, e)}
-                onPaste={handlePinPaste}
-                style={{
-                  width: '100%',
-                  minWidth: '0px',
-                  maxWidth: '46px',
-                  height: '52px',
-                  textAlign: 'center',
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${digit ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: '10px',
-                  color: '#e2e8f0',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                  caretColor: '#3b82f6',
-                  fontFamily: 'inherit'
-                }}
-                onFocus={e => {
-                  e.target.style.borderColor = 'rgba(59,130,246,0.7)';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = digit ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Login Button */}
-        <button
-          id="login-submit-btn"
-          onClick={handleLogin}
-          disabled={isSubmitting}
-          style={{
-            width: '100%',
-            padding: '14px',
-            background: isSubmitting
-              ? 'rgba(59,130,246,0.4)'
-              : 'linear-gradient(135deg, #2563eb, #7c3aed)',
-            border: 'none',
-            borderRadius: '12px',
-            color: 'white',
-            fontSize: '15px',
-            fontWeight: 600,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
-            transition: 'all 0.2s',
-            boxShadow: isSubmitting ? 'none' : '0 4px 20px rgba(59,130,246,0.3)',
-            fontFamily: 'inherit'
-          }}
-          onMouseEnter={e => { if (!isSubmitting) (e.target as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
-          onMouseLeave={e => { (e.target as HTMLButtonElement).style.transform = 'none'; }}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-              Verifying...
-            </>
-          ) : (
-            <>
-              <Lock size={16} />
-              Sign In to Citizen Portal
-              <ArrowRight size={16} />
-            </>
-          )}
-        </button>
-
-        {/* Footer Note */}
-        <p style={{ textAlign: 'center', color: '#334155', fontSize: '12px', marginTop: '24px', lineHeight: '1.5' }}>
-          This is a secured demonstration system.
-          <br />Contact your administrator to obtain credentials.
-        </p>
+        )}
       </div>
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        * { box-sizing: border-box; }
-        input::placeholder { color: #334155; }
-        input:-webkit-autofill {
-          -webkit-box-shadow: 0 0 0 1000px rgba(15,23,42,0.95) inset !important;
-          -webkit-text-fill-color: #e2e8f0 !important;
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }
+
+const demoBtnStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.08)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  color: '#cbd5e1',
+  padding: '6px 12px',
+  borderRadius: '8px',
+  fontSize: '13px',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+};

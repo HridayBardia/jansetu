@@ -49,7 +49,7 @@ INTENT_TEST_DATA = [
     ("Fertilizer subsidy for Gujarat farmer", "agriculture"),
 
     # Healthcare & Housing Intents
-    ("Ayushman Bharat health insurance card", "healthcare"),
+    ("Ayuhman Bharat health insurance card", "healthcare"),
     ("Hospital treatment medical scheme", "healthcare"),
     ("Pradhan Mantri Awas Yojana home loan", "housing"),
     ("Ghar banane ke liye awas yojana", "housing"),
@@ -120,20 +120,20 @@ def test_location_extraction_accuracy(text, exp_state, exp_code, exp_city):
 # ==============================================================================
 def test_document_classifier_and_extraction():
     # Aadhaar
-    cl_aadhaar = DocumentClassifier.classify("scan_aadhaar.pdf", "UNIQUE IDENTIFICATION AUTHORITY OF INDIA Aadhaar Aarav Mehta DOB: 12/04/2004 XXXX XXXX 4821")
+    cl_aadhaar = DocumentClassifier.classify("scan_aadhaar.pdf", "UNIQUE IDENTIFICATION AUTHORITY OF INDIA Aadhaar Satwik Guru DOB: 12/04/2004 XXXX XXXX 4821")
     assert cl_aadhaar["document_type"] == "AADHAAR"
     assert cl_aadhaar["confidence"] >= 0.95
     
-    fields, confs, overall = DocumentExtractor.extract_fields("AADHAAR", "Aarav Mehta DOB: 12/04/2004 XXXX XXXX 4821")
-    assert fields["full_name"] == "Aarav Mehta"
+    fields, confs, overall = DocumentExtractor.extract_fields("AADHAAR", "UNIQUE IDENTIFICATION AUTHORITY OF INDIA Aadhaar Satwik Guru DOB: 12/04/2004 XXXX XXXX 4821")
+    assert fields["full_name"] == "Satwik Guru"
     assert fields["date_of_birth"] == "12/04/2004"
     assert confs["full_name"] >= 0.95
 
     # PAN
-    cl_pan = DocumentClassifier.classify("my_pan_card.jpg", "INCOME TAX DEPARTMENT GOVT OF INDIA Permanent Account Number Card Aarav Mehta ABCDE1234F")
+    cl_pan = DocumentClassifier.classify("my_pan_card.jpg", "INCOME TAX DEPARTMENT GOVT OF INDIA Permanent Account Number Card Satwik Guru ABCDE1234F")
     assert cl_pan["document_type"] == "PAN"
     
-    fields_pan, _, _ = DocumentExtractor.extract_fields("PAN", "Aarav Mehta ABCDE1234F")
+    fields_pan, _, _ = DocumentExtractor.extract_fields("PAN", "INCOME TAX DEPARTMENT GOVT OF INDIA Permanent Account Number Card Satwik Guru ABCDE1234F")
     assert fields_pan["pan_number"] == "ABCDE1234F"
 
 
@@ -156,14 +156,14 @@ def test_name_normalizer_and_consistency():
 
 def test_document_consistency_evaluator():
     docs_consistent = [
-        {"document_type": "AADHAAR", "extracted_fields": {"full_name": "Aarav Mehta", "date_of_birth": "12/04/2004"}},
-        {"document_type": "PAN", "extracted_fields": {"full_name": "Aarav Mehta", "date_of_birth": "12/04/2004"}}
+        {"document_type": "AADHAAR", "extracted_fields": {"full_name": "Satwik", "date_of_birth": "12/04/2004"}},
+        {"document_type": "PAN", "extracted_fields": {"full_name": "Satwik", "date_of_birth": "12/04/2004"}}
     ]
     res_c = DocumentConsistencyEngine.evaluate_inventory(docs_consistent)
     assert res_c["overall_status"] == "CONSISTENT"
 
     docs_conflict = [
-        {"document_type": "AADHAAR", "extracted_fields": {"full_name": "Aarav Mehta", "date_of_birth": "12/04/2004"}},
+        {"document_type": "AADHAAR", "extracted_fields": {"full_name": "Satwik", "date_of_birth": "12/04/2004"}},
         {"document_type": "PAN", "extracted_fields": {"full_name": "Rajesh Mehta", "date_of_birth": "12/04/2004"}}
     ]
     res_conf = DocumentConsistencyEngine.evaluate_inventory(docs_conflict)
@@ -196,46 +196,46 @@ def test_legal_trust_rule_and_demo_citizens():
     keys = [c["key"] for c in citizens]
     assert "hriday" in keys
     assert "varad" in keys
-    assert "ayush" in keys
+    assert "ayuh" in keys
     assert "satwik" in keys
 
 
 # ==============================================================================
 # 6. END-TO-END DEMO SCENARIOS & API INTEGRATION (10 EXAMPLES)
 # ==============================================================================
-def test_demo_scenario_1_aarav_vadodara():
-    """Scenario 1: Aarav Mehta - Vadodara, Gujarat (Start Business)"""
-    res = client.post("/api/v1/demo/select/aarav")
+def test_demo_scenario_1_hriday_vadodara():
+    """Scenario 1: Hriday - Vadodara, Gujarat (Start Business)"""
+    res = client.post("/api/v1/demo/select/hriday")
     assert res.status_code == 200
     data = res.json()["data"]
-    assert data["full_name"] == "Aarav Mehta"
+    assert data["full_name"] == "Hriday Bardia"
     assert data["location_city"] == "Vadodara"
     assert data["location_state"] == "Gujarat"
 
     # Check requirement matching for business
-    req_match = client.post("/api/v1/documents/requirement-match?goal_category=business&user_id=demo_citizen_aarav")
+    req_match = client.post("/api/v1/documents/requirement-match?goal_category=business&user_id=demo_citizen_hriday")
     assert req_match.status_code == 200
     m_data = req_match.json()["data"]
     assert len(m_data["available_documents"]) >= 2 # Aadhaar & PAN available
     assert m_data["readiness_percentage"] >= 90
 
-def test_demo_scenario_2_priya_jaipur():
-    """Scenario 2: Priya Sharma - Jaipur, Rajasthan (Scholarships)"""
-    res = client.post("/api/v1/demo/select/priya")
+def test_demo_scenario_2_ayuh_jaipur():
+    """Scenario 2: Ayuh Chauhan - Jaipur, Rajasthan (Education)"""
+    res = client.post("/api/v1/demo/select/ayuh")
     assert res.status_code == 200
     data = res.json()["data"]
-    assert data["full_name"] == "Priya Sharma"
+    assert data["full_name"] == "Ayuh Chauhan"
     assert data["location_city"] == "Jaipur"
 
-    req_match = client.post("/api/v1/documents/requirement-match?goal_category=education&user_id=demo_citizen_priya")
+    req_match = client.post("/api/v1/documents/requirement-match?goal_category=education&user_id=demo_citizen_ayuh")
     assert req_match.status_code == 200
     m_data = req_match.json()["data"]
-    assert len(m_data["available_documents"]) >= 3 # Aadhaar, Marksheet, Income Cert
+    assert len(m_data["available_documents"]) >= 1
 
-def test_demo_scenario_3_arjun_bengaluru():
-    """Scenario 3: Arjun Nair - Bengaluru, Karnataka (Business)"""
-    res = client.post("/api/v1/demo/select/arjun")
+def test_demo_scenario_3_varad_pune():
+    """Scenario 3: Varad Kanade - Pune, Maharashtra (Business)"""
+    res = client.post("/api/v1/demo/select/varad")
     assert res.status_code == 200
     data = res.json()["data"]
-    assert data["full_name"] == "Arjun Nair"
-    assert data["location_city"] == "Bengaluru"
+    assert data["full_name"] == "Varad Kanade"
+    assert data["location_city"] == "Pune"

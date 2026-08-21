@@ -23,7 +23,7 @@ def seed_database(drop_tables: bool = True):
 
     db = SessionLocal()
     try:
-        logger.info("Seeding Initial Demonstration Users (Hriday, Varad, Narayan)...")
+        logger.info("Seeding Initial Demonstration Users (Hriday, Varad, Ayuh, Satwik, Dishita, Jyoti)...")
         from app.services.demo_vault_service import DemoVaultService, DEMO_CITIZENS
         from app.models.db_models import CitizenProfileDB
 

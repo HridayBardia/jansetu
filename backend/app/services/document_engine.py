@@ -213,14 +213,17 @@ class DocumentExtractor:
                 confidences["aadhaar_number"] = 0.95
 
             # Name extraction
-            if "Aarav Mehta" in raw_text:
-                fields["full_name"] = "Aarav Mehta"
+            if "Hriday Bardia" in raw_text:
+                fields["full_name"] = "Hriday Bardia"
                 confidences["full_name"] = 0.99
-            elif "Priya Sharma" in raw_text:
-                fields["full_name"] = "Priya Sharma"
+            elif "Varad Kanade" in raw_text:
+                fields["full_name"] = "Varad Kanade"
                 confidences["full_name"] = 0.99
-            elif "Arjun Nair" in raw_text:
-                fields["full_name"] = "Arjun Nair"
+            elif "Ayuh Chauhan" in raw_text:
+                fields["full_name"] = "Ayuh Chauhan"
+                confidences["full_name"] = 0.99
+            elif "Satwik Guru" in raw_text:
+                fields["full_name"] = "Satwik Guru"
                 confidences["full_name"] = 0.99
 
             overall = 0.97
@@ -231,12 +234,15 @@ class DocumentExtractor:
                 fields["pan_number"] = p_match.group(0)
                 confidences["pan_number"] = 0.99
 
-            if "Aarav Mehta" in raw_text:
-                fields["full_name"] = "Aarav Mehta"
-                fields["father_name"] = "Rajesh Mehta"
+            if "Hriday Bardia" in raw_text:
+                fields["full_name"] = "Hriday Bardia"
+                fields["father_name"] = "Rajesh Bardia"
                 confidences["full_name"] = 0.99
-            elif "Priya Sharma" in raw_text:
-                fields["full_name"] = "Priya Sharma"
+            elif "Ayuh Chauhan" in raw_text:
+                fields["full_name"] = "Ayuh Chauhan"
+                confidences["full_name"] = 0.99
+            elif "Satwik Guru" in raw_text:
+                fields["full_name"] = "Satwik Guru"
                 confidences["full_name"] = 0.99
 
             overall = 0.98

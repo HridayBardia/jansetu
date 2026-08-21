@@ -161,53 +161,26 @@ export async function loginAPI(username: string, pin: string): Promise<any> {
   } catch (err: any) {
     // If backend returns HTTP 500 or network error, provide instant fallback authentication for demo accounts & valid logins
     const lowerUser = username.trim().toLowerCase();
-    const demoCitizens: Record<string, any> = {
-      hriday: {
-        access_token: 'demo-token-hriday',
-        token_type: 'bearer',
-        user: {
-          id: 'user_hriday_bardia',
-          username: 'hriday',
-          full_name: 'Hriday Bardia',
-          mobile_number: '+917016918865',
-          email: 'hriday@demo.citizen',
-          role: 'citizen',
-          created_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString()
-        }
-      },
-      varad: {
-        access_token: 'demo-token-varad',
-        token_type: 'bearer',
-        user: {
-          id: 'user_varad_kanade',
-          username: 'varad',
-          full_name: 'Varad Kanade',
-          mobile_number: '+918830482422',
-          email: 'varad@demo.citizen',
-          role: 'citizen',
-          created_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString()
-        }
-      },
-      narayan: {
-        access_token: 'demo-token-narayan',
-        token_type: 'bearer',
-        user: {
-          id: 'user_narayan_patil',
-          username: 'narayan',
-          full_name: 'Narayan Patil',
-          mobile_number: '+919988776655',
-          email: 'narayan@demo.citizen',
-          role: 'citizen',
-          created_at: new Date().toISOString(),
-          last_login_at: new Date().toISOString()
-        }
-      }
+    const demoAccounts: Record<string, any> = {
+      hriday: { access_token: 'demo-token-hriday', token_type: 'bearer', user: { id: 'user_hriday_bardia', username: 'hriday', full_name: 'Hriday Bardia', role: 'CITIZEN' } },
+      varad: { access_token: 'demo-token-varad', token_type: 'bearer', user: { id: 'user_varad_kanade', username: 'varad', full_name: 'Varad Kanade', role: 'CITIZEN' } },
+      ayuh: { access_token: 'demo-token-ayuh', token_type: 'bearer', user: { id: 'user_ayuh_citizen', username: 'ayuh', full_name: 'Ayuh', role: 'CITIZEN' } },
+      satwik: { access_token: 'demo-token-satwik', token_type: 'bearer', user: { id: 'user_satwik_citizen', username: 'satwik', full_name: 'Satwik', role: 'CITIZEN' } },
+      dishita: { access_token: 'demo-token-dishita', token_type: 'bearer', user: { id: 'user_dishita_admin', username: 'dishita', full_name: 'Dishita', role: 'ADMIN' } },
+      jyoti: { access_token: 'demo-token-jyoti', token_type: 'bearer', user: { id: 'user_jyoti_admin', username: 'jyoti', full_name: 'Jyoti', role: 'ADMIN' } },
     };
 
-    if (demoCitizens[lowerUser]) {
-      const demoData = demoCitizens[lowerUser];
+    if (demoAccounts[lowerUser]) {
+      const demoData = demoAccounts[lowerUser];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('citizen_token', demoData.access_token);
+        localStorage.setItem('demo_citizen', JSON.stringify(demoData.user));
+      }
+      return demoData;
+    }
+
+    if (demoAccounts[lowerUser]) {
+      const demoData = demoAccounts[lowerUser];
       if (typeof window !== 'undefined') {
         localStorage.setItem('citizen_token', demoData.access_token);
         localStorage.setItem('demo_citizen', JSON.stringify(demoData.user));

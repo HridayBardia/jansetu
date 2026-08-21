@@ -13,7 +13,7 @@ from app.models.schemas import JourneyStepSchema, StepDependencySchema, Eligibil
 
 client = TestClient(app)
 
-from app.api.v1.router import get_current_user
+from app.api.v1.router import get_current_user, get_current_admin
 from app.models.db_models import UserDB
 from tests.conftest import TestingSessionLocal
 
@@ -48,9 +48,12 @@ def override_get_current_user():
 @pytest.fixture(autouse=True)
 def mock_auth():
     app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_admin] = override_get_current_user
     yield
     if get_current_user in app.dependency_overrides:
         del app.dependency_overrides[get_current_user]
+    if get_current_admin in app.dependency_overrides:
+        del app.dependency_overrides[get_current_admin]
 
 
 def test_health_and_readiness():

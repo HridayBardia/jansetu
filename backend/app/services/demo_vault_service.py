@@ -9,6 +9,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
     "hriday": {
         "key": "hriday",
         "user_id": "user_hriday_bardia",
+        "role": "CITIZEN",
         "full_name": "Hriday Bardia",
         "mobile_number": "+917016918865",
         "email": "hriday@demo.citizen",
@@ -245,6 +246,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
     "varad": {
         "key": "varad",
         "user_id": "user_varad_kanade",
+        "role": "CITIZEN",
         "full_name": "Varad Kanade",
         "mobile_number": "+918830482422",
         "email": "varad@demo.citizen",
@@ -405,12 +407,12 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             }
         ]
     },
-    "ayush": {
-        "key": "ayush",
-        "user_id": "user_ayush_chauhan",
-        "full_name": "Ayush Chauhan",
+    "ayuh": {
+        "key": "ayuh",
+        "user_id": "user_ayuh_chauhan",
+        "full_name": "Ayuh Chauhan",
         "mobile_number": "+918969707785",
-        "email": "ayush@demo.citizen",
+        "email": "ayuh@demo.citizen",
         "age": 22,
         "annual_income": 180000.0,
         "income_category": "EWS",
@@ -425,7 +427,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
                 "document_number_masked": "XXXX XXXX 7785",
-                "file_name": "demo_aadhaar_ayush.pdf",
+                "file_name": "demo_aadhaar_ayuh.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 182000,
                 "status": "AVAILABLE",
@@ -436,7 +438,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "UIDAI",
                 "extracted_fields": {
-                    "full_name": "Ayush Chauhan",
+                    "full_name": "Ayuh Chauhan",
                     "date_of_birth": "20/12/2004",
                     "gender": "Male",
                     "aadhaar_number": "DEMO-AADHAAR-8969707785",
@@ -451,7 +453,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "PAN",
                 "document_name": "PAN Card",
                 "document_number_masked": "XXXXX9101N",
-                "file_name": "demo_pan_ayush.pdf",
+                "file_name": "demo_pan_ayuh.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 148000,
                 "status": "AVAILABLE",
@@ -462,7 +464,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Income Tax Department",
                 "extracted_fields": {
-                    "full_name": "Ayush Chauhan",
+                    "full_name": "Ayuh Chauhan",
                     "pan_number": "DEMO-PAN-00003"
                 },
                 "field_confidence": {"full_name": 0.99},
@@ -474,7 +476,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "PASSPORT",
                 "document_name": "Indian Republic Passport",
                 "document_number_masked": "ZXXXXXX1",
-                "file_name": "demo_passport_ayush.pdf",
+                "file_name": "demo_passport_ayuh.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 320000,
                 "status": "AVAILABLE",
@@ -485,7 +487,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Ministry of External Affairs, India",
                 "extracted_fields": {
-                    "full_name": "Ayush Chauhan",
+                    "full_name": "Ayuh Chauhan",
                     "passport_number": "DEMO-PASS-0003",
                     "valid_until": "2032-11-20"
                 },
@@ -498,7 +500,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "DRIVING_LICENCE",
                 "document_name": "Driving Licence",
                 "document_number_masked": "RJ-14-2020-XXXXXXX",
-                "file_name": "demo_dl_ayush.pdf",
+                "file_name": "demo_dl_ayuh.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 205000,
                 "status": "AVAILABLE",
@@ -509,7 +511,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Transport Dept, Jaipur, Rajasthan",
                 "extracted_fields": {
-                    "full_name": "Ayush Chauhan",
+                    "full_name": "Ayuh Chauhan",
                     "dl_number": "DEMO-DL-RJ14-0003",
                     "valid_until": "2035-12-19"
                 },
@@ -636,7 +638,25 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             }
         ]
     },
-    "admin": {
+    "jyoti": {
+        "key": "jyoti",
+        "user_id": "user_jyoti_admin",
+        "role": "ADMIN",
+        "full_name": "Jyoti",
+        "mobile_number": "+919999999992",
+        "email": "jyoti@demo.admin",
+        "age": 40,
+        "annual_income": 1200000.0,
+        "income_category": "HIG",
+        "location_city": "Delhi",
+        "location_district": "New Delhi",
+        "location_state": "Delhi",
+        "category": "General",
+        "occupation": "System Administrator",
+        "education": "M.Tech",
+        "documents": []
+    },
+    "dishita": {
         "key": "admin",
         "user_id": "user_system_admin",
         "full_name": "System Administrator",

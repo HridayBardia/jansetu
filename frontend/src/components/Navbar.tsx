@@ -35,19 +35,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user, isAuthenticated, logout, openAuthModal, changeRole } = useAuth();
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 
-  const navItems = [
-    { label: t('appName', 'Goal Planner'), href: '/dashboard?tab=planner', icon: Compass },
-    { label: t('myJourneys', 'Journeys'), href: '/dashboard?tab=journeys', icon: MapPin },
-    { label: t('myDocuments', 'Documents Vault'), href: '/dashboard?tab=documents', icon: FileText },
-    { label: t('myApplications', 'My Applications'), href: '/dashboard?tab=applications', icon: Briefcase },
-    { label: t('privacy', 'Privacy & Consent'), href: '/dashboard?tab=consent', icon: ShieldCheck },
-    { label: t('alerts', 'Alerts'), href: '/dashboard?tab=alerts', icon: Bell }
-  ];
+  let navItems: { label: string, href: string, icon: any }[] = [];
 
-  if (isAuthenticated && user && (user.role === 'SYSTEM_ADMIN' || user.role === 'DEPARTMENT_ADMIN')) {
-    navItems.push({ label: t('officialDashboard', 'Official & Health'), href: '/dashboard?tab=official', icon: BarChart2 });
+  if (isAuthenticated && user) {
+    if (user.role === 'ADMIN' || user.role === 'admin') {
+      navItems = [
+        { label: t('systemOverview', 'System Overview'), href: '/admin/dashboard', icon: Compass },
+        { label: t('citizens', 'Citizens'), href: '/admin/dashboard?tab=citizens', icon: User },
+        { label: t('applications', 'Applications'), href: '/admin/dashboard?tab=applications', icon: Briefcase },
+        { label: t('interopHub', 'Interop Hub'), href: '/admin/dashboard?tab=interop', icon: Radio },
+        { label: t('dataQuality', 'Data Quality'), href: '/admin/dashboard?tab=data_quality', icon: BarChart2 },
+      ];
+    } else {
+      navItems = [
+        { label: t('appName', 'Goal Planner'), href: '/citizen/dashboard?tab=planner', icon: Compass },
+        { label: t('myJourneys', 'Journeys'), href: '/citizen/dashboard?tab=journeys', icon: MapPin },
+        { label: t('myDocuments', 'Documents Vault'), href: '/citizen/dashboard?tab=documents', icon: FileText },
+        { label: t('myApplications', 'My Applications'), href: '/citizen/dashboard?tab=applications', icon: Briefcase },
+        { label: t('privacy', 'Privacy & Consent'), href: '/citizen/dashboard?tab=consent', icon: ShieldCheck },
+        { label: t('alerts', 'Alerts'), href: '/citizen/dashboard?tab=alerts', icon: Bell }
+      ];
+    }
   }
 
   return (
@@ -76,16 +86,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <p className="text-[10px] text-slate-400 font-mono leading-none mt-0.5">@{user.username}</p>
                 </div>
 
-                {/* Role Switcher */}
-                <select
-                  value={user.role || 'citizen'}
-                  onChange={(e) => changeRole(e.target.value)}
-                  className="bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 cursor-pointer focus:outline-none focus:border-amber-500"
-                >
-                  <option value="citizen">Citizen</option>
-                  <option value="DEPARTMENT_ADMIN">Official</option>
-                  <option value="SYSTEM_ADMIN">Admin</option>
-                </select>
+                {/* Role label instead of switcher */}
+                <div className="bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
+                  {user.role === 'ADMIN' || user.role === 'admin' ? 'ADMIN' : 'CITIZEN'}
+                </div>
 
                 <button
                   onClick={logout}

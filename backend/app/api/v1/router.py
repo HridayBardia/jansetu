@@ -90,6 +90,8 @@ def select_demo_citizen(citizen_key: str, request: Request, db: Session = Depend
 
 
 # --- AUTHENTICATION DEPENDENCY ---
+
+
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
     token = None
     auth_header = request.headers.get("Authorization")
@@ -135,6 +137,18 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
 _failed_attempts: Dict[str, list] = {}
 
 # --- AUTH ENDPOINTS ---
+
+def get_current_citizen(request: Request, current_user: UserDB = Depends(get_current_user)) -> UserDB:
+    if current_user.role != 'CITIZEN' and current_user.role != 'citizen':
+        raise HTTPException(status_code=403, detail='Access restricted to citizens.')
+    return current_user
+
+def get_current_admin(request: Request, current_user: UserDB = Depends(get_current_user)) -> UserDB:
+    if current_user.role != 'ADMIN' and current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail='Access restricted to administrators.')
+    return current_user
+
+
 @api_v1_router.post("/auth/login")
 def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     """
@@ -516,76 +530,26 @@ async def generate_journey(
     return success_response({"journey_id": journey.id, "message": "Journey generated successfully!"}, request)
 
 @api_v1_router.get("/journeys")
-def list_journeys(
-    request: Request,
-    current_user: UserDB = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    user_id = current_user.id
-    journeys_db = db.query(JourneyDB).filter(JourneyDB.user_id == user_id).all()
-
-    results = []
-    for j in journeys_db:
-        # Load steps and dependencies to resolve states
-        steps_db = db.query(JourneyStepDB).filter(JourneyStepDB.journey_id == j.id).order_by(JourneyStepDB.order_index).all()
-        deps_db = db.query(StepDependencyDB).filter(StepDependencyDB.journey_id == j.id).all()
+def list_journeys(request: Request, current_user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role in ['ADMIN', 'admin']:
+        journeys = db.query(JourneyDB).order_by(JourneyDB.created_at.desc()).all()
+    else:
+        journeys = db.query(JourneyDB).filter(JourneyDB.user_id == current_user.id).all()
         
-        # Build Pydantic step objects
-        step_schemas = []
-        for s in steps_db:
-            step_schemas.append(
-                JourneyStepSchema(
-                    id=s.id,
-                    step_key=s.step_key,
-                    title=s.title,
-                    description=s.description,
-                    category=s.category,
-                    state=s.state,
-                    priority=s.priority,
-                    estimated_effort=s.estimated_effort,
-                    official_portal_url=s.official_portal_url,
-                    user_notes=s.user_notes
-                )
-            )
-
-        dep_schemas = [
-            StepDependencySchema(step_key=d.step_key, prerequisite_step_key=d.prerequisite_step_key)
-            for d in deps_db
-        ]
-
-        # Resolve step states deterministically
-        resolved_steps = DependencyEngine.resolve_step_states(step_schemas, dep_schemas)
-        
-        # Serialize resolved_steps
-        serialized_steps = []
-        for s in resolved_steps:
-            serialized_steps.append({
-                "id": s.id,
-                "step_key": s.step_key,
-                "title": s.title,
-                "description": s.description,
-                "category": s.category,
-                "state": s.state,
-                "priority": s.priority,
-                "estimated_effort": s.estimated_effort,
-                "official_portal_url": s.official_portal_url,
-                "user_notes": s.user_notes,
-                "prerequisites": s.prerequisites
-            })
-
-        results.append({
+    res = []
+    for j in journeys:
+        res.append({
             "id": j.id,
+            "user_id": j.user_id,
             "title": j.title,
             "goal_category": j.goal_category,
-            "life_event": j.life_event,
             "state": j.state,
+            "progress_percentage": j.progress_percentage,
             "location_state": j.location_state,
             "location_city": j.location_city,
-            "progress_percentage": j.progress_percentage,
-            "steps": serialized_steps,
-            "updated_at": j.updated_at
+            "created_at": j.created_at.isoformat()
         })
-    return success_response(results, request)
+    return success_response(res, request)
 
 @api_v1_router.get("/journeys/{journey_id}")
 def get_journey(journey_id: str, request: Request, db: Session = Depends(get_db)):
@@ -1291,7 +1255,7 @@ def get_source_health(request: Request, db: Session = Depends(get_db)):
 @api_v1_router.get("/admin/diagnostics")
 def get_admin_diagnostics(
     request: Request,
-    current_user: UserDB = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     if current_user.role not in ["SYSTEM_ADMIN", "DEPARTMENT_ADMIN"]:
@@ -1373,7 +1337,7 @@ def call_service_endpoint(
     service_id: str,
     payload: Dict[str, Any],
     request: Request,
-    current_user: UserDB = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     operation = payload.get("operation")
@@ -1412,8 +1376,22 @@ def list_applications(
     current_user: UserDB = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    apps = ApplicationTracker.list_applications(db, current_user.id)
-    return success_response(apps, request)
+    if current_user.role in ['ADMIN', 'admin']:
+        # Admin gets all applications
+        apps = db.query(ApplicationDB).order_by(ApplicationDB.submitted_at.desc()).all()
+        return success_response([
+            {
+                "id": a.id,
+                "application_id": a.application_id,
+                "service_id": a.service_id,
+                "citizen_id": a.citizen_id,
+                "status": a.status,
+                "submitted_at": a.submitted_at.isoformat()
+            } for a in apps
+        ], request)
+    else:
+        apps = ApplicationTracker.list_applications(db, current_user.id)
+        return success_response(apps, request)
 
 @api_v1_router.post("/applications")
 def create_application(
@@ -1592,7 +1570,7 @@ def list_audit_logs(request: Request, db: Session = Depends(get_db)):
 @api_v1_router.get("/conflicts")
 def list_conflicts(
     request: Request,
-    current_user: UserDB = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     conflicts = db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).all()
@@ -1624,7 +1602,7 @@ def resolve_data_conflict(
     conflict_id: str,
     payload: Dict[str, Any],
     request: Request,
-    current_user: UserDB = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     resolved_value = payload.get("resolved_value")
@@ -1733,7 +1711,7 @@ def get_service_levels(request: Request):
 @api_v1_router.get("/data-quality/master")
 def get_master_data_record(
     request: Request,
-    current_user: UserDB = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     record = DataQualityEngine.get_master_citizen_record(db, current_user.id)
@@ -1742,7 +1720,7 @@ def get_master_data_record(
 @api_v1_router.get("/metrics")
 def get_admin_metrics(
     request: Request,
-    current_user: UserDB = Depends(get_current_user),
+    current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     # Enforce administrative access check
@@ -1764,3 +1742,62 @@ def get_admin_metrics(
     }, request)
 
 
+
+
+@api_v1_router.get("/admin/citizens")
+def get_all_citizens(request: Request, current_user: UserDB = Depends(get_current_admin), db: Session = Depends(get_db)):
+    citizens = db.query(UserDB).filter(UserDB.role.in_(['CITIZEN', 'citizen'])).all()
+    res = []
+    for c in citizens:
+        profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == c.id).first()
+        active_journeys = db.query(JourneyDB).filter(JourneyDB.user_id == c.id).count()
+        applications = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == c.id).count()
+        res.append({
+            "id": c.id,
+            "name": c.full_name,
+            "location": profile.location_city if profile else "Unknown",
+            "active_journeys": active_journeys,
+            "applications": applications,
+            "last_active": (c.last_login_at or c.created_at).isoformat() if c.last_login_at or c.created_at else None
+        })
+    return success_response(res, request)
+
+@api_v1_router.get("/admin/citizens/{citizen_id}")
+def get_citizen_details(
+    citizen_id: str, 
+    request: Request, 
+    reason: str = Query("Admin Review", description="Reason for access"),
+    current_user: UserDB = Depends(get_current_admin), 
+    db: Session = Depends(get_db)
+):
+    c = db.query(UserDB).filter(UserDB.id == citizen_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Citizen not found")
+        
+    profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == c.id).first()
+    active_journeys = db.query(JourneyDB).filter(JourneyDB.user_id == c.id).count()
+    applications = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == c.id).count()
+    documents = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == c.id).count()
+    
+    # Audit log the access
+    audit_log = AuditLogDB(
+        id=str(uuid.uuid4()),
+        citizen_id=citizen_id,
+        action="Viewed Citizen Profile",
+        resource="Citizen Profile",
+        details=f"Admin: {current_user.full_name} | Reason: {reason}",
+        timestamp=datetime.utcnow()
+    )
+    db.add(audit_log)
+    db.commit()
+    
+    return success_response({
+        "id": c.id,
+        "name": c.full_name,
+        "location": profile.location_city if profile else "Unknown",
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+        "last_active": (c.last_login_at or c.created_at).isoformat() if c.last_login_at or c.created_at else None,
+        "active_journeys": active_journeys,
+        "applications": applications,
+        "documents": documents
+    }, request)

@@ -34,6 +34,10 @@ export default function JourneyDetailPage() {
   // Source drawer state
   const [selectedSource, setSelectedSource] = useState<any | null>(null);
 
+  // Consent Interceptor state
+  const [isConsentOpen, setIsConsentOpen] = useState(false);
+  const [pendingStepKey, setPendingStepKey] = useState<string | null>(null);
+
   const loadJourney = useCallback(async () => {
     const data = await fetchJourneyByIdAPI(journeyId);
     if (data) setJourney(data);
@@ -50,11 +54,24 @@ export default function JourneyDetailPage() {
     }
   }, [lastEvent, loadJourney]);
 
-  const handleCompleteStep = async (stepKey: string) => {
-    const success = await completeStepAPI(journeyId, stepKey);
+  const handleCompleteStep = (stepKey: string) => {
+    setPendingStepKey(stepKey);
+    setIsConsentOpen(true);
+  };
+
+  const confirmCompleteStep = async () => {
+    if (!pendingStepKey) return;
+    const success = await completeStepAPI(journeyId, pendingStepKey);
     if (success) {
       loadJourney();
     }
+    setIsConsentOpen(false);
+    setPendingStepKey(null);
+  };
+
+  const denyCompleteStep = () => {
+    setIsConsentOpen(false);
+    setPendingStepKey(null);
   };
 
   const handleSendChat = async (e: React.FormEvent) => {
@@ -477,6 +494,46 @@ export default function JourneyDetailPage() {
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Consent Interceptor Modal */}
+      {isConsentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-amber-500/50 rounded-2xl p-6 shadow-2xl max-w-md w-full space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <ShieldCheck className="w-6 h-6 text-amber-500" />
+              <h3 className="text-lg font-bold text-white uppercase tracking-wider">Consent Required</h3>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-slate-300">
+                You are about to share your data to complete this step.
+              </p>
+              <div className="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+                <p className="text-xs text-slate-400 font-mono">Requesting Entity: <span className="text-white">Government Service Gateway</span></p>
+                <p className="text-xs text-slate-400 font-mono">Data Requested: <span className="text-white">Verified Address, Identity Proof</span></p>
+              </div>
+              <p className="text-xs text-amber-400/80 italic pt-2">
+                The citizen must explicitly approve sharing. The system will never silently send your data.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={confirmCompleteStep}
+                className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition"
+              >
+                [Allow] Share Data
+              </button>
+              <button
+                onClick={denyCompleteStep}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-sm transition"
+              >
+                [Deny] Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

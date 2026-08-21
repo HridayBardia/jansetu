@@ -28,7 +28,7 @@ def override_get_current_user(db: Session = Depends(get_db)):
     user = db.query(UserDB).filter(UserDB.username == active_mock_username).first()
     if not user:
         from app.core.security import hash_pin
-        full_names = {"hriday": "Hriday Bardia", "ayush": "Ayush Chauhan", "varad": "Varad Kanade"}
+        full_names = {"hriday": "Hriday Bardia", "ayuh": "Ayuh", "varad": "Varad Kanade"}
         user = UserDB(
             id=f"demo_citizen_{active_mock_username}",
             username=active_mock_username,
@@ -267,8 +267,8 @@ def test_18_different_users():
     needed1 = [d["type"] for d in res1.json()["data"]["documents"]["missing"] + res1.json()["data"]["documents"]["need"]]
     assert "PASSPORT" in needed1
     
-    # Ayush
-    active_mock_username = "ayush"
+    # Ayuh
+    active_mock_username = "ayuh"
     res2 = client.post("/api/v1/journey/analyze", json=payload)
     available2 = [d["type"] for d in res2.json()["data"]["documents"]["have"]]
     assert "PASSPORT" in available2
