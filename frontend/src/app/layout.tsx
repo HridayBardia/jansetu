@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * NAVIGATION ARCHITECTURE CONSOLIDATION DECISION:
+ * We implement the "Reverse Navigation Model" where `/dashboard` acts as the single source
+ * of truth for all sections (Goal Planner, Journeys list, Documents, Applications, Privacy/Consent,
+ * Interop Hub, Data Quality conflicts, Alerts, and Official Telemetry). The top navigation bar items
+ * link to `/dashboard?tab=...`, which automatically syncs the active tab state. This prevents
+ * redundant rendering, ensures a unified citizen experience, and preserves the Guided Tour state.
+ */
+
 import React, { useState } from 'react';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';

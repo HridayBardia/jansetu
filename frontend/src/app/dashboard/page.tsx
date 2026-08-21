@@ -60,7 +60,8 @@ import {
   History,
   Plus,
   RefreshCw,
-  Trash2
+  Trash2,
+  BarChart2
 } from 'lucide-react';
 
 const INDIAN_STATES_AND_UTS = [
@@ -441,7 +442,26 @@ export default function DashboardPage() {
   const [activeJourneys, setActiveJourneys] = useState<any[]>([]);
   const [userDocs, setUserDocs] = useState<any[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'planner' | 'applications' | 'consent' | 'interop' | 'conflicts'>('planner');
+  const [activeTab, setActiveTab] = useState<'planner' | 'journeys' | 'documents' | 'applications' | 'consent' | 'interop' | 'conflicts' | 'alerts' | 'official'>('planner');
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab) {
+          const validTabs = ['planner', 'journeys', 'documents', 'applications', 'consent', 'interop', 'conflicts', 'alerts', 'official'];
+          if (validTabs.includes(tab)) {
+            setActiveTab(tab as any);
+          }
+        }
+      }
+    };
+    
+    handleUrlChange();
+    const interval = setInterval(handleUrlChange, 200);
+    return () => clearInterval(interval);
+  }, []);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
   const [consents, setConsents] = useState<any[]>([]);
@@ -461,6 +481,8 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [serviceLevels, setServiceLevels] = useState<any[]>([]);
   const [masterRecord, setMasterRecord] = useState<any>(null);
+  const [uploadingFile, setUploadingFile] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
@@ -785,6 +807,20 @@ export default function DashboardPage() {
           <p className="text-[11px] text-slate-500">
             A jurisdiction-aware interoperability middleware layer orchestrating Central, State, and Municipal departments.
           </p>
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2.5 bg-slate-950/40 border border-slate-850 px-2.5 py-1 rounded-lg w-fit">
+            <span>JanSetu</span>
+            <span>/</span>
+            <span className="text-amber-400">
+              {activeTab === 'planner' ? 'Goal Planner' : 
+               activeTab === 'journeys' ? 'Active Journeys' : 
+               activeTab === 'documents' ? 'Documents Vault' :
+               activeTab === 'applications' ? 'My Applications' :
+               activeTab === 'consent' ? 'Privacy & Consent' :
+               activeTab === 'interop' ? 'Interop Hub' :
+               activeTab === 'conflicts' ? 'Data Quality' :
+               activeTab === 'alerts' ? 'Alerts & Events' : 'Official View'}
+            </span>
+          </div>
         </div>
 
         {/* Current Location Badge & Change Location Action */}
@@ -856,6 +892,40 @@ export default function DashboardPage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('journeys')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'journeys'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <MapPin className="w-4 h-4" />
+          <span>Active Journeys</span>
+          {activeJourneys.length > 0 && (
+            <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
+              {activeJourneys.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('documents')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'documents'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Documents Vault</span>
+          {userDocs.length > 0 && (
+            <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
+              {userDocs.length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => { setActiveTab('applications'); loadInteropData(); }}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap relative ${
             activeTab === 'applications'
@@ -881,7 +951,7 @@ export default function DashboardPage() {
           }`}
         >
           <Key className="w-4 h-4" />
-          <span>Privacy & Data</span>
+          <span>Privacy & Consent</span>
           {consents.filter(c => c.granted).length > 0 && (
             <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {consents.filter(c => c.granted).length}
@@ -889,37 +959,59 @@ export default function DashboardPage() {
           )}
         </button>
 
-        {(user?.role === 'SYSTEM_ADMIN' || user?.role === 'DEPARTMENT_ADMIN' || guidedStep !== null) && (
-          <>
-            <button
-              onClick={() => { setActiveTab('interop'); loadInteropData(); }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-                activeTab === 'interop'
-                  ? 'border-amber-500 text-amber-400 font-black'
-                  : 'border-transparent text-slate-400 hover:text-white'
-              }`}
-            >
-              <Activity className="w-4 h-4" />
-              <span>Interop Hub</span>
-            </button>
+        <button
+          onClick={() => { setActiveTab('interop'); loadInteropData(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'interop'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Interop Hub</span>
+        </button>
 
-            <button
-              onClick={() => { setActiveTab('conflicts'); loadInteropData(); }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-                activeTab === 'conflicts'
-                  ? 'border-amber-500 text-amber-400 font-black'
-                  : 'border-transparent text-slate-400 hover:text-white'
-              }`}
-            >
-              <ShieldAlert className="w-4 h-4" />
-              <span>Data Quality</span>
-              {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
-                <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
-                  {conflicts.filter(c => c.status === 'DETECTED').length}
-                </span>
-              )}
-            </button>
-          </>
+        <button
+          onClick={() => { setActiveTab('conflicts'); loadInteropData(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'conflicts'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4" />
+          <span>Data Quality</span>
+          {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
+            <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
+              {conflicts.filter(c => c.status === 'DETECTED').length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('alerts')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+            activeTab === 'alerts'
+              ? 'border-amber-500 text-amber-400 font-black'
+              : 'border-transparent text-slate-400 hover:text-white'
+          }`}
+        >
+          <Bell className="w-4 h-4" />
+          <span>Alerts & Events</span>
+        </button>
+
+        {(user?.role === 'SYSTEM_ADMIN' || user?.role === 'DEPARTMENT_ADMIN') && (
+          <button
+            onClick={() => setActiveTab('official')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+              activeTab === 'official'
+                ? 'border-emerald-500 text-emerald-400 font-black'
+                : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            <span>Official View</span>
+          </button>
         )}
       </div>
 
@@ -1340,11 +1432,13 @@ export default function DashboardPage() {
               <button 
                 type="button"
                 onClick={() => {
+                  setIsRefreshing(true);
                   const stFilter = selectedState === 'All India' ? undefined : selectedState;
                   fetchSchemesAPI({ state_name: stFilter, limit: 15 }).then((res) => {
                     if (res && res.schemes) {
                       setSchemes(res.schemes);
                     }
+                    setTimeout(() => setIsRefreshing(false), 300);
                   });
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition"
@@ -2435,6 +2529,341 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {activeTab === 'journeys' && (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-amber-400" />
+                <span>Your Active Workflows & Journeys</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Monitor status, check prerequisite dependencies, and execute step-by-step onboarding sequences.
+              </p>
+            </div>
+            
+            {activeJourneys.length === 0 ? (
+              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center space-y-4 max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                  <MapPin className="w-6 h-6 text-amber-500" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xs font-bold text-white">No active journeys found</h3>
+                  <p className="text-[11px] text-slate-500">Analyze a citizen goal to automatically generate a step-by-step journey.</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('planner')}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs transition hover:opacity-90"
+                >
+                  Go to Goal Planner
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeJourneys.map((j) => (
+                  <div key={j.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                          {j.goal_category}
+                        </span>
+                        <span className="text-xs text-slate-500">Jurisdiction: {j.jurisdiction || 'State'}</span>
+                      </div>
+                      <h3 className="text-sm font-black text-white">{j.title}</h3>
+                      <p className="text-xs text-slate-400">{j.description}</p>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/journeys/${j.id}`)}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition shadow self-start sm:self-center"
+                    >
+                      <span>Track Workflow</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'documents' && (
+        <div className="space-y-6 animate-fadeIn">
+          {uploadingFile && (
+            <div className="bg-slate-900 border border-amber-500/20 rounded-xl p-4 space-y-2 animate-pulse text-xs">
+              <div className="flex justify-between font-bold text-slate-200">
+                <span>Uploading {uploadingFile}...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                <div className="bg-amber-500 h-full transition-all duration-100" style={{ width: `${uploadProgress}%` }} />
+              </div>
+              <p className="text-[10px] text-slate-500">Running OCR extraction and hashing cross-document consistency...</p>
+            </div>
+          )}
+          <DocumentVault 
+            documents={userDocs} 
+            goalCategory={journeyAnalysis?.intent?.primary === 'STUDY_ABROAD' ? 'education' : 'business'}
+            consistencyStatus={
+              userDocs.length > 0 ? {
+                overall_status: 'CONSISTENT',
+                identity_status: 'MATCHED',
+                dob_status: 'MATCHED',
+                discrepancies: []
+              } : undefined
+            }
+            onUpload={(file) => {
+              setUploadingFile(file ? file.name : 'rent_agreement_signed.pdf');
+              setUploadProgress(0);
+              let progress = 0;
+              const timer = setInterval(() => {
+                progress += 20;
+                setUploadProgress(progress);
+                if (progress >= 100) {
+                  clearInterval(timer);
+                  setTimeout(() => {
+                    const mockDoc = {
+                      id: `doc-${Date.now()}`,
+                      document_type: 'RENT_AGREEMENT',
+                      document_name: 'Rent Agreement / Lease Deed',
+                      document_number_masked: 'XXXX-XXXX-8821',
+                      file_name: file ? file.name : 'rent_agreement_signed.pdf',
+                      file_size: file ? Math.round(file.size / 1024) : 124,
+                      status: 'COMPLETED',
+                      verification_status: 'OCR_EXTRACTED',
+                      is_synthetic: false,
+                      issued_by: 'Sub-Registrar Office, Bengaluru',
+                      expiry_status: 'NO_EXPIRY',
+                      extracted_fields: {
+                        lessee_name: user?.full_name || 'Hriday Bardia',
+                        property_address: '42, 2nd Main, Indiranagar, Bengaluru, KA',
+                        monthly_rent: '₹25,000',
+                        stamp_duty_paid: '₹5,000',
+                        valid_from: '2026-04-01',
+                        valid_to: '2027-03-31'
+                      }
+                    };
+                    setUserDocs(prev => [mockDoc, ...prev]);
+                    setUploadingFile(null);
+                  }, 300);
+                }
+              }, 200);
+            }}
+          />
+        </div>
+      )}
+
+      {activeTab === 'alerts' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeIn">
+          {/* Regulatory Policy Changes */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Bell className="w-5 h-5 text-amber-400" />
+                <span>System Policy & Regulatory Updates</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Official regulatory policy triggers automatically mapped to your location and profile.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Karnataka Trade Policy</span>
+                  <span className="text-[10px] text-slate-500">Effective: 01 April 2026</span>
+                </div>
+                <h4 className="text-xs font-bold text-white">Karnataka Single Window Clearance Amendment</h4>
+                <p className="text-[11px] text-slate-400">Updates trade licensing rules for commercial food businesses in BBMP limits, reducing approval timelines from 15 to 7 days.</p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Central Indirect Taxes</span>
+                  <span className="text-[10px] text-slate-500">Effective: 15 Feb 2026</span>
+                </div>
+                <h4 className="text-xs font-bold text-white">GSTIN Validation Schema Change</h4>
+                <p className="text-[11px] text-slate-400">Requires multi-factor authentication for API-based registration, automatically managed by JanSetu OAuth adapters.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Event-driven Notifications */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Activity className="w-5 h-5 text-cyan-400" />
+                <span>Application-Status Event Feed</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Event-driven notification triggers tracking your registrations across departments.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {notifications.length === 0 ? (
+                <div className="bg-slate-950 border border-slate-900 p-6 rounded-xl text-center text-slate-500 text-xs">
+                  No notifications yet. Submitted applications will post event feeds here.
+                </div>
+              ) : (
+                notifications.map((n: any, idx) => (
+                  <div key={idx} className="bg-slate-950 border border-slate-850 rounded-xl p-3.5 flex gap-3 text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-500 shrink-0">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-slate-200">{n.title || 'Event Log'}</span>
+                        <span className="text-[9px] text-slate-500 font-mono">{new Date(n.created_at || Date.now()).toLocaleTimeString()}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">{n.message || n.description}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'official' && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header Stats Panel */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Beneficiaries</span>
+              <span className="text-lg font-black text-white">148,204 Citizens</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Approvals Rate</span>
+              <span className="text-lg font-black text-emerald-400">94.2% Success</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">SLA Compliance</span>
+              <span className="text-lg font-black text-cyan-400">{metrics?.sla_compliance_rate || '97.4'}% Target</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Failed Transactions</span>
+              <span className="text-lg font-black text-red-400 animate-pulse">{metrics?.failed_transactions_count || '8'} Events</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* System Health Telemetry */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl lg:col-span-1 space-y-4">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <span>Telemetry Health Monitoring</span>
+                </h2>
+                <p className="text-[10px] text-slate-500">Live API response latency and connector uptime telemetry.</p>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                <div className="flex justify-between items-center p-2.5 bg-slate-950 border border-slate-800 rounded-lg">
+                  <span className="text-slate-400">Core Gateway Latency</span>
+                  <span className="font-bold text-white font-mono">{metrics?.latency_average_ms || 118}ms</span>
+                </div>
+                <div className="flex justify-between items-center p-2.5 bg-slate-950 border border-slate-800 rounded-lg">
+                  <span className="text-slate-400">Orchestrator Uptime</span>
+                  <span className="font-bold text-emerald-400 font-mono">{metrics?.uptime_percentage || 99.98}%</span>
+                </div>
+
+                <div className="space-y-1.5 pt-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">State Nodes Response Uptime</span>
+                  {metrics?.departments?.map((dept: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center text-[11px]">
+                      <span className="text-slate-400">{dept.name}</span>
+                      <span className="font-bold text-white font-mono">{dept.uptime}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Connector Registries Topology */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl lg:col-span-2 space-y-4">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-amber-400" />
+                  <span>GovTech Connector Registry & Protocols</span>
+                </h2>
+                <p className="text-[10px] text-slate-500">Connected middleware state adapters, caching nodes, and legacy protocols.</p>
+              </div>
+
+              <div className="overflow-x-auto text-xs">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase font-bold">
+                      <th className="pb-2">Registry Endpoint</th>
+                      <th className="pb-2">Protocol</th>
+                      <th className="pb-2 text-center">Status</th>
+                      <th className="pb-2 text-right">Simulation</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    <tr className="hover:bg-slate-950/20">
+                      <td className="py-2.5 font-bold text-slate-200">DigiLocker Sandbox Endpoint</td>
+                      <td className="py-2.5 text-slate-400 font-mono">REST JSON API (Oauth2)</td>
+                      <td className="py-2.5 text-center">
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[9px] font-bold">HEALTHY</span>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span className="text-slate-500 text-[10px]">Authoritative Node</span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-950/20">
+                      <td className="py-2.5 font-bold text-slate-200">Pune Municipal Corp (PMC)</td>
+                      <td className="py-2.5 text-slate-400 font-mono">SOAP 1.1 XML (Envelope)</td>
+                      <td className="py-2.5 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                          healthData?.services?.find((s: any) => s.service_id === 'srv_pmc_license')?.health_status === 'Failed' 
+                            ? 'bg-red-500/10 text-red-400 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-400'
+                        }`}>
+                          {healthData?.services?.find((s: any) => s.service_id === 'srv_pmc_license')?.health_status === 'Failed' ? 'FAILED' : 'HEALTHY'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <button
+                          onClick={() => {
+                            const currentStatus = healthData?.services?.find((s: any) => s.service_id === 'srv_pmc_license')?.health_status === 'Failed' ? 'HEALTHY' : 'FAILED';
+                            toggleConnectorHealthAPI('srv_pmc_license', currentStatus).then(() => loadInteropData());
+                          }}
+                          className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-2 py-1 rounded text-[9px] transition"
+                        >
+                          Toggle Outage
+                        </button>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-950/20">
+                      <td className="py-2.5 font-bold text-slate-200">BBMP Bangalore Municipal Node</td>
+                      <td className="py-2.5 text-slate-400 font-mono">SOAP 1.2 XML (RPC)</td>
+                      <td className="py-2.5 text-center">
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[9px] font-bold">HEALTHY</span>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span className="text-slate-500 text-[10px]">N/A</span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-950/20">
+                      <td className="py-2.5 font-bold text-slate-200">GSTN Central Taxes Registry</td>
+                      <td className="py-2.5 text-slate-400 font-mono">REST JSON (OAuth2)</td>
+                      <td className="py-2.5 text-center">
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[9px] font-bold">HEALTHY</span>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span className="text-slate-500 text-[10px]">Authoritative Node</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Guided Tour Stepper Controller */}
       {isGuidedTourMinimized ? (
         <button 
@@ -2449,6 +2878,12 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
             <span className="text-[10px] font-black text-amber-500 tracking-wider uppercase flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" /> SIH judge guided demo
+              <span className="group relative cursor-pointer inline-block">
+                <HelpCircle className="w-3 h-3 text-slate-400 hover:text-white" />
+                <span className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-950 border border-slate-800 text-[10px] text-slate-300 p-2 rounded-lg w-52 font-normal hidden group-hover:block shadow-2xl z-50 normal-case leading-relaxed">
+                  This stepper guide walks judges through the platform's key interoperability features: including document sharing consent, API payload inspection, legacy connector failures, and master-data reconciliations.
+                </span>
+              </span>
             </span>
             <div className="flex items-center gap-2">
               <button 
@@ -2505,6 +2940,8 @@ export default function DashboardPage() {
                         onClick={() => {
                           setGuidedStep(2);
                           setActiveTab('planner');
+                          setDomicileState('Karnataka');
+                          setSelectedState('Karnataka');
                           setGoalInput("I want to start a small food business in Bengaluru.");
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
@@ -2522,6 +2959,12 @@ export default function DashboardPage() {
                       <button
                         onClick={() => {
                           setGuidedStep(3);
+                          setActiveTab('planner');
+                          setDomicileState('Karnataka');
+                          setSelectedState('Karnataka');
+                          setGoalInput("I want to start a small food business in Bengaluru.");
+                          // Simulate goal planning analysis submit
+                          handleAnalyzeGoal({ preventDefault: () => {} } as any);
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                       >
@@ -2538,6 +2981,7 @@ export default function DashboardPage() {
                       <button
                         onClick={() => {
                           setGuidedStep(4);
+                          setActiveTab('planner');
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                       >
@@ -2554,6 +2998,7 @@ export default function DashboardPage() {
                       <button
                         onClick={() => {
                           setGuidedStep(5);
+                          setActiveTab('consent');
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                       >
@@ -2604,6 +3049,7 @@ export default function DashboardPage() {
                       <button
                         onClick={() => {
                           setGuidedStep(8);
+                          setActiveTab('interop');
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                       >
@@ -2637,6 +3083,9 @@ export default function DashboardPage() {
                       <button
                         onClick={() => {
                           setGuidedStep(10);
+                          setActiveTab('interop');
+                          // Trigger connector failure simulation automatically so the PMC node turns red!
+                          toggleConnectorHealthAPI('srv_pmc_license', 'FAILED').then(() => loadInteropData());
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                       >
@@ -2670,6 +3119,7 @@ export default function DashboardPage() {
                       <button
                         onClick={() => {
                           setGuidedStep(12);
+                          setActiveTab('official');
                         }}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                       >
@@ -2687,6 +3137,8 @@ export default function DashboardPage() {
                         onClick={() => {
                           setGuidedStep(null);
                           setActiveTab('planner');
+                          // Reset connector health to healthy
+                          toggleConnectorHealthAPI('srv_pmc_license', 'HEALTHY').then(() => loadInteropData());
                         }}
                         className="w-full bg-emerald-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:bg-emerald-400 transition"
                       >

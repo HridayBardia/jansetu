@@ -19,7 +19,8 @@ import {
   FileText,
   User,
   LogOut,
-  LogIn
+  LogIn,
+  Briefcase
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -34,18 +35,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+  const { user, isAuthenticated, logout, openAuthModal, changeRole } = useAuth();
 
   const navItems = [
-    { label: t('appName', 'JanSetu AI'), href: '/', icon: Compass },
-    { label: t('myJourneys', 'Journeys'), href: '/journeys', icon: MapPin },
-    { label: t('myDocuments', 'Documents Vault'), href: '/privacy', icon: FileText },
-    { label: t('alerts', 'Alerts'), href: '/alerts', icon: Bell },
-    { label: t('privacy', 'Privacy & Consent'), href: '/privacy', icon: ShieldCheck }
+    { label: t('appName', 'Goal Planner'), href: '/dashboard?tab=planner', icon: Compass },
+    { label: t('myJourneys', 'Journeys'), href: '/dashboard?tab=journeys', icon: MapPin },
+    { label: t('myDocuments', 'Documents Vault'), href: '/dashboard?tab=documents', icon: FileText },
+    { label: t('myApplications', 'My Applications'), href: '/dashboard?tab=applications', icon: Briefcase },
+    { label: t('privacy', 'Privacy & Consent'), href: '/dashboard?tab=consent', icon: ShieldCheck },
+    { label: t('alerts', 'Alerts'), href: '/dashboard?tab=alerts', icon: Bell }
   ];
 
   if (isAuthenticated && user && (user.role === 'SYSTEM_ADMIN' || user.role === 'DEPARTMENT_ADMIN')) {
-    navItems.push({ label: t('adminDashboard', 'Diagnostics'), href: '/admin', icon: BarChart2 });
+    navItems.push({ label: t('officialDashboard', 'Official & Health'), href: '/dashboard?tab=official', icon: BarChart2 });
   }
 
   return (
@@ -66,17 +68,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Authenticated Citizen Profile / Login Button */}
             {isAuthenticated && user ? (
               <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-500/30">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-500/30 shrink-0">
                   {user.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden sm:block text-left">
                   <p className="text-xs font-bold text-slate-200 leading-none">{user.full_name}</p>
                   <p className="text-[10px] text-slate-400 font-mono leading-none mt-0.5">@{user.username}</p>
                 </div>
+
+                {/* Role Switcher */}
+                <select
+                  value={user.role || 'citizen'}
+                  onChange={(e) => changeRole(e.target.value)}
+                  className="bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400 cursor-pointer focus:outline-none focus:border-amber-500"
+                >
+                  <option value="citizen">Citizen</option>
+                  <option value="DEPARTMENT_ADMIN">Official</option>
+                  <option value="SYSTEM_ADMIN">Admin</option>
+                </select>
+
                 <button
                   onClick={logout}
                   title="Logout"
-                  className="ml-1 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition"
+                  className="ml-1 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition shrink-0"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>

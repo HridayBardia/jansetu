@@ -46,6 +46,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (profileData: Partial<CitizenProfile>) => Promise<any>;
   refreshUser: () => Promise<void>;
+  changeRole: (role: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -62,6 +63,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
   updateProfile: async () => {},
   refreshUser: async () => {},
+  changeRole: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -123,6 +125,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res;
   };
 
+  const changeRole = (role: string) => {
+    if (user) {
+      setUser({ ...user, role });
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -139,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateProfile,
         refreshUser,
+        changeRole,
       }}
     >
       {children}

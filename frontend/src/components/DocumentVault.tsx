@@ -45,7 +45,7 @@ interface DocumentVaultProps {
     overall_status: string;
     discrepancies: string[];
   };
-  onUpload?: () => void;
+  onUpload?: (file?: File) => void;
   goalCategory?: string;
 }
 
@@ -156,6 +156,27 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
         </div>
       )}
 
+      {/* File Upload Zone */}
+      <div className="border-2 border-dashed border-slate-800 hover:border-amber-500/40 rounded-xl p-5 text-center cursor-pointer transition bg-slate-950/40 space-y-2 group relative">
+        <input 
+          type="file" 
+          className="absolute inset-0 opacity-0 cursor-pointer" 
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file && onUpload) {
+              onUpload(file);
+            }
+          }}
+        />
+        <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400 group-hover:text-amber-400 group-hover:border-amber-500/30 transition">
+          <Upload className="w-4 h-4" />
+        </div>
+        <div className="space-y-0.5">
+          <p className="text-xs font-bold text-slate-300">Click or drag files here to upload</p>
+          <p className="text-[10px] text-slate-500">Supports PDF, PNG, JPG up to 10MB • AES-256 GCM Encrypted Vault storage</p>
+        </div>
+      </div>
+
       {/* Document List */}
       <div className="space-y-3">
         {documents.length === 0 ? (
@@ -163,7 +184,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
             <p className="text-xs font-semibold text-slate-400">No documents in vault yet.</p>
             {onUpload && (
               <button
-                onClick={onUpload}
+                onClick={() => onUpload()}
                 className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs shadow"
               >
                 <Upload className="w-4 h-4" />

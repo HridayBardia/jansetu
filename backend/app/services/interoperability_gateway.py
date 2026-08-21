@@ -845,48 +845,36 @@ class ApplicationTracker:
     def list_applications(db: Session, user_id: str) -> List[Dict[str, Any]]:
         apps = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == user_id).all()
         if not apps:
-            from app.models.db_models import CitizenProfileDB
-            profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == user_id).first()
-            state = (profile.location_state if profile else "Maharashtra") or "Maharashtra"
-            
-            # Resolve service IDs based on jurisdiction
-            biz_service = "srv_msins_biz"
-            license_service = "srv_pmc_license"
-            
-            if state == "Karnataka":
-                biz_service = "srv_kar_biz"
-                license_service = "srv_kar_municipal"
-            elif state == "Gujarat":
-                biz_service = "srv_guj_biz"
-                license_service = "srv_guj_municipal"
-            elif state == "Rajasthan":
-                biz_service = "srv_raj_biz"
-                license_service = "srv_raj_municipal"
-                
+            import random
             defaults = [
-                (biz_service, "UNDER_VERIFICATION", [
-                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Sent via Unified Single Window Portal.", "timestamp": "2026-08-19T10:00:00Z"},
-                    {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Consent-based Address/Identity check passed.", "timestamp": "2026-08-20T14:30:00Z"}
-                ]),
-                (license_service, "DOCUMENTS_REQUIRED", [
-                    {"status": "SUBMITTED", "title": "Application Created", "description": "Awaiting layout plan documents.", "timestamp": "2026-08-20T11:00:00Z"},
+                ("srv_kar_municipal", "DOCUMENTS_REQUIRED", "Bruhat Bengaluru Mahanagara Palike", "Trade License – BBMP", [
+                    {"status": "SUBMITTED", "title": "Application Created", "description": "Form submitted via single-window.", "timestamp": "2026-08-20T10:00:00Z"},
                     {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Please upload a Fire NOC layout document.", "timestamp": "2026-08-21T09:00:00Z"}
-                ])
-            ]
-            for s_id, status, timeline in defaults:
-                service = db.query(ServiceRegistryDB).filter(ServiceRegistryDB.service_id == s_id).first()
-                app_id = f"APP-{random.randint(100000, 999999)}"
-                actions = []
-                if status == "DOCUMENTS_REQUIRED":
-                    actions = [{"type": "UPLOAD_DOCUMENT", "document_type": "FIRE_NOC", "label": "Upload Fire NOC Certificate"}]
+                ], [{"type": "UPLOAD_DOCUMENT", "document_type": "FIRE_NOC", "label": "Upload Fire NOC Certificate"}]),
                 
+                ("srv_central_tax", "APPROVED", "GSTN Central Board of Indirect Taxes", "GST Registration – Central", [
+                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Sent via GST Common Portal.", "timestamp": "2026-08-18T11:00:00Z"},
+                    {"status": "APPROVED", "title": "GSTIN Issued", "description": "GSTIN generated: 29AAAAA0000A1Z5.", "timestamp": "2026-08-19T14:30:00Z"}
+                ], []),
+                
+                ("srv_kar_biz", "UNDER_VERIFICATION", "Karnataka Labour Department", "Shop Establishment – Karnataka Labour Dept", [
+                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Form v2.1 submitted.", "timestamp": "2026-08-19T10:00:00Z"},
+                    {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Local inspector review scheduled.", "timestamp": "2026-08-20T14:30:00Z"}
+                ], []),
+
+                ("srv_dbt_schemes", "SUBMITTED", "Food Safety and Standards Authority of India", "Food License – FSSAI", [
+                    {"status": "SUBMITTED", "title": "Application Submitted", "description": "Food safety registration fee paid.", "timestamp": "2026-08-21T10:00:00Z"}
+                ], [])
+            ]
+            for s_id, status, dept_name, service_name, timeline, actions in defaults:
+                app_id = f"APP-{random.randint(100000, 999999)}"
                 db.add(ApplicationDB(
                     application_id=app_id,
                     citizen_id=user_id,
                     service_id=s_id,
-                    department_id=s_id.split("_")[1],
-                    department_name=service.department if service else "Govt Department",
-                    service_name=service.name if service else "Govt Service",
+                    department_id=s_id.split("_")[1] if "_" in s_id else s_id,
+                    department_name=dept_name,
+                    service_name=service_name,
                     status=status,
                     documents=["AADHAAR", "PAN"],
                     timeline=timeline,
