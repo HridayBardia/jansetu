@@ -88,6 +88,7 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
 }
 
 import { CinematicIntro } from '@/components/CinematicIntro';
+import { MockDataProvider } from '@/context/MockDataContext';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [sandboxMode, setSandboxMode] = useState(true);
@@ -128,9 +129,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
         <LanguageProvider>
           <AuthProvider>
-            <AppContent sandboxMode={sandboxMode} setSandboxMode={setSandboxMode}>
-              {children}
-            </AppContent>
+            <MockDataProvider>
+              <AppContent sandboxMode={sandboxMode} setSandboxMode={setSandboxMode}>
+                {children}
+              </AppContent>
+            </MockDataProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

@@ -65,6 +65,7 @@ import {
   Network,
   UserCircle
 } from 'lucide-react';
+import { useMockData } from '@/context/MockDataContext';
 
 const INDIAN_STATES_AND_UTS = [
   { name: "Andhra Pradesh", code: "AP", type: "STATE", official_name: "State of Andhra Pradesh" },
@@ -441,8 +442,17 @@ export default function DashboardPage() {
   const [schemes, setSchemes] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStage, setGenerationStage] = useState(0);
-  const [activeJourneys, setActiveJourneys] = useState<any[]>([]);
-  const [userDocs, setUserDocs] = useState<any[]>([]);
+  const { 
+    profile: mockProfile, 
+    familyMembers, 
+    documents: mockDocs, 
+    journeys: mockJourneys, 
+    applications: mockApplications, 
+    consents: mockConsents, 
+    governmentConnections, 
+    alerts: mockAlerts,
+    addDocument
+  } = useMockData();
 
   const [activeTab, setActiveTab] = useState<'planner' | 'journeys' | 'documents' | 'applications' | 'consent' | 'interop' | 'conflicts' | 'alerts' | 'official'>('planner');
 
@@ -465,12 +475,10 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [consents, setConsents] = useState<any[]>([]);
+  
   const [healthData, setHealthData] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [conflicts, setConflicts] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [guidedStep, setGuidedStep] = useState<number | null>(null);
   const [isGuidedTourMinimized, setIsGuidedTourMinimized] = useState(false);
@@ -488,12 +496,9 @@ export default function DashboardPage() {
 
   const loadInteropData = () => {
     setIsRefreshing(true);
-    fetchApplicationsAPI().then((data) => setApplications(data || []));
-    fetchConsentsAPI().then((data) => setConsents(data || []));
     fetchConnectorHealthAPI().then((data) => setHealthData(data || null));
     fetchAuditLogsAPI().then((data) => setAuditLogs(data || []));
     fetchConflictsAPI().then((data) => setConflicts(data || []));
-    fetchNotificationsAPI().then((data) => setNotifications(data || []));
     fetchMetricsAPI().then((data) => setMetrics(data || null));
     fetchServiceLevelsAPI().then((data) => setServiceLevels(data || []));
     fetchMasterDataRecordAPI().then((data) => setMasterRecord(data || null));
@@ -515,8 +520,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchJourneysAPI().then((data) => setActiveJourneys(data || []));
-      fetchUserDocumentsAPI().then((docs) => setUserDocs(docs || []));
       fetchStatesAPI().then((data) => {
         if (data && data.length > 0) {
           setStatesList(data);
@@ -903,9 +906,9 @@ export default function DashboardPage() {
         >
           <MapPin className="w-4 h-4" />
           <span>Active Journeys</span>
-          {activeJourneys.length > 0 && (
+          {mockJourneys.length > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {activeJourneys.length}
+              {mockJourneys.length}
             </span>
           )}
         </button>
@@ -920,9 +923,9 @@ export default function DashboardPage() {
         >
           <FileText className="w-4 h-4" />
           <span>Documents Vault</span>
-          {userDocs.length > 0 && (
+          {mockDocs.length > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {userDocs.length}
+              {mockDocs.length}
             </span>
           )}
         </button>
@@ -937,9 +940,9 @@ export default function DashboardPage() {
         >
           <Briefcase className="w-4 h-4" />
           <span>My Applications</span>
-          {applications.length > 0 && (
+          {mockApplications.length > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {applications.length}
+              {mockApplications.length}
             </span>
           )}
         </button>
@@ -954,9 +957,9 @@ export default function DashboardPage() {
         >
           <Key className="w-4 h-4" />
           <span>YOUR DATA & CONSENT</span>
-          {consents.filter(c => c.granted).length > 0 && (
+          {mockConsents.filter(c => c.status === 'ACTIVE').length > 0 && (
             <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {consents.filter(c => c.granted).length}
+              {mockConsents.filter(c => c.status === 'ACTIVE').length}
             </span>
           )}
         </button>
@@ -1369,13 +1372,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {applications.length === 0 ? (
+        {mockApplications.length === 0 ? (
           <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
             No active applications found. Use the Goal Planner to start a journey.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {applications.slice(0, 2).map((app) => (
+            {mockApplications.slice(0, 2).map((app) => (
               <div 
                 key={app.id} 
                 onClick={() => { setActiveTab('applications'); setSelectedApp(app); }}
@@ -1383,21 +1386,21 @@ export default function DashboardPage() {
               >
                 <div className="flex justify-between items-start gap-2 border-b border-slate-850 pb-3 text-xs">
                   <div>
-                    <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department_name}</span>
-                    <h3 className="text-sm font-bold text-white mt-0.5">{app.service_name}</h3>
-                    <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.application_id}</span></p>
+                    <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department}</span>
+                    <h3 className="text-sm font-bold text-white mt-0.5">{app.title}</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.id}</span></p>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider text-center shrink-0 ${
-                    app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                    app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                    app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                    ['APPROVED', 'COMPLETED'].includes(app.status) ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                    app.status === 'ACTION_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                    ['SUBMITTED', 'VERIFICATION'].includes(app.status) ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
                     'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}>
                     {app.status.replace("_", " ")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                  <span>Submitted: {new Date(app.submitted_at).toLocaleDateString()}</span>
+                  <span>Submitted: {app.submittedDate}</span>
                   <span className="text-amber-400 font-bold flex items-center gap-1">
                     Track <ArrowRight className="w-3 h-3" />
                   </span>
@@ -1513,24 +1516,24 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Applications</span>
-              <span className="text-lg font-black text-white">{applications.length} Registered</span>
+              <span className="text-lg font-black text-white">{mockApplications.length} Registered</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Verification</span>
               <span className="text-lg font-black text-amber-400">
-                {applications.filter(a => ['UNDER_VERIFICATION', 'SUBMITTED', 'DOCUMENTS_REQUIRED'].includes(a.status)).length} Pending
+                {mockApplications.filter(a => ['VERIFICATION', 'SUBMITTED', 'ACTION_REQUIRED'].includes(a.status)).length} Pending
               </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completed</span>
               <span className="text-lg font-black text-emerald-400">
-                {applications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length} Issued
+                {mockApplications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length} Issued
               </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Action Required</span>
               <span className="text-lg font-black text-red-400 animate-pulse">
-                {applications.filter(a => a.status === 'DOCUMENTS_REQUIRED').length} Alert
+                {mockApplications.filter(a => a.status === 'ACTION_REQUIRED').length} Alert
               </span>
             </div>
           </div>
@@ -1555,13 +1558,13 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {applications.length === 0 ? (
+            {mockApplications.length === 0 ? (
               <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
                 No active applications found. Use the Goal Planner to start a journey.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {applications.map((app) => (
+                {mockApplications.map((app) => (
                   <div 
                     key={app.id} 
                     onClick={() => setSelectedApp(app)}
@@ -1569,15 +1572,15 @@ export default function DashboardPage() {
                   >
                     <div className="flex justify-between items-start gap-2 border-b border-slate-900 pb-3 text-xs">
                       <div>
-                        <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department_name}</span>
-                        <h3 className="text-sm font-bold text-white mt-0.5">{app.service_name}</h3>
-                        <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.application_id}</span></p>
+                        <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department}</span>
+                        <h3 className="text-sm font-bold text-white mt-0.5">{app.title}</h3>
+                        <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.id}</span></p>
                       </div>
 
                       <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider text-center shrink-0 ${
-                        app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                        app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                        ['APPROVED', 'COMPLETED'].includes(app.status) ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                        app.status === 'ACTION_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                        ['SUBMITTED', 'VERIFICATION'].includes(app.status) ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
                         'bg-slate-900 text-slate-400 border border-slate-800'
                       }`}>
                         {app.status.replace("_", " ")}
@@ -1585,7 +1588,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                      <span>Submitted: {new Date(app.submitted_at).toLocaleDateString()}</span>
+                      <span>Submitted: {app.submittedDate}</span>
                       <span className="text-amber-400 font-bold hover:underline flex items-center gap-1">
                         View Details <ArrowRight className="w-3 h-3" />
                       </span>
@@ -1733,15 +1736,15 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
               <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Active Consents</span>
-              <span className="text-lg font-black text-emerald-400">{consents.filter(c => c.granted && c.access_type !== 'REVOKED').length || 2}</span>
+              <span className="text-lg font-black text-emerald-400">{mockConsents.filter(c => c.status === 'ACTIVE').length}</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
               <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Pending Requests</span>
-              <span className="text-lg font-black text-amber-400">{consents.filter(c => !c.granted).length || 1}</span>
+              <span className="text-lg font-black text-amber-400">{mockConsents.filter(c => c.status === 'PENDING').length}</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
               <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Revoked Accounts</span>
-              <span className="text-lg font-black text-slate-500">{consents.filter(c => c.access_type === 'REVOKED').length || 1}</span>
+              <span className="text-lg font-black text-slate-500">{mockConsents.filter(c => c.status === 'REVOKED').length}</span>
             </div>
           </div>
 
@@ -1758,24 +1761,24 @@ export default function DashboardPage() {
 
             {/* List of consents */}
             <div className="space-y-4">
-              {consents.map((c) => (
+              {mockConsents.map((c) => (
                 <div key={c.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div>
-                      <h4 className="font-bold text-white text-sm">{c.department_name}</h4>
+                      <h4 className="font-bold text-white text-sm">{c.department}</h4>
                       <p className="text-slate-400 mt-1">Purpose: {c.purpose}</p>
                       <p className="text-[10px] text-slate-500 mt-1">
-                        Requested Fields: <span className="font-mono text-cyan-400 font-bold">{c.requested_fields.join(", ")}</span>
+                        Requested Fields: <span className="font-mono text-cyan-400 font-bold">{c.requestedFields.join(", ")}</span>
                       </p>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        c.granted && c.access_type !== 'REVOKED'
+                        c.status === 'ACTIVE'
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : c.access_type === 'REVOKED' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : c.status === 'REVOKED' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                       }`}>
-                        {c.granted && c.access_type !== 'REVOKED' ? 'Active Consent' : c.access_type === 'REVOKED' ? 'Access Revoked' : 'Pending Authorization'}
+                        {c.status === 'ACTIVE' ? 'Active Consent' : c.status === 'REVOKED' ? 'Access Revoked' : 'Pending Authorization'}
                       </span>
                     </div>
                   </div>
@@ -1787,11 +1790,11 @@ export default function DashboardPage() {
                     >
                       View Details
                     </button>
-                    {!c.granted && c.access_type !== 'REVOKED' && (
+                    {c.status === 'PENDING' && (
                       <>
                         <button
                           onClick={() => {
-                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ALWAYS").then(() => loadInteropData());
+                            createConsentAPI(c.id, c.department, c.requestedFields, c.purpose, "ALWAYS").then(() => loadInteropData());
                           }}
                           className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
                         >
@@ -1799,7 +1802,7 @@ export default function DashboardPage() {
                         </button>
                         <button
                           onClick={() => {
-                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ONCE").then(() => loadInteropData());
+                            createConsentAPI(c.id, c.department, c.requestedFields, c.purpose, "ONCE").then(() => loadInteropData());
                           }}
                           className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] hover:from-amber-400 hover:to-orange-400 transition text-center min-h-[44px] sm:min-h-0"
                         >
@@ -1807,9 +1810,9 @@ export default function DashboardPage() {
                         </button>
                       </>
                     )}
-                    {c.granted && c.access_type !== 'REVOKED' && (
+                    {c.status === 'ACTIVE' && (
                       <button
-                        onClick={() => revokeConsentAPI(c.consent_id).then(() => loadInteropData())}
+                        onClick={() => revokeConsentAPI(c.id).then(() => loadInteropData())}
                         className="text-red-400 hover:text-red-300 font-bold bg-red-500/5 sm:bg-transparent hover:bg-red-500/10 border border-red-500/10 sm:border-transparent hover:border-red-500/20 px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
                       >
                         Revoke Access
@@ -1875,11 +1878,11 @@ export default function DashboardPage() {
                   <div className="space-y-3">
                     <div>
                       <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHO IS REQUESTING?</span>
-                      <p className="text-slate-200 font-bold">{selectedConsent.department_name}</p>
+                      <p className="text-slate-200 font-bold">{selectedConsent.department}</p>
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHAT DATA FIELDS?</span>
-                      <p className="text-cyan-400 font-mono font-bold">{selectedConsent.requested_fields.join(", ")}</p>
+                      <p className="text-cyan-400 font-mono font-bold">{selectedConsent.requestedFields.join(", ")}</p>
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHY ACCESS IS NEEDED?</span>
@@ -1887,7 +1890,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] font-semibold block uppercase">DURATION</span>
-                      <p className="text-slate-300">Scoped strictly to the application lifetime ({selectedConsent.access_type}).</p>
+                      <p className="text-slate-300">Scoped strictly to the application lifetime ({selectedConsent.status}).</p>
                     </div>
                     <div>
                       <span className="text-slate-500 text-[10px] font-semibold block uppercase">SECURITY PROTOCOL</span>
@@ -1900,11 +1903,11 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="flex gap-2 pt-4">
-                    {!selectedConsent.granted && selectedConsent.access_type !== 'REVOKED' && (
+                    {selectedConsent.status === 'PENDING' && (
                       <>
                         <button
                           onClick={() => {
-                            createConsentAPI(selectedConsent.department_id, selectedConsent.department_name, selectedConsent.requested_fields, selectedConsent.purpose, "ONCE").then(() => {
+                            createConsentAPI(selectedConsent.id, selectedConsent.department, selectedConsent.requestedFields, selectedConsent.purpose, "ONCE").then(() => {
                               setSelectedConsent(null);
                               loadInteropData();
                             });
@@ -2056,7 +2059,7 @@ export default function DashboardPage() {
               </p>
             </div>
             
-            {activeJourneys.length === 0 ? (
+            {mockJourneys.length === 0 ? (
               <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center space-y-4 max-w-md mx-auto">
                 <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
                   <MapPin className="w-6 h-6 text-amber-500" />
@@ -2074,17 +2077,17 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeJourneys.map((j) => (
+                {mockJourneys.map((j) => (
                   <div key={j.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                          {j.goal_category}
+                          {j.category}
                         </span>
-                        <span className="text-xs text-slate-500">Jurisdiction: {j.jurisdiction || 'State'}</span>
+                        <span className="text-xs text-slate-500">Progress: {j.progress}%</span>
                       </div>
                       <h3 className="text-sm font-black text-white">{j.title}</h3>
-                      <p className="text-xs text-slate-400">{j.description}</p>
+                      <p className="text-xs text-slate-400">{j.currentStage}</p>
                     </div>
                     <button
                       onClick={() => router.push(`/journeys/${j.id}`)}
@@ -2116,10 +2119,10 @@ export default function DashboardPage() {
             </div>
           )}
           <DocumentVault 
-            documents={userDocs} 
+            documents={mockDocs} 
             goalCategory={journeyAnalysis?.intent?.primary === 'STUDY_ABROAD' ? 'education' : 'business'}
             consistencyStatus={
-              userDocs.length > 0 ? {
+              mockDocs.length > 0 ? {
                 overall_status: 'CONSISTENT',
                 identity_status: 'MATCHED',
                 dob_status: 'MATCHED',
@@ -2138,26 +2141,16 @@ export default function DashboardPage() {
                   setTimeout(() => {
                     const mockDoc = {
                       id: `doc-${Date.now()}`,
-                      document_type: 'RENT_AGREEMENT',
-                      document_name: 'Rent Agreement / Lease Deed',
-                      document_number_masked: 'XXXX-XXXX-8821',
-                      file_name: file ? file.name : 'rent_agreement_signed.pdf',
-                      file_size: file ? Math.round(file.size / 1024) : 124,
-                      status: 'COMPLETED',
-                      verification_status: 'OCR_EXTRACTED',
-                      is_synthetic: false,
-                      issued_by: 'Sub-Registrar Office, Bengaluru',
-                      expiry_status: 'NO_EXPIRY',
-                      extracted_fields: {
-                        lessee_name: user?.full_name || 'Hriday Bardia',
-                        property_address: '42, 2nd Main, Indiranagar, Bengaluru, KA',
-                        monthly_rent: '₹25,000',
-                        stamp_duty_paid: '₹5,000',
-                        valid_from: '2026-04-01',
-                        valid_to: '2027-03-31'
-                      }
+                      name: file ? file.name : 'rent_agreement_signed.pdf',
+                      type: 'Rent Agreement',
+                      status: 'VERIFIED' as const,
+                      uploadDate: new Date().toLocaleDateString('en-GB'),
+                      fileType: 'PDF',
+                      pageCount: 1,
+                      source: 'Uploaded by User',
+                      isDemo: true
                     };
-                    setUserDocs(prev => [mockDoc, ...prev]);
+                    addDocument(mockDoc);
                     setUploadingFile(null);
                   }, 300);
                 }
@@ -2215,22 +2208,22 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-3">
-              {notifications.length === 0 ? (
+              {mockAlerts.length === 0 ? (
                 <div className="bg-slate-950 border border-slate-900 p-6 rounded-xl text-center text-slate-500 text-xs">
                   No notifications yet. Submitted applications will post event feeds here.
                 </div>
               ) : (
-                notifications.map((n: any, idx) => (
-                  <div key={idx} className="bg-slate-950 border border-slate-850 rounded-xl p-3.5 flex gap-3 text-xs">
+                mockAlerts.map((n) => (
+                  <div key={n.id} className={`bg-slate-950 border border-slate-850 rounded-xl p-3.5 flex gap-3 text-xs ${n.isNew ? 'border-amber-500/50 bg-slate-900 animate-pulse' : ''}`}>
                     <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-500 shrink-0">
                       <Sparkles className="w-4 h-4 text-amber-500" />
                     </div>
                     <div className="space-y-1 flex-1">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-200">{n.title || 'Event Log'}</span>
-                        <span className="text-[9px] text-slate-500 font-mono">{new Date(n.created_at || Date.now()).toLocaleTimeString()}</span>
+                        <span className="font-bold text-slate-200">{n.category || 'Event Log'}</span>
+                        <span className="text-[9px] text-slate-500 font-mono">{n.timestamp}</span>
                       </div>
-                      <p className="text-[11px] text-slate-400">{n.message || n.description}</p>
+                      <p className="text-[11px] text-slate-400">{n.message}</p>
                     </div>
                   </div>
                 ))
