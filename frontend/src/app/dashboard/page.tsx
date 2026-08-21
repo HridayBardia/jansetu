@@ -421,7 +421,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
 export default function DashboardPage() {
   const router = useRouter();
   const { t, isRTL } = useLanguage();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, profile } = useAuth();
 
   const [goalInput, setGoalInput] = useState('');
   const latestRequestIdRef = React.useRef<number>(0);
@@ -431,7 +431,7 @@ export default function DashboardPage() {
   const [schemesError, setSchemesError] = useState(false);
   
   const [selectedState, setSelectedState] = useState('All India');
-  const [domicileState, setDomicileState] = useState('Rajasthan');
+  const [domicileState, setDomicileState] = useState('Gujarat');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statesList, setStatesList] = useState<any[]>([]);
@@ -451,6 +451,8 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [guidedStep, setGuidedStep] = useState<number | null>(null);
+  const [isGuidedTourMinimized, setIsGuidedTourMinimized] = useState(false);
+  const [isGuidedTourPaused, setIsGuidedTourPaused] = useState(false);
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [selectedConsent, setSelectedConsent] = useState<any | null>(null);
   const [selectedConnector, setSelectedConnector] = useState<any | null>(null);
@@ -499,6 +501,19 @@ export default function DashboardPage() {
       loadInteropData();
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (profile?.location_state) {
+      setDomicileState(profile.location_state);
+      setSelectedState(profile.location_state);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (domicileState) {
+      setSelectedState(domicileState);
+    }
+  }, [domicileState]);
 
   useEffect(() => {
     const stFilter = selectedState === 'All India' ? undefined : selectedState;
@@ -771,6 +786,26 @@ export default function DashboardPage() {
             A jurisdiction-aware interoperability middleware layer orchestrating Central, State, and Municipal departments.
           </p>
         </div>
+
+        {/* Current Location Badge & Change Location Action */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-amber-400" />
+            <div className="text-left">
+              <span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider">CURRENT LOCATION</span>
+              <span className="text-xs font-black text-white">{profile?.location_city || 'Vadodara'}, {domicileState}</span>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setActiveTab('planner');
+              setIsDropdownOpen(true);
+            }}
+            className="text-[10px] text-amber-400 hover:text-amber-300 font-black uppercase tracking-wider border-l border-slate-800 pl-3 transition"
+          >
+            [Change]
+          </button>
+        </div>
       </div>
 
       {/* Overview Cards Grid */}
@@ -846,7 +881,7 @@ export default function DashboardPage() {
           }`}
         >
           <Key className="w-4 h-4" />
-          <span>Consent Center</span>
+          <span>Privacy & Data</span>
           {consents.filter(c => c.granted).length > 0 && (
             <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {consents.filter(c => c.granted).length}
@@ -854,34 +889,38 @@ export default function DashboardPage() {
           )}
         </button>
 
-        <button
-          onClick={() => { setActiveTab('interop'); loadInteropData(); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'interop'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          <span>Interop Hub</span>
-        </button>
+        {(user?.role === 'SYSTEM_ADMIN' || user?.role === 'DEPARTMENT_ADMIN' || guidedStep !== null) && (
+          <>
+            <button
+              onClick={() => { setActiveTab('interop'); loadInteropData(); }}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+                activeTab === 'interop'
+                  ? 'border-amber-500 text-amber-400 font-black'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              <span>Interop Hub</span>
+            </button>
 
-        <button
-          onClick={() => { setActiveTab('conflicts'); loadInteropData(); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'conflicts'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" />
-          <span>Data Quality</span>
-          {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
-            <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
-              {conflicts.filter(c => c.status === 'DETECTED').length}
-            </span>
-          )}
-        </button>
+            <button
+              onClick={() => { setActiveTab('conflicts'); loadInteropData(); }}
+              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
+                activeTab === 'conflicts'
+                  ? 'border-amber-500 text-amber-400 font-black'
+                  : 'border-transparent text-slate-400 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span>Data Quality</span>
+              {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
+                <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
+                  {conflicts.filter(c => c.status === 'DETECTED').length}
+                </span>
+              )}
+            </button>
+          </>
+        )}
       </div>
 
       {activeTab === 'planner' && (
@@ -1166,147 +1205,207 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Citizen Document Vault Integrated Directly in Dashboard */}
-      <DocumentVault documents={userDocs} />
-
-      {/* Active Journeys Section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <Compass className="w-5 h-5 text-amber-400" />
-          <span>Your Active Journeys</span>
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            onClick={() => router.push('/journeys/journey_biz_vadodara_1')}
-            className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 rounded-xl p-5 cursor-pointer transition space-y-4 group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-xs">
-                  GJ
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition">
-                    Start a Small Business in Vadodara
-                  </h3>
-                  <p className="text-xs text-slate-400">Vadodara, Gujarat • Sole Proprietorship</p>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-amber-400">75%</span>
-            </div>
-
-            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full w-[75%]" />
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-              <span>Next: VMC Trade License & MSME Registration</span>
-              <span className="text-amber-400 flex items-center gap-1 group-hover:translate-x-1 transition">
-                Continue <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </div>
-          </div>
-
-          <div
-            onClick={() => router.push('/journeys/journey_edu_gujarat_1')}
-            className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 rounded-xl p-5 cursor-pointer transition space-y-4 group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  MYSY
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-emerald-400 transition">
-                    Gujarat MYSY Higher Education Scholarship
-                  </h3>
-                  <p className="text-xs text-slate-400">Gujarat • PM-Vidyalaxmi Subvention</p>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-emerald-400">40%</span>
-            </div>
-
-            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full w-[40%]" />
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-              <span>Next: Income Certificate Verification</span>
-              <span className="text-emerald-400 flex items-center gap-1 group-hover:translate-x-1 transition">
-                Continue <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </div>
+      {/* 01 — YOUR JOURNEY */}
+      <div className="space-y-4 mt-8">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black text-amber-500 font-mono">01</span>
+          <div className="border-l border-slate-800 pl-3">
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">YOUR JOURNEY</h2>
+            <p className="text-xs text-slate-400">Your active government tasks</p>
           </div>
         </div>
-      </div>
 
-      {/* Real-Time Verified Government Schemes Explorer */}
-      <div className="space-y-6 pt-4 border-t border-slate-800">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span>Real-Time Verified Government Schemes</span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Active schemes across Central, 28 States, and 8 Union Territories with verified status.
-            </p>
-          </div>
-
-          <StateSelector selectedState={selectedState} onStateChange={setSelectedState} />
-        </div>
-
-        {schemes.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center space-y-2">
-            <p className="text-sm font-semibold text-slate-300">No active schemes currently listed for this location.</p>
-            <p className="text-xs text-slate-500">Try switching to 'All India' or select a different location.</p>
+        {activeJourneys.length === 0 ? (
+          <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
+            No active journeys yet. Enter your goal above (e.g. "I want to start a business in Pune") to build your first personalized government journey.
           </div>
         ) : (
-          <div className="space-y-6">
-            {localSchemes.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
-                  <Building2 className="w-4 h-4" />
-                  <span>LOCAL / DISTRICT SERVICES</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeJourneys.map((j: any) => (
+              <div
+                key={j.id}
+                onClick={() => router.push(`/journeys/${j.id || 'journey_biz_vadodara_1'}`)}
+                className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 rounded-xl p-5 cursor-pointer transition space-y-4 group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-xs">
+                      {j.location_state === 'Gujarat' ? 'GJ' : j.location_state === 'Karnataka' ? 'KA' : j.location_state === 'Rajasthan' ? 'RJ' : 'IN'}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition">
+                        {j.goal_title || 'Dynamic Citizen Journey'}
+                      </h3>
+                      <p className="text-xs text-slate-400">{j.location_city || 'Vadodara'}, {j.location_state || 'Gujarat'}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-400">In Progress</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {localSchemes.map((sch) => (
-                    <SchemeCard key={sch.id} scheme={sch} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {stateSchemes.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  <MapPin className="w-4 h-4" />
-                  <span>STATE PROGRAMMES ({selectedState})</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {stateSchemes.map((sch) => (
-                    <SchemeCard key={sch.id} scheme={sch} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {nationalSchemes.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  <Globe className="w-4 h-4" />
-                  <span>NATIONAL (Government of India)</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {nationalSchemes.map((sch) => (
-                    <SchemeCard key={sch.id} scheme={sch} />
-                  ))}
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                  <span>Explore resolved categories, single-windows and documents.</span>
+                  <span className="text-amber-400 flex items-center gap-1 group-hover:translate-x-1 transition">
+                    Open <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </div>
-            )}
+            ))}
           </div>
         )}
+      </div>
+
+      {/* 02 — DOCUMENTS */}
+      <div className="space-y-4 mt-8">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black text-amber-500 font-mono">02</span>
+          <div className="border-l border-slate-800 pl-3">
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">DOCUMENTS</h2>
+            <p className="text-xs text-slate-400">Your verified documents</p>
+          </div>
+        </div>
+        <DocumentVault documents={userDocs} />
+      </div>
+
+      {/* 03 — APPLICATIONS */}
+      <div className="space-y-4 mt-8">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black text-amber-500 font-mono">03</span>
+          <div className="border-l border-slate-800 pl-3">
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">APPLICATIONS</h2>
+            <p className="text-xs text-slate-400">Track your applications</p>
+          </div>
+        </div>
+
+        {applications.length === 0 ? (
+          <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
+            No active applications found. Use the Goal Planner to start a journey.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {applications.slice(0, 2).map((app) => (
+              <div 
+                key={app.id} 
+                onClick={() => { setActiveTab('applications'); setSelectedApp(app); }}
+                className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 space-y-4 cursor-pointer transition shadow-md"
+              >
+                <div className="flex justify-between items-start gap-2 border-b border-slate-850 pb-3 text-xs">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department_name}</span>
+                    <h3 className="text-sm font-bold text-white mt-0.5">{app.service_name}</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.application_id}</span></p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider text-center shrink-0 ${
+                    app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                    app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                    app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                    'bg-slate-800 text-slate-400 border border-slate-700'
+                  }`}>
+                    {app.status.replace("_", " ")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                  <span>Submitted: {new Date(app.submitted_at).toLocaleDateString()}</span>
+                  <span className="text-amber-400 font-bold flex items-center gap-1">
+                    Track <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 04 — GOVERNMENT SUPPORT */}
+      <div className="space-y-4 mt-8">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black text-amber-500 font-mono">04</span>
+          <div className="border-l border-slate-800 pl-3">
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">GOVERNMENT SUPPORT</h2>
+            <p className="text-xs text-slate-400">Relevant support available to you</p>
+          </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span>Verified Schemes & Benefits</span>
+                <span className="text-xs font-normal text-slate-400">({schemes.length} Available)</span>
+              </h3>
+              <p className="text-xs text-slate-450 font-mono">
+                Source: JanSetu federated query • Last verified: {new Date().toLocaleDateString('en-GB')}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={() => {
+                  const stFilter = selectedState === 'All India' ? undefined : selectedState;
+                  fetchSchemesAPI({ state_name: stFilter, limit: 15 }).then((res) => {
+                    if (res && res.schemes) {
+                      setSchemes(res.schemes);
+                    }
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/40 transition"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry Query</span>
+              </button>
+              <StateSelector selectedState={selectedState} onStateChange={setSelectedState} />
+            </div>
+          </div>
+
+          {schemes.length === 0 ? (
+            <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-505 text-xs">
+              No active schemes currently listed for this location. Try changing your domicile state.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {localSchemes.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                    <Building2 className="w-4 h-4" />
+                    <span>LOCAL / DISTRICT SERVICES</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {localSchemes.map((sch) => (
+                      <SchemeCard key={sch.id} scheme={sch} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {stateSchemes.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    <MapPin className="w-4 h-4" />
+                    <span>STATE PROGRAMMES ({selectedState})</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {stateSchemes.map((sch) => (
+                      <SchemeCard key={sch.id} scheme={sch} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {nationalSchemes.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    <Globe className="w-4 h-4" />
+                    <span>NATIONAL (Government of India)</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {nationalSchemes.map((sch) => (
+                      <SchemeCard key={sch.id} scheme={sch} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       </>
       )}
@@ -1993,8 +2092,8 @@ export default function DashboardPage() {
     "body": {
       "verified": true,
       "claims": {
-        "name": "Aarav Mehta",
-        "dob": "2005-01-10"
+        "name": "${user?.full_name || 'Hriday Bardia'}",
+        "dob": "${profile?.date_of_birth || '2005-01-10'}"
       }
     }
   }
@@ -2123,8 +2222,8 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono bg-slate-950 border border-slate-850 p-4 rounded-xl text-slate-300">
                 <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2">
                   <span className="text-[10px] font-black text-slate-500 uppercase block">Source System: Aadhaar</span>
-                  <p className="text-slate-400">full_name: <span className="text-emerald-400 font-bold">"Aarav Mehta"</span></p>
-                  <p className="text-slate-400">dob: <span className="text-emerald-400 font-bold">"10/01/2005"</span></p>
+                  <p className="text-slate-400">full_name: <span className="text-emerald-400 font-bold">"{user?.full_name || 'Hriday Bardia'}"</span></p>
+                  <p className="text-slate-400">dob: <span className="text-emerald-400 font-bold">"{profile?.date_of_birth || '10/01/2005'}"</span></p>
                   <p className="text-slate-400">addr_line1: <span className="text-emerald-400 font-bold">"Flat 402, Shivajinagar"</span></p>
                 </div>
                 <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2 flex flex-col justify-center items-center text-center">
@@ -2137,8 +2236,8 @@ export default function DashboardPage() {
                 </div>
                 <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2">
                   <span className="text-[10px] font-black text-slate-500 uppercase block">Target System: PMC License</span>
-                  <p className="text-slate-400">applicant_name: <span className="text-emerald-400 font-bold">"Aarav Mehta"</span></p>
-                  <p className="text-slate-400">birth_date: <span className="text-emerald-400 font-bold">"2005-01-10"</span></p>
+                  <p className="text-slate-400">applicant_name: <span className="text-emerald-400 font-bold">"{user?.full_name || 'Hriday Bardia'}"</span></p>
+                  <p className="text-slate-400">birth_date: <span className="text-emerald-400 font-bold">"{profile?.date_of_birth || '2005-01-10'}"</span></p>
                   <p className="text-slate-400">registered_address: <span className="text-emerald-400 font-bold">"Flat 402, Shivajinagar"</span></p>
                 </div>
               </div>
@@ -2324,7 +2423,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3 text-xs text-emerald-400">
+<div className="bg-emerald-500/5 border border-emerald-500/10 rounded-lg p-3 text-xs text-emerald-400">
                         Conflict resolved. Verified value established: <span className="font-bold">{c.resolved_value}</span>.
                       </div>
                     )}
@@ -2337,249 +2436,319 @@ export default function DashboardPage() {
       )}
 
       {/* Floating Guided Tour Stepper Controller */}
-      <div className="fixed bottom-4 right-4 z-40 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl max-w-sm w-full space-y-3">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-          <span className="text-[10px] font-black text-amber-500 tracking-wider uppercase flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" /> SIH judge guided demo
-          </span>
-          {guidedStep !== null && (
-            <button
-              onClick={() => setGuidedStep(null)}
-              className="text-slate-500 hover:text-slate-300 text-xs"
-            >
-              Reset Guide
-            </button>
-          )}
-        </div>
-
-        {guidedStep === null ? (
-          <div className="space-y-2">
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Start the interactive walkthrough to follow a Pune citizen goal journey through data vault sharing, REST/SOAP connector triggers, and conflict resolutions.
-            </p>
-            <button
-              onClick={() => {
-                setGuidedStep(1);
-                setActiveTab('planner');
-                setGoalInput("I want to start a small food business in Pune.");
-              }}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:from-amber-400 hover:to-orange-400 transition"
-            >
-              Start Guided Tour
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest font-black">
-              <span>Step {guidedStep} of 12</span>
-              <span>{guidedStep === 12 ? 'COMPLETED' : 'IN PROGRESS'}</span>
+      {isGuidedTourMinimized ? (
+        <button 
+          onClick={() => setIsGuidedTourMinimized(false)}
+          className="fixed bottom-4 right-4 z-40 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 border border-amber-400/20 text-xs uppercase tracking-wider animate-bounce"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Restore Demo Guide {guidedStep !== null ? `(Step ${guidedStep})` : ''}</span>
+        </button>
+      ) : (
+        <div className="fixed bottom-4 right-4 z-40 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl max-w-sm w-full space-y-3">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+            <span className="text-[10px] font-black text-amber-500 tracking-wider uppercase flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> SIH judge guided demo
+            </span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsGuidedTourMinimized(true)}
+                className="text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5 bg-slate-805 rounded"
+                title="Minimize Guide"
+              >
+                Minimize
+              </button>
+              {guidedStep !== null && (
+                <button
+                  onClick={() => { setGuidedStep(null); setIsGuidedTourPaused(false); }}
+                  className="text-slate-500 hover:text-slate-300 text-xs"
+                >
+                  Reset
+                </button>
+              )}
             </div>
-            
-            {guidedStep === 1 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 1: PAN-INDIA ALIGNMENT.</strong> Government systems don't need to be replaced. They need to be connected. Our platform sitting as middleware orchestrates Central, State, and Local services.
+          </div>
+
+          {guidedStep === null ? (
+            <div className="space-y-2">
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Start the interactive walkthrough to follow a citizen goal journey through data vault sharing, REST/SOAP connector triggers, and conflict resolutions.
+              </p>
+              <button
+                onClick={() => {
+                  setGuidedStep(1);
+                  setActiveTab('planner');
+                  setGoalInput("I want to start a small food business in Bengaluru.");
+                }}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:from-amber-400 hover:to-orange-400 transition"
+              >
+                Start Guided Tour
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest font-black">
+                <span>Step {guidedStep} of 12</span>
+                <span className={isGuidedTourPaused ? 'text-amber-500' : 'text-emerald-400'}>
+                  {isGuidedTourPaused ? 'PAUSED' : guidedStep === 12 ? 'COMPLETED' : 'IN PROGRESS'}
+                </span>
+              </div>
+              
+              {!isGuidedTourPaused ? (
+                <>
+                  {guidedStep === 1 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 1: PAN-INDIA ALIGNMENT.</strong> Government systems don't need to be replaced. They need to be connected. Our platform sitting as middleware orchestrates Central, State, and Local services.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(2);
+                          setActiveTab('planner');
+                          setGoalInput("I want to start a small food business in Bengaluru.");
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Enter Karnataka Goal
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 2 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 2: JURISDICTION DETECTION.</strong> The system dynamically parses city (Bengaluru) and maps it to Karnataka state, without hardcoded boundaries. Domicile is resolved to Karnataka.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(3);
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Understand Goal / AI Map
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 3 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 3: RUN PLATFORM MAPPING.</strong> AI maps required documents, matching local business single-windows and local municipal trade licenses. Click <strong>"Next"</strong> to explore the resolved categories.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(4);
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Inspect Document Checklists
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 4 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 4: DOCUMENTS YOU NEED.</strong> Under segment 02, verify that Aadhaar & PAN are loaded. See how single-window registrations require these federated files securely.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(5);
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Federated Data Sharing Consent
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 5 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 5: CONSENT HUB.</strong> Switch to the <strong>Privacy & Data</strong> tab. See the logged list of active and pending data-sharing requests made by government endpoints.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(6);
+                          setActiveTab('consent');
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Go to Privacy & Data Tab
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 6 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 6: SECURE TOGGLE & LOGS.</strong> Click the toggle to grant or revoke access. Check the real-time access audit logs showing exactly when records were accessed.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(7);
+                          setActiveTab('planner');
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Run Live API Integration
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 7 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 7: MIDDLEWARE ROUTER.</strong> Scroll to segment 03. Click the continue action on the active journey cards to trigger middleware SOAP and REST adapters.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(8);
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Interoperability Hub Exchange
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 8 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 8: TRACK SYSTEM EXCHANGES.</strong> Navigate to the <strong>Interop Hub</strong> tab. See live API exchange logs, JSON payloads, and response headers.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(9);
+                          setActiveTab('interop');
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Inspect Interop Hub SVG
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 9 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 9: SVG TOPOLOGY NETWORK.</strong> Explore the national middleware network. Central, State, and Legacy SOAP municipal services are linked. Click any node to check raw payload logs.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(10);
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Simulate Connector Failure
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 10 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 10: FAULT TOLERANCE.</strong> Click <strong>"Simulate Failure"</strong> at the top right. PMC/BMA goes degraded, triggering automatic retries and secure fallback policies without crash.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(11);
+                          setActiveTab('conflicts');
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Resolve Data Discrepancy
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 11 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 11: DATA QUALITY & MDM.</strong> Check Master Profile. Click <strong>"Use Authoritative Aadhaar"</strong> to normalize conflicts into standard CDM models and resolve database discrepancies.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(12);
+                        }}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                      >
+                        Next: Performance & SLA Impact
+                      </button>
+                    </div>
+                  )}
+
+                  {guidedStep === 12 && (
+                    <div className="space-y-2 text-[11px]">
+                      <p className="text-slate-200">
+                        <strong>STEP 12: SLA AND GovTech IMPACT.</strong> Look at the SLA targets (e.g. 48h vs 31h) and GovTech impact metrics (60.7% duplicate submission reduction, +11.2% data consistency).
+                      </p>
+                      <button
+                        onClick={() => {
+                          setGuidedStep(null);
+                          setActiveTab('planner');
+                        }}
+                        className="w-full bg-emerald-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:bg-emerald-400 transition"
+                      >
+                        Complete Guided Tour
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-slate-400 italic py-4 text-center">
+                  Guided tour paused. Explore the application manually.
                 </p>
+              )}
+
+              {/* Stepper Control Panel */}
+              <div className="flex justify-between items-center border-t border-slate-800/80 pt-2.5 mt-2 text-[10px]">
                 <button
                   onClick={() => {
-                    setGuidedStep(2);
+                    if (guidedStep > 1) {
+                      setGuidedStep(guidedStep - 1);
+                    } else {
+                      setGuidedStep(null);
+                    }
+                  }}
+                  className="text-slate-400 hover:text-white font-bold"
+                >
+                  ← BACK
+                </button>
+                
+                <button
+                  onClick={() => setIsGuidedTourPaused(!isGuidedTourPaused)}
+                  className="text-amber-500 hover:text-amber-400 font-bold"
+                >
+                  {isGuidedTourPaused ? '▶ RESUME' : '⏸ PAUSE'}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setGuidedStep(1);
+                    setIsGuidedTourPaused(false);
                     setActiveTab('planner');
-                    setGoalInput("I want to start a small food business in Bengaluru.");
                   }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                  className="text-slate-400 hover:text-white font-bold"
                 >
-                  Next: Enter Karnataka Goal
+                  RESTART
                 </button>
-              </div>
-            )}
-
-            {guidedStep === 2 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 2: JURISDICTION DETECTION.</strong> The system dynamically parses city (Bengaluru) and maps it to Karnataka state, without hardcoded boundaries. Domicile is resolved to Karnataka.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(3);
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Understand Goal / AI Map
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 3 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 3: RUN PLATFORM MAPPING.</strong> AI maps required documents, matching local business single-windows and local municipal trade licenses. Click <strong>"Next"</strong> to explore the resolved categories.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(4);
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Review Journey Steps
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 4 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 4: REVIEW STEP HIERARCHIES.</strong> The planner shows the Central (Identity, DigiLocker), State (Karnataka Business Registration), and Local (BMA trade licensing) levels.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(5);
-                    setActiveTab('applications');
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Open Application Tracker
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 5 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 5: UNIFIED TRACKING.</strong> View unified application status cards across different jurisdictions (Central, State, Municipal BMA) in a single profile tracking interface.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(6);
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Prevent Duplicate Uploader
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 6 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 6: PREVENT DUPLICATES.</strong> The system reuses verified e-KYC credentials. Instead of prompting to upload address proof again, the platform requests authorization to reuse verified logs.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(7);
-                    const firstApp = applications[0];
-                    if (firstApp) setSelectedApp(firstApp);
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Inspect & Simulate Event
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 7 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 7: WORKFLOW SIMULATION.</strong> Click <strong>"Simulate Status Update"</strong> inside the app details modal to trigger asynchronous state propagation events across systems.
-                </p>
-                <button
-                  onClick={() => {
-                    setSelectedApp(null);
-                    setGuidedStep(8);
-                    setActiveTab('consent');
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Open Consent Center
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 8 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 8: CONSENT CENTER.</strong> Authorize data reuse. Scoped tokens are granted per-department. Click <strong>"Allow Once"</strong> or <strong>"Allow Always"</strong> to trigger encrypted e-KYC reuse.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(9);
-                    setActiveTab('interop');
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Inspect Interop Hub SVG
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 9 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 9: SVG TOPOLOGY NETWORK.</strong> Explore the national middleware network. Central, State, and Legacy SOAP municipal services are linked. Click any node to check raw payload logs.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(10);
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Simulate Connector Failure
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 10 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 10: FAULT TOLERANCE.</strong> Click <strong>"Simulate Failure"</strong> at the top right. PMC/BMA goes degraded, triggering automatic retries and secure fallback policies without crash.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(11);
-                    setActiveTab('conflicts');
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Resolve Data Discrepancy
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 11 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 11: DATA QUALITY & MDM.</strong> Check Master Profile. Click <strong>"Use Authoritative Aadhaar"</strong> to normalize conflicts into standard CDM models and resolve database discrepancies.
-                </p>
-                <button
-                  onClick={() => {
-                    setGuidedStep(12);
-                  }}
-                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
-                >
-                  Next: Performance & SLA Impact
-                </button>
-              </div>
-            )}
-
-            {guidedStep === 12 && (
-              <div className="space-y-2 text-[11px]">
-                <p className="text-slate-200">
-                  <strong>STEP 12: SLA AND GovTech IMPACT.</strong> Look at the SLA targets (e.g. 48h vs 31h) and GovTech impact metrics (60.7% duplicate submission reduction, +11.2% data consistency).
-                </p>
+                
                 <button
                   onClick={() => {
                     setGuidedStep(null);
+                    setIsGuidedTourPaused(false);
                     setActiveTab('planner');
                   }}
-                  className="w-full bg-emerald-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:bg-emerald-400 transition"
+                  className="text-red-400 hover:text-red-300 font-bold"
                 >
-                  Complete Guided Tour
+                  EXIT
                 </button>
               </div>
-            )}
-
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

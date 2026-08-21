@@ -635,6 +635,20 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "language_code": "en"
             }
         ]
+    },
+    "admin": {
+        "key": "admin",
+        "user_id": "user_system_admin",
+        "full_name": "System Administrator",
+        "mobile_number": "+919999999999",
+        "email": "admin@jansetu.gov.in",
+        "role": "SYSTEM_ADMIN",
+        "age": 35,
+        "location_city": "Delhi",
+        "location_district": "New Delhi",
+        "location_state": "Delhi",
+        "category": "General",
+        "documents": []
     }
 }
 
@@ -716,6 +730,7 @@ class DemoVaultService:
                 pin_hash=hash_pin("123456"),  # default demo PIN
                 full_name=expected_name,
                 mobile_number=demo_info["mobile_number"],
+                role=demo_info.get("role", "citizen")
             )
             db.add(user)
             db.commit()

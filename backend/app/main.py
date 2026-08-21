@@ -67,6 +67,7 @@ def seed_synthetic_users():
                 full_name=data["full_name"],
                 mobile_number=data.get("mobile_number"),
                 email=data.get("email"),
+                role=data.get("role", "citizen")
             )
             db.add(user)
             db.flush()

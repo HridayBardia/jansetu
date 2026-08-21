@@ -11,7 +11,7 @@ export interface DemoCitizenSelectorProps {
 const CITIZEN_PROFILES = [
   {
     key: 'aarav',
-    name: 'Aarav Mehta',
+    name: 'Hriday Bardia (Demo)',
     city: 'Vadodara',
     state: 'Gujarat',
     age: 22,

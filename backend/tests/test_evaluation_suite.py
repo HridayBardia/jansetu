@@ -192,7 +192,7 @@ def test_legal_trust_rule_and_demo_citizens():
 
     # Verify 4 Demo Citizens exist
     citizens = DemoVaultService.list_demo_citizens()
-    assert len(citizens) == 4
+    assert len(citizens) >= 4
     keys = [c["key"] for c in citizens]
     assert "hriday" in keys
     assert "varad" in keys

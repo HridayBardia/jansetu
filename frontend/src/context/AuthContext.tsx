@@ -7,6 +7,7 @@ export interface User {
   id: string;
   username: string;
   full_name: string;
+  role?: string;
   mobile_number?: string;
   created_at?: string;
   last_login_at?: string;

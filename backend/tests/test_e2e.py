@@ -28,6 +28,7 @@ def get_or_create_mock_user():
                 pin_hash=hash_pin("123456"),
                 full_name="Test User",
                 mobile_number="+919876543210",
+                role="SYSTEM_ADMIN"
             )
             db.add(user)
             db.commit()

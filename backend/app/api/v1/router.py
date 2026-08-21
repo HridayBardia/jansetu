@@ -196,7 +196,7 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     except Exception as e:
         print(f"[WARN] Failed to seed demo vault: {e}")
 
-    token = create_access_token({"sub": user.id, "username": user.username, "name": user.full_name})
+    token = create_access_token({"sub": user.id, "username": user.username, "name": user.full_name, "role": user.role or "citizen"})
 
     response.set_cookie(
         key="citizen_session",
@@ -247,6 +247,7 @@ def get_me(request: Request, current_user: UserDB = Depends(get_current_user), d
             "username": current_user.username,
             "full_name": current_user.full_name,
             "mobile_number": current_user.mobile_number,
+            "role": current_user.role or "citizen",
             "created_at": current_user.created_at,
             "last_login_at": current_user.last_login_at
         },
@@ -889,13 +890,19 @@ def import_digilocker_documents(
     }, request)
 
 @api_v1_router.get("/documents/consistency")
-def get_document_consistency(request: Request, user_id: str = "demo_user_1", db: Session = Depends(get_db)):
-    docs = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == user_id).all()
+def get_document_consistency(
+    request: Request,
+    user_id: Optional[str] = None,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target_user_id = user_id or current_user.id
+    docs = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == target_user_id).all()
     serialized_docs = [{"document_type": d.document_type, "extracted_fields": d.extracted_fields or {}} for d in docs]
     eval_res = DocumentConsistencyEngine.evaluate_inventory(serialized_docs)
     
     return success_response({
-        "user_id": user_id,
+        "user_id": target_user_id,
         "identity_status": eval_res["identity_status"],
         "dob_status": eval_res["dob_status"],
         "address_status": eval_res["address_status"],
@@ -935,21 +942,23 @@ def get_document_graph(goal_category: str = "business", location_state: str = "G
 @api_v1_router.post("/documents/packet")
 def build_document_packet(
     goal_category: str = "business",
-    user_id: str = "demo_user_1",
+    user_id: Optional[str] = None,
     request: Request = None,
+    current_user: UserDB = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user = db.query(UserDB).filter(UserDB.id == user_id).first()
+    target_user_id = user_id or current_user.id
+    user = db.query(UserDB).filter(UserDB.id == target_user_id).first()
     c_name = user.full_name if user else "Citizen"
     
-    docs = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == user_id).all()
+    docs = db.query(UserDocumentDB).filter(UserDocumentDB.user_id == target_user_id).all()
     serialized_docs = [{"document_type": d.document_type, "expiry_status": d.expiry_status, "verification_status": d.verification_status} for d in docs]
     inventory_match = DocumentRequirementMatcher.match_inventory(goal_category, serialized_docs)
 
     packet = DocumentPacketBuilder.build_preparation_packet(
         citizen_name=c_name,
-        goal_title="Start Business in Vadodara",
-        location="Vadodara, Gujarat",
+        goal_title="Citizen Journey",
+        location="India",
         inventory_match=inventory_match
     )
     return success_response(packet, request)
@@ -988,14 +997,28 @@ def get_alerts(request: Request, journey_category: Optional[str] = None, db: Ses
 
 # 7. Privacy Center & Consent Management
 @api_v1_router.get("/privacy/consents")
-def get_consents(request: Request, user_id: str = "demo_user_1", db: Session = Depends(get_db)):
-    consents = ConsentEngine.get_user_consents(db, user_id)
-    logs = ConsentEngine.get_data_access_logs(user_id)
+def get_consents(
+    request: Request,
+    user_id: Optional[str] = None,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target_user_id = user_id or current_user.id
+    consents = ConsentEngine.get_user_consents(db, target_user_id)
+    logs = ConsentEngine.get_data_access_logs(target_user_id)
     return success_response({"consents": [c.model_dump() for c in consents], "access_logs": logs}, request)
 
 @api_v1_router.post("/privacy/consents/toggle")
-def toggle_consent(purpose: str, granted: bool, request: Request, user_id: str = "demo_user_1", db: Session = Depends(get_db)):
-    updated = ConsentEngine.toggle_consent(db, user_id, purpose, granted)
+def toggle_consent(
+    purpose: str,
+    granted: bool,
+    request: Request,
+    user_id: Optional[str] = None,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target_user_id = user_id or current_user.id
+    updated = ConsentEngine.toggle_consent(db, target_user_id, purpose, granted)
     return success_response(updated.model_dump(), request)
 
 # 8. States & UTs Index (All 28 States & 8 UTs)
@@ -1184,7 +1207,13 @@ def get_source_health(request: Request, db: Session = Depends(get_db)):
     }, request)
 
 @api_v1_router.get("/admin/diagnostics")
-def get_admin_diagnostics(request: Request, db: Session = Depends(get_db)):
+def get_admin_diagnostics(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["SYSTEM_ADMIN", "DEPARTMENT_ADMIN"]:
+        raise HTTPException(status_code=403, detail="Access denied. Administrator privileges required.")
     IngestionEngine.seed_database(db)
     total_j = db.query(JourneyDB).count()
     total_s = db.query(GovernmentSourceDB).count()

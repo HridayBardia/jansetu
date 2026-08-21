@@ -37,7 +37,7 @@ def seed_database(drop_tables: bool = True):
                 full_name=info["full_name"],
                 mobile_number=info["mobile_number"],
                 email=info.get("email"),
-                role="citizen"
+                role=info.get("role", "citizen")
             )
             db.add(user)
             db.commit()

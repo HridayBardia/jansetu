@@ -41,9 +41,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     { label: t('myJourneys', 'Journeys'), href: '/journeys', icon: MapPin },
     { label: t('myDocuments', 'Documents Vault'), href: '/privacy', icon: FileText },
     { label: t('alerts', 'Alerts'), href: '/alerts', icon: Bell },
-    { label: t('privacy', 'Privacy & Consent'), href: '/privacy', icon: ShieldCheck },
-    { label: t('adminDashboard', 'Diagnostics'), href: '/admin', icon: BarChart2 }
+    { label: t('privacy', 'Privacy & Consent'), href: '/privacy', icon: ShieldCheck }
   ];
+
+  if (isAuthenticated && user && (user.role === 'SYSTEM_ADMIN' || user.role === 'DEPARTMENT_ADMIN')) {
+    navItems.push({ label: t('adminDashboard', 'Diagnostics'), href: '/admin', icon: BarChart2 });
+  }
 
   return (
     <>

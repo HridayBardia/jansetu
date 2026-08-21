@@ -364,7 +364,7 @@ class GovernmentConnector:
 
 class RestGovernmentConnector(GovernmentConnector):
     def getCitizenData(self, db: Session, user_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        return ConnectorManager._simulate_rest_call(user_id, params.get("service_id", ""), operation, params)
+        return ConnectorManager._simulate_rest_call(db, user_id, params.get("service_id", ""), operation, params)
 
 class LegacyGovernmentConnector(GovernmentConnector):
     def getCitizenData(self, db: Session, user_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -738,13 +738,17 @@ class ConnectorManager:
             raise e
 
     @staticmethod
-    def _simulate_rest_call(user_id: str, service_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _simulate_rest_call(db: Session, user_id: str, service_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        from app.models.db_models import UserDB
+        user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        full_name = user.full_name if user else "Hriday Bardia"
+
         if service_id == "srv_identity":
             return {
                 "verified": True,
                 "document_reference": "AADHAAR-VAULT-XYZ9",
                 "identity_claims": {
-                    "full_name": "Aarav Mehta",
+                    "full_name": full_name,
                     "dob": "2005-01-10",
                     "gender": "Male",
                     "masked_mobile": "******8865"
@@ -776,7 +780,7 @@ class ConnectorManager:
             return {
                 "pan_verified": True,
                 "compliance_status": "COMPLIANT",
-                "taxpayer_name": "Aarav Mehta"
+                "taxpayer_name": full_name
             }
         elif service_id == "srv_digilocker":
             return {
