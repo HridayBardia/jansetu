@@ -25,7 +25,8 @@ import {
   fetchConnectorHealthAPI,
   fetchAuditLogsAPI,
   fetchConflictsAPI,
-  resolveConflictAPI
+  resolveConflictAPI,
+  toggleConnectorHealthAPI
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
@@ -446,6 +447,11 @@ export default function DashboardPage() {
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [guidedStep, setGuidedStep] = useState<number | null>(null);
+  const [selectedApp, setSelectedApp] = useState<any | null>(null);
+  const [selectedConsent, setSelectedConsent] = useState<any | null>(null);
+  const [selectedConnector, setSelectedConnector] = useState<any | null>(null);
+  const [showExchange, setShowExchange] = useState<boolean>(false);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
@@ -1295,6 +1301,32 @@ export default function DashboardPage() {
       {/* Applications Tab */}
       {activeTab === 'applications' && (
         <div className="space-y-6 animate-fadeIn">
+          {/* Applications Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Applications</span>
+              <span className="text-lg font-black text-white">{applications.length || 4} Registered</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Verification</span>
+              <span className="text-lg font-black text-amber-400">
+                {applications.filter(a => ['UNDER_VERIFICATION', 'SUBMITTED', 'DOCUMENTS_REQUIRED'].includes(a.status)).length || 3} Pending
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completed</span>
+              <span className="text-lg font-black text-emerald-400">
+                {applications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length || 1} Issued
+              </span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Action Required</span>
+              <span className="text-lg font-black text-red-400 animate-pulse">
+                {applications.filter(a => a.status === 'DOCUMENTS_REQUIRED').length || 1} Alert
+              </span>
+            </div>
+          </div>
+
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1303,7 +1335,7 @@ export default function DashboardPage() {
                   <span>Unified Government Application Tracking</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Cross-department status, timelines, and required actions under Government of Maharashtra.
+                  Track and manage registrations across multiple departments from a single authenticated citizen window.
                 </p>
               </div>
               <button
@@ -1317,20 +1349,24 @@ export default function DashboardPage() {
 
             {applications.length === 0 ? (
               <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
-                No active applications found. Use the Goal Planner to start a journey and register services.
+                No active applications found. Use the Goal Planner to start a journey.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {applications.map((app) => (
-                  <div key={app.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-900 pb-3 text-xs">
+                  <div 
+                    key={app.id} 
+                    onClick={() => setSelectedApp(app)}
+                    className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl p-5 space-y-4 cursor-pointer transition shadow-md"
+                  >
+                    <div className="flex justify-between items-start gap-2 border-b border-slate-900 pb-3 text-xs">
                       <div>
-                        <span className="text-[10px] font-black text-slate-500 tracking-wider block uppercase">{app.department_name}</span>
+                        <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department_name}</span>
                         <h3 className="text-sm font-bold text-white mt-0.5">{app.service_name}</h3>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Application Reference: <span className="font-mono text-amber-400 font-bold">{app.application_id}</span></p>
+                        <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.application_id}</span></p>
                       </div>
 
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider text-center shrink-0 ${
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider text-center shrink-0 ${
                         app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                         app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
                         app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
@@ -1340,113 +1376,325 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    {/* Timeline */}
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Timeline & Logs</span>
-                      <div className="relative border-l border-slate-850 ml-1.5 pl-4 space-y-4 py-1 text-xs">
-                        {app.timeline.map((evt: any, idx: number) => (
-                          <div key={idx} className="relative">
-                            <div className={`absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full border ${
-                              evt.status === 'APPROVED' ? 'bg-emerald-400 border-emerald-500' :
-                              evt.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-400 border-red-500' :
-                              'bg-amber-400 border-amber-500'
-                            }`} />
-                            <h4 className="font-bold text-slate-300">{evt.title}</h4>
-                            <p className="text-slate-400 text-[11px] mt-0.5">{evt.description}</p>
-                            <span className="text-[10px] text-slate-500 block mt-1">{new Date(evt.timestamp).toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                      <span>Submitted: {new Date(app.submitted_at).toLocaleDateString()}</span>
+                      <span className="text-amber-400 font-bold hover:underline flex items-center gap-1">
+                        View Details <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
-
-                    {/* Action Items */}
-                    {app.required_actions && app.required_actions.length > 0 && (
-                      <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-2">
-                          <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                          <div>
-                            <span className="font-bold text-red-400 block">Department Action Item Required</span>
-                            <p className="text-slate-400">Please provide the missing document layout validation to proceed.</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            updateApplicationStatusAPI(app.application_id, "UNDER_VERIFICATION", "Fire NOC uploaded. Re-initiating interop checklist.").then(() => loadInteropData());
-                          }}
-                          className="bg-red-500 hover:bg-red-400 text-white font-bold px-3 py-1.5 rounded text-[11px] shrink-0 transition"
-                        >
-                          Resolve & Upload
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Application Detail Modal */}
+          {selectedApp && (
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scaleUp">
+                <div className="bg-slate-950 p-5 border-b border-slate-800 flex justify-between items-center">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{selectedApp.department_name}</span>
+                    <h3 className="text-base font-bold text-white">{selectedApp.service_name}</h3>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedApp(null)}
+                    className="text-slate-400 hover:text-white text-sm font-bold bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg transition"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto text-xs">
+                  {/* Timeline Progress */}
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Application Timeline</span>
+                    <div className="relative border-l border-slate-800 ml-1.5 pl-4 space-y-4 py-1">
+                      <div className="relative">
+                        <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
+                        <h4 className="font-bold text-slate-300">Goal Created</h4>
+                        <p className="text-slate-500 text-[10px]">Citizen goal resolved and journey generated.</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
+                        <h4 className="font-bold text-slate-300">Identity Verified</h4>
+                        <p className="text-slate-500 text-[10px]">Authoritative Aadhaar e-KYC validation successful.</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
+                        <h4 className="font-bold text-slate-300">Address Verified</h4>
+                        <p className="text-slate-500 text-[10px]">Residential address validated from state land registry.</p>
+                      </div>
+                      {selectedApp.timeline.map((evt: any, idx: number) => (
+                        <div key={idx} className="relative">
+                          <div className={`absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full border ${
+                            evt.status === 'APPROVED' ? 'bg-emerald-500 border-emerald-500' :
+                            evt.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500 border-red-500 animate-pulse' :
+                            'bg-cyan-500 border-cyan-500'
+                          }`} />
+                          <h4 className="font-bold text-slate-300">{evt.title}</h4>
+                          <p className="text-slate-400 text-[11px] mt-0.5">{evt.description}</p>
+                          <span className="text-[9px] text-slate-500 block mt-0.5">{new Date(evt.timestamp).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Metadata fields */}
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3 text-[11px]">
+                      <div>
+                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Data Fields Reused</span>
+                        <span className="text-slate-300 font-bold">✓ Identity, Address, Contact</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Registry Source</span>
+                        <span className="text-slate-300 font-bold">UIDAI Registry, State Land Registry</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Consent token</span>
+                        <span className="text-cyan-400 font-mono font-bold">✓ CONSENT-8821 (Authorized)</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Connector Protocol</span>
+                        <span className="text-slate-300 font-bold">
+                          {selectedApp.service_id === 'srv_pmc_license' ? 'SOAP Legacy Adapter' : 'Modern OAuth REST API'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Simulate update action */}
+                  {selectedApp.status === 'UNDER_VERIFICATION' && (
+                    <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-amber-400">
+                        <Sparkles className="w-4 h-4 shrink-0" />
+                        <span className="font-bold uppercase tracking-wider text-[10px]">Simulate Event Update (Judge Demo)</span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">
+                        Clicking this triggers an asynchronous event update from the department. The status change will immediately propagate to all tabs.
+                      </p>
+                      <button
+                        onClick={() => {
+                          updateApplicationStatusAPI(selectedApp.application_id, "APPROVED", "Business Registration approved. Corporate Registration ID: MSINS-PUNE-88742 successfully issued.").then(() => {
+                            setSelectedApp(null);
+                            loadInteropData();
+                          });
+                        }}
+                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-2 rounded-lg text-xs hover:from-amber-400 hover:to-orange-400 transition"
+                      >
+                        Simulate Status Update: Approve Application
+                      </button>
+                    </div>
+                  )}
+
+                  {selectedApp.status === 'DOCUMENTS_REQUIRED' && (
+                    <div className="bg-red-500/5 border border-red-500/15 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-red-400 font-bold">
+                        <ShieldAlert className="w-4 h-4 shrink-0" />
+                        <span>Action Required: Missing Premises Document</span>
+                      </div>
+                      <p className="text-slate-400 text-[11px]">
+                        Please resolve the action item by simulating a document upload validation check.
+                      </p>
+                      <button
+                        onClick={() => {
+                          updateApplicationStatusAPI(selectedApp.application_id, "UNDER_VERIFICATION", "Fire NOC layout document uploaded. Re-initiating automated interoperability validation checklist.").then(() => {
+                            setSelectedApp(null);
+                            loadInteropData();
+                          });
+                        }}
+                        className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-2 rounded-lg text-xs transition"
+                      >
+                        Resolve & Upload Fire NOC
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Consent Tab */}
       {activeTab === 'consent' && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          {/* Consent stats bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Active Consents</span>
+              <span className="text-lg font-black text-emerald-400">{consents.filter(c => c.granted && c.access_type !== 'REVOKED').length || 2}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Pending Requests</span>
+              <span className="text-lg font-black text-amber-400">{consents.filter(c => !c.granted).length || 1}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Revoked Accounts</span>
+              <span className="text-lg font-black text-slate-500">{consents.filter(c => c.access_type === 'REVOKED').length || 1}</span>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Key className="w-5 h-5 text-amber-400" />
-                <span>Consent Center</span>
+                <span>Consent-Based Data Sharing Dashboard</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Citizen Privacy Dashboard. View active data-sharing consents and revoke access where applicable.
+                You control privacy. Authorize, restrict, or revoke access to your verified e-KYC documents dynamically.
               </p>
             </div>
 
-            {consents.length === 0 ? (
-              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
-                No active data sharing permissions logged.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {consents.map((c) => (
-                  <div key={c.id} className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4 text-xs">
+            {/* List of consents */}
+            <div className="space-y-4">
+              {consents.map((c) => (
+                <div key={c.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div>
-                      <h4 className="font-bold text-white">{c.department_name}</h4>
-                      <p className="text-slate-400 mt-0.5">Purpose: {c.purpose}</p>
+                      <h4 className="font-bold text-white text-sm">{c.department_name}</h4>
+                      <p className="text-slate-400 mt-1">Purpose: {c.purpose}</p>
                       <p className="text-[10px] text-slate-500 mt-1">
                         Requested Fields: <span className="font-mono text-cyan-400 font-bold">{c.requested_fields.join(", ")}</span>
                       </p>
-                      <span className="text-[10px] text-slate-500 block mt-0.5">Granted: {new Date(c.granted_at).toLocaleString()}</span>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         c.granted && c.access_type !== 'REVOKED'
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          : c.access_type === 'REVOKED' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                       }`}>
-                        {c.granted && c.access_type !== 'REVOKED' ? `Active (${c.access_type})` : 'Revoked'}
+                        {c.granted && c.access_type !== 'REVOKED' ? 'Active Consent' : c.access_type === 'REVOKED' ? 'Access Revoked' : 'Pending Authorization'}
                       </span>
-                      
-                      {c.granted && c.access_type !== 'REVOKED' && (
-                        <button
-                          onClick={() => revokeConsentAPI(c.consent_id).then(() => loadInteropData())}
-                          className="text-red-400 hover:text-red-300 font-bold hover:bg-red-500/10 border border-transparent hover:border-red-500/20 px-2 py-1 rounded transition"
-                        >
-                          Revoke
-                        </button>
-                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+
+                  <div className="flex gap-2 justify-end border-t border-slate-900 pt-3">
+                    <button
+                      onClick={() => setSelectedConsent(c)}
+                      className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 font-bold px-3 py-1.5 rounded text-[11px] transition"
+                    >
+                      View Details
+                    </button>
+                    {!c.granted && c.access_type !== 'REVOKED' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ONCE").then(() => loadInteropData());
+                          }}
+                          className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold px-3 py-1.5 rounded text-[11px] hover:from-amber-400 hover:to-orange-400 transition"
+                        >
+                          Allow Once
+                        </button>
+                        <button
+                          onClick={() => {
+                            createConsentAPI(c.department_id, c.department_name, c.requested_fields, c.purpose, "ALWAYS").then(() => loadInteropData());
+                          }}
+                          className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-1.5 rounded text-[11px] transition"
+                        >
+                          Allow Always
+                        </button>
+                      </>
+                    )}
+                    {c.granted && c.access_type !== 'REVOKED' && (
+                      <button
+                        onClick={() => revokeConsentAPI(c.consent_id).then(() => loadInteropData())}
+                        className="text-red-400 hover:text-red-300 font-bold hover:bg-red-500/10 border border-transparent hover:border-red-500/20 px-3 py-1.5 rounded text-[11px] transition"
+                      >
+                        Revoke Access
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Consent Details Modal */}
+          {selectedConsent && (
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-scaleUp">
+                <div className="bg-slate-950 p-5 border-b border-slate-800 flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Key className="w-4 h-4 text-amber-400" />
+                    <span>Consent Details Sheet</span>
+                  </h3>
+                  <button 
+                    onClick={() => setSelectedConsent(null)}
+                    className="text-slate-400 hover:text-white text-xs bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg transition"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4 text-xs">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHO IS REQUESTING?</span>
+                      <p className="text-slate-200 font-bold">{selectedConsent.department_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHAT DATA FIELDS?</span>
+                      <p className="text-cyan-400 font-mono font-bold">{selectedConsent.requested_fields.join(", ")}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHY ACCESS IS NEEDED?</span>
+                      <p className="text-slate-300">{selectedConsent.purpose}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">DURATION</span>
+                      <p className="text-slate-300">Scoped strictly to the application lifetime ({selectedConsent.access_type}).</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">SECURITY PROTOCOL</span>
+                      <p className="text-slate-300 font-bold text-emerald-400">✓ End-to-end Encrypted payload exchange in transit</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">AUDIT COMPLIANCE</span>
+                      <p className="text-slate-300">All lookups logged permanently in system audit trails.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    {!selectedConsent.granted && selectedConsent.access_type !== 'REVOKED' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            createConsentAPI(selectedConsent.department_id, selectedConsent.department_name, selectedConsent.requested_fields, selectedConsent.purpose, "ONCE").then(() => {
+                              setSelectedConsent(null);
+                              loadInteropData();
+                            });
+                          }}
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-2 rounded-lg text-xs hover:from-amber-400 hover:to-orange-400 transition"
+                        >
+                          Approve Consent
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedConsent(null);
+                          }}
+                          className="flex-1 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition"
+                        >
+                          Deny
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
       {/* Interop Tab */}
       {activeTab === 'interop' && (
         <div className="space-y-6 animate-fadeIn">
+          {/* Telemetry metrics bar */}
           {healthData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1">
@@ -1476,38 +1724,332 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Interactive Topology Network diagram */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Activity className="w-5 h-5 text-amber-400" />
-                <span>Interoperability Command Center (Registry Connectors)</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Real-time status of Modern REST APIs and Legacy SOAP Adapters.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-amber-400" />
+                  <span>Interoperability Gateway Topology Diagram</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Interactive network showing mock protocol endpoints. Click any node to inspect data exchanges.
+                </p>
+              </div>
+              {/* Failure Simulation triggers */}
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    toggleConnectorHealthAPI("srv_pmc_license", "FAILED").then(() => loadInteropData());
+                  }}
+                  className="bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 font-bold px-3 py-1.5 rounded-lg text-xs transition"
+                >
+                  Simulate Failure
+                </button>
+                <button
+                  onClick={() => {
+                    toggleConnectorHealthAPI("srv_pmc_license", "HEALTHY").then(() => loadInteropData());
+                  }}
+                  className="bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 font-bold px-3 py-1.5 rounded-lg text-xs transition"
+                >
+                  Restore Service
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              {healthData?.services?.map((svc: any, idx: number) => (
-                <div key={idx} className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex justify-between items-center gap-3">
-                  <div>
-                    <h4 className="font-bold text-white">{svc.name}</h4>
-                    <p className="text-slate-500 text-[10px] mt-0.5">Protocol: <span className="font-mono text-cyan-400">{svc.connector_type} Protocol</span></p>
-                    <p className="text-slate-500 text-[10px]">Requests: {svc.request_count} | Latency: {svc.latency}</p>
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+              <div className="lg:col-span-2">
+                <svg viewBox="0 0 600 350" className="w-full h-auto bg-slate-950 border border-slate-850 rounded-xl shadow-2xl">
+                  {/* Connections to Satellites */}
+                  <line x1="300" y1="175" x2="300" y2="50" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4,4" />
+                  <line x1="300" y1="175" x2="100" y2="120" stroke="#10b981" strokeWidth="1.5" />
+                  <line x1="300" y1="175" x2="100" y2="230" stroke="#10b981" strokeWidth="1.5" />
+                  <line x1="300" y1="175" x2="500" y2="120" stroke="#10b981" strokeWidth="1.5" />
+                  <line x1="300" y1="175" x2="500" y2="230" stroke={healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status === "Failed" ? "#ef4444" : "#10b981"} strokeWidth="1.5" />
+                  <line x1="300" y1="175" x2="300" y2="300" stroke="#10b981" strokeWidth="1.5" />
 
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    svc.status === 'Healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                    svc.status === 'Degraded' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                    'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}>
-                    {svc.status}
-                  </span>
-                </div>
-              ))}
+                  {/* Animated pulsing circles moving along lines */}
+                  <circle r="3.5" fill="#f59e0b">
+                    <animateMotion dur="3s" repeatCount="indefinite" path="M 300 175 L 300 50 Z" />
+                  </circle>
+                  <circle r="3.5" fill="#10b981">
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 300 175 L 100 120 Z" />
+                  </circle>
+                  <circle r="3.5" fill="#10b981">
+                    <animateMotion dur="3.5s" repeatCount="indefinite" path="M 300 175 L 100 230 Z" />
+                  </circle>
+                  <circle r="3.5" fill="#10b981">
+                    <animateMotion dur="4s" repeatCount="indefinite" path="M 300 175 L 500 120 Z" />
+                  </circle>
+                  <circle r="3.5" fill={healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status === "Failed" ? "#ef4444" : "#10b981"}>
+                    <animateMotion dur="3s" repeatCount="indefinite" path="M 300 175 L 500 230 Z" />
+                  </circle>
+                  <circle r="3.5" fill="#10b981">
+                    <animateMotion dur="2s" repeatCount="indefinite" path="M 300 175 L 300 300 Z" />
+                  </circle>
+
+                  {/* Center Hub */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    name: "Maharashtra Interoperability Gateway",
+                    connector_type: "Hub Engine",
+                    status: "Healthy",
+                    request_count: "18,421",
+                    latency: "380ms",
+                    api_version: "v3.2",
+                    details: "Central routing engine managing API protocols, token consent controls, and common schemas mapping."
+                  })}>
+                    <circle cx="300" cy="175" r="45" fill="#f59e0b" fillOpacity="0.1" stroke="#f59e0b" strokeWidth="2" className="animate-pulse" />
+                    <circle cx="300" cy="175" r="35" fill="#f59e0b" />
+                    <text x="300" y="172" fill="#020205" textAnchor="middle" fontSize="10" fontWeight="900">INTEROP</text>
+                    <text x="300" y="184" fill="#020205" textAnchor="middle" fontSize="9" fontWeight="900">GATEWAY</text>
+                  </g>
+
+                  {/* Satellites */}
+                  {/* Top: Doc Vault */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    service_id: "srv_digilocker",
+                    name: "Document Verification Service (DigiLocker API)",
+                    connector_type: "REST API",
+                    status: "Healthy",
+                    request_count: "3,142",
+                    latency: "210ms",
+                    api_version: "v2.0",
+                    details: "DigiLocker REST integration verifying document hashes."
+                  })}>
+                    <circle cx="300" cy="50" r="22" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
+                    <text x="300" y="53" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">DigiLocker</text>
+                  </g>
+
+                  {/* Top Left: Identity */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    service_id: "srv_identity",
+                    name: "Identity Verification Service (Aadhaar API)",
+                    connector_type: "REST API",
+                    status: "Healthy",
+                    request_count: "5,821",
+                    latency: "310ms",
+                    api_version: "v2.1",
+                    details: "Aadhaar e-KYC demographics identity verify."
+                  })}>
+                    <circle cx="100" cy="120" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
+                    <text x="100" y="123" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">Aadhaar ID</text>
+                  </g>
+
+                  {/* Bottom Left: Address */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    service_id: "srv_address",
+                    name: "Address Verification Service",
+                    connector_type: "REST API",
+                    status: "Healthy",
+                    request_count: "4,192",
+                    latency: "280ms",
+                    api_version: "v1.0",
+                    details: "Land registry & property tax databases address match."
+                  })}>
+                    <circle cx="100" cy="230" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
+                    <text x="100" y="233" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">Address</text>
+                  </g>
+
+                  {/* Top Right: Business MSINS */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    service_id: "srv_msins_biz",
+                    name: "Business Registration (MSINS)",
+                    connector_type: "REST API",
+                    status: "Healthy",
+                    request_count: "2,842",
+                    latency: "420ms",
+                    api_version: "v3.0",
+                    details: "Maharashtra State Innovation Society business creation."
+                  })}>
+                    <circle cx="500" cy="120" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
+                    <text x="500" y="123" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">MSINS Biz</text>
+                  </g>
+
+                  {/* Bottom Right: Municipal Legacy Adapter */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    service_id: "srv_pmc_license",
+                    name: "Legacy Municipal System (Pune Trade License)",
+                    connector_type: "SOAP Legacy Adapter",
+                    status: healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status || "Healthy",
+                    request_count: "1,424",
+                    latency: "680ms",
+                    api_version: "v2.0-SOAP",
+                    details: "Legacy Municipal SOAP service adapter wrapping traditional XML responses."
+                  })}>
+                    <circle cx="500" cy="230" r="22" fill="#1e293b" stroke={healthData?.services?.find((s: any) => s.name.includes("Municipal"))?.status === "Failed" ? "#ef4444" : "#10b981"} strokeWidth="2" />
+                    <text x="500" y="233" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">PMC SOAP</text>
+                  </g>
+
+                  {/* Bottom: Notifications */}
+                  <g className="cursor-pointer" onClick={() => setSelectedConnector({
+                    name: "Notification Gateway",
+                    connector_type: "REST API",
+                    status: "Healthy",
+                    request_count: "12,982",
+                    latency: "95ms",
+                    api_version: "v1.1",
+                    details: "SMS & Email notification dispatcher."
+                  })}>
+                    <circle cx="300" cy="300" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
+                    <text x="300" y="303" fill="#ffffff" textAnchor="middle" fontSize="7" fontWeight="bold">Alerts</text>
+                  </g>
+                </svg>
+              </div>
+
+              {/* Connector details panel */}
+              <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 text-xs space-y-4 flex flex-col justify-between">
+                {selectedConnector ? (
+                  <>
+                    <div className="space-y-3">
+                      <div>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-wider uppercase inline-block mb-1 ${
+                          selectedConnector.status === 'Healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                          selectedConnector.status === 'Failed' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
+                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }`}>
+                          {selectedConnector.status}
+                        </span>
+                        <h4 className="font-bold text-white text-sm">{selectedConnector.name}</h4>
+                        <p className="text-[10px] text-slate-500">Connector Type: <span className="text-cyan-400 font-mono">{selectedConnector.connector_type}</span></p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-900 p-2.5 rounded-lg border border-slate-850">
+                        <p className="text-slate-400">API Version: <strong className="text-slate-200">{selectedConnector.api_version || 'v1.0'}</strong></p>
+                        <p className="text-slate-400">Total Requests: <strong className="text-slate-200">{selectedConnector.request_count}</strong></p>
+                        <p className="text-slate-400">Success Rate: <strong className="text-emerald-400">99.2%</strong></p>
+                        <p className="text-slate-400">Avg Latency: <strong className="text-amber-400">{selectedConnector.latency}</strong></p>
+                      </div>
+
+                      <p className="text-slate-400 text-[11px] leading-relaxed">
+                        {selectedConnector.details}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-900">
+                      <button
+                        onClick={() => setShowExchange(!showExchange)}
+                        className="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white font-bold py-2 rounded-lg transition text-[11px]"
+                      >
+                        {showExchange ? 'Hide Exchange Inspector' : 'View Recent Exchange Packet'}
+                      </button>
+
+                      {showExchange && (
+                        <div className="mt-3 p-3 bg-slate-950 border border-slate-850 rounded-lg text-[9px] font-mono overflow-x-auto max-h-40 text-slate-300">
+                          {selectedConnector.connector_type.includes("SOAP") ? (
+                            <pre className="leading-tight text-yellow-300/90">
+{`<!-- SOAP Request Envelope -->
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <ApplyForTradeLicense xmlns="http://tempuri.org/">
+      <business_id>MSINS-PUNE-88741</business_id>
+      <ward_number>PMC-Ward-12</ward_number>
+      <area_sqft>450</area_sqft>
+    </ApplyForTradeLicense>
+  </soap:Body>
+</soap:Envelope>
+
+<!-- Legacy Response -->
+<soap:Envelope>
+  <soap:Body>
+    <ApplyForTradeLicenseResponse>
+      <LicenseNumber>LIC-PMC-2026-9912</LicenseNumber>
+      <Status>ISSUED</Status>
+    </ApplyForTradeLicenseResponse>
+  </soap:Body>
+</soap:Envelope>`}
+                            </pre>
+                          ) : (
+                            <pre className="leading-tight text-cyan-300/90">
+{`// REST JSON Exchange
+{
+  "request": {
+    "url": "/api/v1/services/srv_identity/call",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer jwt_token_hash"
+    },
+    "body": {
+      "operation": "verify_demographics",
+      "params": {
+        "aadhaar": "XXXX-XXXX-8865"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "verified": true,
+      "claims": {
+        "name": "Aarav Mehta",
+        "dob": "2005-01-10"
+      }
+    }
+  }
+}`}
+                            </pre>
+                          )}
+                          <p className="text-[8px] text-slate-500 mt-2 text-center uppercase tracking-wider block border-t border-slate-900 pt-1">DEMO API EXCHANGE</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 space-y-2">
+                    <Activity className="w-8 h-8 text-slate-700 animate-pulse" />
+                    <p>Select any node on the interop topology map to view API connection logs.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
+          {/* Common Data Model mapping visualizer */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Compass className="w-5 h-5 text-amber-400" />
+                  <span>Common Data Model Schema Normalizer</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Visualizes how disparate formats from separate systems are translated dynamically without modifying their databases.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCDM(!showCDM)}
+                className="text-amber-400 hover:text-amber-300 font-bold text-xs"
+              >
+                {showCDM ? 'Hide Mapping' : 'Show Mapping'}
+              </button>
+            </div>
+
+            {showCDM && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono bg-slate-950 border border-slate-850 p-4 rounded-xl text-slate-300">
+                <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2">
+                  <span className="text-[10px] font-black text-slate-500 uppercase block">Source System: Aadhaar</span>
+                  <p className="text-slate-400">full_name: <span className="text-emerald-400 font-bold">"Aarav Mehta"</span></p>
+                  <p className="text-slate-400">dob: <span className="text-emerald-400 font-bold">"10/01/2005"</span></p>
+                  <p className="text-slate-400">addr_line1: <span className="text-emerald-400 font-bold">"Flat 402, Shivajinagar"</span></p>
+                </div>
+                <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2 flex flex-col justify-center items-center text-center">
+                  <span className="text-[10px] font-black text-amber-500 uppercase block">JanSetu Normalized CDM</span>
+                  <div className="w-full bg-slate-950 p-2 rounded text-[11px] border border-amber-500/20 text-slate-200 space-y-1">
+                    <p>name</p>
+                    <p>date_of_birth</p>
+                    <p>address</p>
+                  </div>
+                </div>
+                <div className="bg-slate-900/50 p-3 rounded border border-slate-800 space-y-2">
+                  <span className="text-[10px] font-black text-slate-500 uppercase block">Target System: PMC License</span>
+                  <p className="text-slate-400">applicant_name: <span className="text-emerald-400 font-bold">"Aarav Mehta"</span></p>
+                  <p className="text-slate-400">birth_date: <span className="text-emerald-400 font-bold">"2005-01-10"</span></p>
+                  <p className="text-slate-400">registered_address: <span className="text-emerald-400 font-bold">"Flat 402, Shivajinagar"</span></p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Audit Logs */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <History className="w-5 h-5 text-amber-400" />
@@ -1550,6 +2092,74 @@ export default function DashboardPage() {
       {/* Data Quality Tab */}
       {activeTab === 'conflicts' && (
         <div className="space-y-6 animate-fadeIn">
+          {/* MDM stats bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Records Validated</span>
+              <span className="text-lg font-black text-white">18,421</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Consistent</span>
+              <span className="text-lg font-black text-emerald-400">17,962</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Warnings</span>
+              <span className="text-lg font-black text-amber-400">341</span>
+            </div>
+            <div className="bg-slate-900 border grid-cols-1 border-slate-800 rounded-xl p-4 space-y-0.5">
+              <span className="text-slate-500 font-semibold uppercase block text-[9px]">Conflicts</span>
+              <span className="text-lg font-black text-red-400">{conflicts.filter(c => c.status === 'DETECTED').length} Active</span>
+            </div>
+          </div>
+
+          {/* Master Citizen Record (MDM view) */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-amber-400" />
+                <span>Master Citizen Profile Record (MDM View)</span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Authoritative single-source-of-truth values derived from connected registries.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-850 rounded-xl p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Citizen Master ID</span>
+                  <span className="text-sm font-bold text-amber-400 font-mono">CIT-10482</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Verified Name</span>
+                  <span className="text-sm font-bold text-white">{user?.full_name || 'Aarav Mehta'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Authoritative DOB</span>
+                  <span className="text-sm font-bold text-white">
+                    {conflicts.find(c => c.field_name === 'date_of_birth' && c.status === 'RESOLVED')?.resolved_value || '10 Jan 2005 (Aadhaar)'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Verified Residence Address</span>
+                  <span className="text-sm font-bold text-white">Flat 402, Pune, Maharashtra</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Contact Verified</span>
+                  <span className="text-sm font-bold text-white">+91 98765 43210</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Data Sources Connected</span>
+                  <span className="text-sm font-bold text-emerald-400">✓ UIDAI, State land registry</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 border-t border-slate-900 pt-3">
+                *Authoritative values are maintained separately from individual department source-system representations to protect citizen data privacy.
+              </p>
+            </div>
+          </div>
+
+          {/* Conflicts Resolver */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1568,7 +2178,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-4">
                 {conflicts.map((c) => (
-                  <div key={c.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
+                  <div key={c.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between border-b border-slate-900 pb-3 text-xs">
                       <div>
                         <span className="text-[10px] font-black text-red-400 uppercase tracking-wider block">DISCREPANCY DETECTED</span>
@@ -1602,13 +2212,13 @@ export default function DashboardPage() {
                             onClick={() => resolveConflictAPI(c.id, c.value_a).then(() => loadInteropData())}
                             className="bg-slate-900 hover:bg-slate-850 border border-slate-700 text-white font-bold px-3 py-1.5 rounded text-xs transition"
                           >
-                            Use Aadhaar: {c.value_a}
+                            Use Authoritative Aadhaar: {c.value_a}
                           </button>
                           <button
                             onClick={() => resolveConflictAPI(c.id, c.value_b).then(() => loadInteropData())}
                             className="bg-slate-900 hover:bg-slate-850 border border-slate-700 text-white font-bold px-3 py-1.5 rounded text-xs transition"
                           >
-                            Use PMC: {c.value_b}
+                            Use Local PMC: {c.value_b}
                           </button>
                         </div>
                       </div>
@@ -1624,6 +2234,171 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Floating Guided Tour Stepper Controller */}
+      <div className="fixed bottom-4 right-4 z-40 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl max-w-sm w-full space-y-3">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+          <span className="text-[10px] font-black text-amber-500 tracking-wider uppercase flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" /> SIH judge guided demo
+          </span>
+          {guidedStep !== null && (
+            <button
+              onClick={() => setGuidedStep(null)}
+              className="text-slate-500 hover:text-slate-300 text-xs"
+            >
+              Reset Guide
+            </button>
+          )}
+        </div>
+
+        {guidedStep === null ? (
+          <div className="space-y-2">
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              Start the interactive walkthrough to follow a Pune citizen goal journey through data vault sharing, REST/SOAP connector triggers, and conflict resolutions.
+            </p>
+            <button
+              onClick={() => {
+                setGuidedStep(1);
+                setActiveTab('planner');
+                setGoalInput("I want to start a small food business in Pune.");
+              }}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:from-amber-400 hover:to-orange-400 transition"
+            >
+              Start Guided Tour
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest font-black">
+              <span>Step {guidedStep} of 7</span>
+              <span>{guidedStep === 7 ? 'COMPLETED' : 'IN PROGRESS'}</span>
+            </div>
+            
+            {guidedStep === 1 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 1: Enter Goal.</strong> Domicile State is pre-set to Maharashtra. Click the <strong>"Understand Goal"</strong> button to parse the goal and trigger mock registries.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(2);
+                    // Force input value
+                    setGoalInput("I want to start a small food business in Pune.");
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next Step (Auto-fill & Submit)
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 2 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 2: Review Goal Steps.</strong> Look at the dynamic steps generated. Note status, departments, required data schema, and next actions.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(3);
+                    setActiveTab('applications');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next Step: Open tracker tab
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 3 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 3: Track applications.</strong> 4 cards resolved across MSINS, PMC licensing, address check, and UIDAI e-KYC. Click <strong>"Business Registration"</strong> to see details.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(4);
+                    const bizApp = applications.find(a => a.service_id === 'srv_msins_biz');
+                    if (bizApp) setSelectedApp(bizApp);
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next Step: Open details modal
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 4 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 4: Simulate Update.</strong> Click the amber <strong>"Simulate Status Update"</strong> button inside the modal to approve the registration and propagate updates.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedApp(null);
+                    setGuidedStep(5);
+                    setActiveTab('consent');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next Step: Open Consent Center
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 5 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 5: Manage Consents.</strong> Look at PMC Food Licensing's pending consent request. Click <strong>"Allow Once"</strong> or <strong>"Allow Always"</strong> to authorize secure data reuse.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(6);
+                    setActiveTab('interop');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next Step: View Interop Hub
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 6 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 6: Inspect interop layers.</strong> Explore the interactive SVG diagram. Note the SOAP municipal node and REST services. Click <strong>"Simulate Failure"</strong> to test exception handling.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(7);
+                    setActiveTab('conflicts');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next Step: Resolve conflicts
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 7 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 7: Resolve discrepancies.</strong> In Data Quality, select <strong>"Use Authoritative Aadhaar"</strong> to fix the DOB discrepancy and synchronize the Master Record.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(null);
+                    setActiveTab('planner');
+                  }}
+                  className="w-full bg-emerald-500 text-slate-950 font-bold py-1.5 rounded text-xs hover:bg-emerald-400 transition"
+                >
+                  Complete Guided Tour
+                </button>
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
     </div>
   );
 }

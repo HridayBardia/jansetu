@@ -968,4 +968,11 @@ export async function resolveConflictAPI(conflictId: string, resolvedValue: stri
   });
 }
 
+export async function toggleConnectorHealthAPI(serviceId: string, status: string): Promise<any | null> {
+  return await apiFetch<any>(`/connectors/${serviceId}/health`, {
+    method: 'POST',
+    body: JSON.stringify({ status })
+  });
+}
+
 

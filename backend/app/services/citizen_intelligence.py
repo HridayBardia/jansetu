@@ -1470,7 +1470,190 @@ class CitizenIntelligenceEngine:
         journey.status = "COMPLETE"
         journey.result_json = result_payload
         db.commit()
-        
+
+        # Seed interconnected demo dataset if query contains 'food' or 'business' in Pune
+        if "pune" in query.lower() and ("food" in query.lower() or "business" in query.lower()):
+            from app.models.db_models import ApplicationDB, ConsentRecordDB, DataConflictDB, NotificationDB, AuditLogDB, CitizenProfileDB
+            from app.services.interoperability_gateway import ServiceRegistry
+            from datetime import timedelta
+            import uuid
+
+            # Dynamically override profile location to Pune, Maharashtra for this demo run
+            profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == current_user.id).first()
+            if profile:
+                profile.location_state = "Maharashtra"
+                profile.location_city = "Pune"
+                db.commit()
+
+            # Seed service registry
+            ServiceRegistry.seed_services(db)
+
+            # Clear previous demo items for this user
+            db.query(ApplicationDB).filter(ApplicationDB.citizen_id == current_user.id).delete()
+            db.query(ConsentRecordDB).filter(ConsentRecordDB.user_id == current_user.id).delete()
+            db.query(DataConflictDB).filter(DataConflictDB.user_id == current_user.id).delete()
+            db.query(NotificationDB).filter(NotificationDB.user_id == current_user.id).delete()
+            db.commit()
+
+            # 1. Seed applications
+            apps_data = [
+                {
+                    "application_id": "MH-BIZ-2026-01842",
+                    "service_id": "srv_msins_biz",
+                    "department_id": "msins",
+                    "department_name": "Maharashtra State Innovation Society",
+                    "service_name": "Business Registration Service",
+                    "status": "UNDER_VERIFICATION",
+                    "documents": ["AADHAAR", "PAN"],
+                    "timeline": [
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Business registration form submitted.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
+                        {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Address/Identity checks initiated via Interop Gateway.", "timestamp": (datetime.utcnow() - timedelta(days=1)).isoformat()}
+                    ],
+                    "required_actions": []
+                },
+                {
+                    "application_id": "MH-FBL-2026-00491",
+                    "service_id": "srv_pmc_license",
+                    "department_id": "pmc",
+                    "department_name": "Pune Municipal Corporation",
+                    "service_name": "Food Business License",
+                    "status": "DOCUMENTS_REQUIRED",
+                    "documents": ["AADHAAR", "RENT_AGREEMENT"],
+                    "timeline": [
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Food licensing application submitted.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
+                        {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Premises document required.", "timestamp": (datetime.utcnow() - timedelta(days=1)).isoformat()}
+                    ],
+                    "required_actions": [{"type": "UPLOAD_DOCUMENT", "document_type": "FIRE_NOC", "label": "Upload Fire NOC Certificate"}]
+                },
+                {
+                    "application_id": "ADDR-78421",
+                    "service_id": "srv_address",
+                    "department_id": "revenue",
+                    "department_name": "Revenue Department, Govt of Maharashtra",
+                    "service_name": "Address Verification Service",
+                    "status": "APPROVED",
+                    "documents": ["AADHAAR"],
+                    "timeline": [
+                        {"status": "SUBMITTED", "title": "Requested", "description": "Address lookup request.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
+                        {"status": "APPROVED", "title": "Verified", "description": "Residential address matched via property registry.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()}
+                    ],
+                    "required_actions": []
+                },
+                {
+                    "application_id": "ID-90812",
+                    "service_id": "srv_identity",
+                    "department_id": "uidai",
+                    "department_name": "UIDAI / Ministry of Electronics & IT",
+                    "service_name": "Identity Verification Service (Aadhaar API)",
+                    "status": "APPROVED",
+                    "documents": ["AADHAAR"],
+                    "timeline": [
+                        {"status": "SUBMITTED", "title": "Verification Request", "description": "Aadhaar e-KYC query.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
+                        {"status": "APPROVED", "title": "e-KYC Completed", "description": "Masked mobile OTP verified successfully.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()}
+                    ],
+                    "required_actions": []
+                }
+            ]
+            for app_item in apps_data:
+                db.add(ApplicationDB(
+                    application_id=app_item["application_id"],
+                    citizen_id=current_user.id,
+                    service_id=app_item["service_id"],
+                    department_id=app_item["department_id"],
+                    department_name=app_item["department_name"],
+                    service_name=app_item["service_name"],
+                    status=app_item["status"],
+                    documents=app_item["documents"],
+                    timeline=app_item["timeline"],
+                    required_actions=app_item["required_actions"]
+                ))
+
+            # 2. Seed consents
+            consents_data = [
+                {
+                    "consent_id": "CONSENT-8821",
+                    "department_id": "msins",
+                    "department_name": "Maharashtra State Innovation Society",
+                    "requested_fields": ["full_name", "date_of_birth", "gender"],
+                    "purpose": "Process your business registration application.",
+                    "granted": True,
+                    "access_type": "ALWAYS"
+                },
+                {
+                    "consent_id": "CONSENT-9942",
+                    "department_id": "pmc",
+                    "department_name": "Food Licensing Service (PMC)",
+                    "requested_fields": ["verified_identity", "business_address", "contact_information"],
+                    "purpose": "Process your food business license application.",
+                    "granted": False,
+                    "access_type": "ONCE"
+                },
+                {
+                    "consent_id": "CONSENT-1042",
+                    "department_id": "legacy_municipal",
+                    "department_name": "Example Legacy Municipal Service",
+                    "requested_fields": ["annual_income", "caste"],
+                    "purpose": "Seeded legacy data check",
+                    "granted": False,
+                    "access_type": "REVOKED"
+                }
+            ]
+            for c_item in consents_data:
+                db.add(ConsentRecordDB(
+                    consent_id=c_item["consent_id"],
+                    user_id=current_user.id,
+                    department_id=c_item["department_id"],
+                    department_name=c_item["department_name"],
+                    requested_fields=c_item["requested_fields"],
+                    purpose=c_item["purpose"],
+                    granted=c_item["granted"],
+                    access_type=c_item["access_type"]
+                ))
+
+            # 3. Seed data conflicts
+            db.add(DataConflictDB(
+                user_id=current_user.id,
+                field_name="date_of_birth",
+                source_a="Identity Service (UIDAI)",
+                value_a="10 Jan 2005",
+                source_b="Pune Municipal Corporation",
+                value_b="11 Jan 2005",
+                status="DETECTED"
+            ))
+
+            # 4. Seed notifications
+            notifs_data = [
+                {"title": "Unified Journey Generated", "message": "Your dynamic Pune Food Business setup journey has been mapped.", "category": "JOURNEY_CREATED"},
+                {"title": "Pending Action: Premises Document", "message": "PMC Food Licensing requests premises Rent Agreement / Fire NOC.", "category": "DOCUMENT_REQUIRED"},
+                {"title": "Identity Verified", "message": "Aadhaar e-KYC completed successfully via secure interop gate.", "category": "DOCUMENT_VERIFIED"}
+            ]
+            for n_item in notifs_data:
+                db.add(NotificationDB(
+                    user_id=current_user.id,
+                    title=n_item["title"],
+                    message=n_item["message"],
+                    category=n_item["category"],
+                    is_read=False
+                ))
+
+            # 5. Seed Audit Logs
+            audit_events = [
+                {"actor": current_user.username, "action": "JOURNEY_INITIATE", "resource": "Pune Food Business Setup Journey", "status": "SUCCESS"},
+                {"actor": "SYSTEM_GATEWAY", "action": "API_REQUEST", "resource": "srv_identity e-KYC verification", "status": "SUCCESS"},
+                {"actor": current_user.username, "action": "CONSENT_GRANT", "resource": "CONSENT-8821 to Maharashtra State Innovation Society", "status": "SUCCESS"},
+                {"actor": "SYSTEM_DATA_QUALITY", "action": "DATA_CONFLICT", "resource": "date_of_birth difference flagged between UIDAI and PMC", "status": "CONFLICT"}
+            ]
+            for a_item in audit_events:
+                db.add(AuditLogDB(
+                    actor=a_item["actor"],
+                    action=a_item["action"],
+                    resource=a_item["resource"],
+                    status=a_item["status"],
+                    correlation_id=str(uuid.uuid4())
+                ))
+            
+            db.commit()
+
         logger.info(f"[DEBUG TRACE] FINAL JOURNEY: success=True, goal_title={goal_title!r}")
         
         return result_payload

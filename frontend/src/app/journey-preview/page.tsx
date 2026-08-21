@@ -86,6 +86,9 @@ export default function JourneyPreviewPage() {
         ...(activeJourney?.schemes?.targetState || [])
       ].filter((v, idx, self) => self.findIndex(t => (t.id === v.id || t.name === v.name)) === idx);
 
+  const isPuneFoodBiz = goalTitle.toLowerCase().includes("pune") && 
+    (goalTitle.toLowerCase().includes("food") || goalTitle.toLowerCase().includes("business"));
+
   return (
     <div className="min-h-screen bg-[#020205] text-slate-100 py-10 px-4 md:px-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -119,6 +122,176 @@ export default function JourneyPreviewPage() {
             )}
           </div>
         </div>
+
+        {isPuneFoodBiz && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div>
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">GOAL UNDERSTOOD</span>
+              <h2 className="text-lg font-bold text-white mt-1">Start a small food business in Pune, Maharashtra</h2>
+            </div>
+
+            {/* Identified Services */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">IDENTIFIED SERVICES</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-slate-300">Identity verification</span>
+                  <span className="text-emerald-400 font-bold">✓ Verified</span>
+                </div>
+                <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-slate-300">Address verification</span>
+                  <span className="text-emerald-400 font-bold">✓ Verified</span>
+                </div>
+                <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-slate-300">Business registration</span>
+                  <span className="text-amber-400 font-bold">● In Progress</span>
+                </div>
+                <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-slate-300">Applicable licensing</span>
+                  <span className="text-red-400 font-bold animate-pulse">⚠ Action Required</span>
+                </div>
+                <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex items-center justify-between sm:col-span-2 md:col-span-1">
+                  <span className="text-slate-300">Govt support discovery</span>
+                  <span className="text-cyan-400 font-bold">✓ Ready</span>
+                </div>
+              </div>
+            </div>
+
+            {/* YOUR JOURNEY */}
+            <div className="space-y-4 pt-2">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">YOUR JOURNEY</span>
+              <div className="relative border-l border-slate-800 ml-3 pl-6 space-y-6 text-xs">
+                
+                {/* Step 1 */}
+                <div className="relative">
+                  <div className="absolute -left-[30px] top-1 w-3 h-3 rounded-full bg-emerald-500 border border-slate-900" />
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">1. Verify identity</h4>
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">COMPLETED</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p><strong>Service:</strong> Identity Service (Aadhaar API)</p>
+                      <p><strong>Department:</strong> UIDAI / Ministry of Electronics & IT</p>
+                      <p><strong>Required Data:</strong> Aadhaar number, name</p>
+                      <p><strong>Required Docs:</strong> Aadhaar Card</p>
+                      <p><strong>Dependencies:</strong> None</p>
+                      <p><strong>Connector:</strong> Modern REST API (OAuth 2.0)</p>
+                      <p><strong>Est. Processing State:</strong> Instant</p>
+                      <p><strong>Next Action:</strong> None (Data cached in secure vault)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="relative">
+                  <div className="absolute -left-[30px] top-1 w-3 h-3 rounded-full bg-emerald-500 border border-slate-900" />
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">2. Verify address</h4>
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">COMPLETED</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p><strong>Service:</strong> Address Verification Service</p>
+                      <p><strong>Department:</strong> Revenue Department, Govt of Maharashtra</p>
+                      <p><strong>Required Data:</strong> Address text, pincode</p>
+                      <p><strong>Required Docs:</strong> Rent Agreement</p>
+                      <p><strong>Dependencies:</strong> Step 1</p>
+                      <p><strong>Connector:</strong> Modern REST API</p>
+                      <p><strong>Est. Processing State:</strong> Instant</p>
+                      <p><strong>Next Action:</strong> None</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="relative">
+                  <div className="absolute -left-[30px] top-1 w-3 h-3 rounded-full bg-amber-500 border border-slate-900" />
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">3. Register business</h4>
+                      <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-bold">UNDER VERIFICATION</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p><strong>Service:</strong> Business Registration (Single Window)</p>
+                      <p><strong>Department:</strong> Maharashtra State Innovation Society (MSINS)</p>
+                      <p><strong>Required Data:</strong> Business Name, PAN, Type</p>
+                      <p><strong>Required Docs:</strong> Aadhaar Card, PAN Card</p>
+                      <p><strong>Dependencies:</strong> Step 1, 2</p>
+                      <p><strong>Connector:</strong> Modern REST API</p>
+                      <p><strong>Est. Processing State:</strong> 1-2 Days</p>
+                      <p><strong>Next Action:</strong> Pre-filled application using verified vault credentials</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="relative">
+                  <div className="absolute -left-[30px] top-1 w-3 h-3 rounded-full bg-red-500 border border-slate-900 animate-pulse" />
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">4. Complete applicable licensing</h4>
+                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded text-[10px] font-bold">ACTION REQUIRED</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p><strong>Service:</strong> Trade License / Food Safety</p>
+                      <p><strong>Department:</strong> Pune Municipal Corporation (PMC)</p>
+                      <p><strong>Required Data:</strong> Ward Number, Area Sqft, Business ID</p>
+                      <p><strong>Required Docs:</strong> Aadhaar, Rent Agreement, Fire NOC</p>
+                      <p><strong>Dependencies:</strong> Step 3</p>
+                      <p><strong>Connector:</strong> Legacy SOAP Adapter (MunicipalServiceAdapter)</p>
+                      <p><strong>Est. Processing State:</strong> 3-5 Days</p>
+                      <p className="text-red-400"><strong>Next Action:</strong> Upload Fire NOC certificate to complete required items</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 5 */}
+                <div className="relative">
+                  <div className="absolute -left-[30px] top-1 w-3 h-3 rounded-full bg-slate-800 border border-slate-900" />
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">5. Submit required applications</h4>
+                      <span className="bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">PENDING</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p><strong>Service:</strong> Interoperability Registry Submission</p>
+                      <p><strong>Department:</strong> Maharashtra State Innovation Society</p>
+                      <p><strong>Required Data:</strong> Verified common data schemas</p>
+                      <p><strong>Required Docs:</strong> Aadhaar, PAN, Rent Agreement</p>
+                      <p><strong>Dependencies:</strong> Step 4</p>
+                      <p><strong>Connector:</strong> Modern REST API</p>
+                      <p><strong>Est. Processing State:</strong> 1 Day</p>
+                      <p><strong>Next Action:</strong> Submit once consent is granted in Consent Center</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 6 */}
+                <div className="relative">
+                  <div className="absolute -left-[30px] top-1 w-3 h-3 rounded-full bg-slate-800 border border-slate-900" />
+                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-white text-sm">6. Track all applications</h4>
+                      <span className="bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">PENDING</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+                      <p><strong>Service:</strong> Unified tracking console</p>
+                      <p><strong>Department:</strong> Citizen Portal</p>
+                      <p><strong>Required Data:</strong> Transaction references</p>
+                      <p><strong>Required Docs:</strong> None</p>
+                      <p><strong>Dependencies:</strong> Step 5</p>
+                      <p><strong>Connector:</strong> REST API</p>
+                      <p><strong>Est. Processing State:</strong> Real-time</p>
+                      <p><strong>Next Action:</strong> Track via dashboard applications tab</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Section 01: Verified Documents */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
@@ -174,7 +347,7 @@ export default function JourneyPreviewPage() {
               {schemesList.map((scheme: any, idx: number) => (
                 <div key={idx} className="bg-slate-950 border border-slate-800/80 rounded-xl p-4 space-y-2 text-xs">
                   <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-2.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                    {scheme?.level || 'State'}
+                    {scheme?.level || scheme?.governmentLevel || 'State'}
                   </span>
                   <h4 className="font-bold text-white leading-tight">{scheme?.name || scheme?.title}</h4>
                   <p className="text-slate-400 text-[11px] leading-relaxed">{scheme?.description}</p>

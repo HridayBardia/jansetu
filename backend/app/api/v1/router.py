@@ -1525,4 +1525,34 @@ def resolve_data_conflict(
         raise HTTPException(status_code=404, detail="Conflict not found")
     return success_response({"status": "resolved"}, request)
 
+@api_v1_router.post("/connectors/{service_id}/health")
+def update_connector_health_status(
+    service_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    status = payload.get("status", "HEALTHY")
+    service = db.query(ServiceRegistryDB).filter(ServiceRegistryDB.service_id == service_id).first()
+    if service:
+        service.health_status = status
+        db.commit()
+        
+        # Update ConnectorHealthDB record as well
+        from app.models.db_models import ConnectorHealthDB
+        health_rec = db.query(ConnectorHealthDB).filter(
+            ConnectorHealthDB.service_name.contains("Licensing") if "license" in service_id else ConnectorHealthDB.service_name.contains("Municipal")
+        ).first()
+        if health_rec:
+            health_rec.health_status = "Failed" if status == "FAILED" else "Degraded" if status == "DEGRADED" else "Healthy"
+            db.commit()
+            
+        AuditLogger.log(
+            db, actor="SYSTEM_ADMIN", action="CONNECTOR_HEALTH_CHANGE",
+            resource=f"Service: {service_id}, Status: {status}",
+            status="SUCCESS"
+        )
+        return success_response({"status": status}, request)
+    raise HTTPException(status_code=404, detail="Service registry not found")
+
 
