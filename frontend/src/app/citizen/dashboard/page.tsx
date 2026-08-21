@@ -758,7 +758,7 @@ export default function DashboardPage() {
               className="p-1.5 bg-slate-900 border border-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition relative"
             >
               <Bell className="w-4.5 h-4.5" />
-              {notifications.length > 0 && (
+              {mockAlerts.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border border-slate-950 animate-pulse" />
               )}
             </button>
@@ -767,19 +767,19 @@ export default function DashboardPage() {
               <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 z-50 space-y-3 text-xs">
                 <div className="flex items-center justify-between border-b border-slate-850 pb-2">
                   <span className="font-bold text-white uppercase tracking-wider">Notifications Center</span>
-                  <span className="text-[10px] text-slate-500">{notifications.length} alerts</span>
+                  <span className="text-[10px] text-slate-500">{mockAlerts.length} alerts</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-2">
-                  {notifications.map((n, idx) => (
-                    <div key={n.id || idx} className="p-2 bg-slate-950 border border-slate-850 rounded-lg space-y-1">
+                  {mockAlerts.map((n) => (
+                    <div key={n.id} className="p-2 bg-slate-950 border border-slate-850 rounded-lg space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-300">{n.title}</span>
-                        <span className="text-[9px] text-slate-500">{new Date(n.created_at).toLocaleTimeString()}</span>
+                        <span className="font-bold text-slate-300">{n.category}</span>
+                        <span className="text-[9px] text-slate-500">{n.timestamp}</span>
                       </div>
                       <p className="text-slate-400 text-[11px] leading-relaxed">{n.message}</p>
                     </div>
                   ))}
-                  {notifications.length === 0 && (
+                  {mockAlerts.length === 0 && (
                     <p className="text-slate-500 text-center py-4">No recent notifications.</p>
                   )}
                 </div>
@@ -857,7 +857,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-0.5">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document Vault</span>
-            <span className="text-sm font-black text-white">{userDocs.length} Verified Files</span>
+            <span className="text-sm font-black text-white">{mockDocs.length} Verified Files</span>
           </div>
         </div>
 
@@ -867,7 +867,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-0.5">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Journeys</span>
-            <span className="text-sm font-black text-white">{activeJourneys.length} Workflows</span>
+            <span className="text-sm font-black text-white">{mockJourneys.length} Workflows</span>
           </div>
         </div>
 
@@ -1312,13 +1312,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {activeJourneys.length === 0 ? (
+        {mockJourneys.length === 0 ? (
           <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
             No active journeys yet. Enter your goal above (e.g. "I want to start a business in Pune") to build your first personalized government journey.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {activeJourneys.map((j: any) => (
+            {mockJourneys.map((j) => (
               <div
                 key={j.id}
                 onClick={() => router.push(`/journeys/${j.id || 'journey_biz_vadodara_1'}`)}
@@ -1327,13 +1327,13 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-xs">
-                      {j.location_state === 'Gujarat' ? 'GJ' : j.location_state === 'Karnataka' ? 'KA' : j.location_state === 'Rajasthan' ? 'RJ' : 'IN'}
+                      {domicileState === 'Gujarat' ? 'GJ' : domicileState === 'Karnataka' ? 'KA' : domicileState === 'Rajasthan' ? 'RJ' : 'IN'}
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white group-hover:text-amber-400 transition">
-                        {j.goal_title || 'Dynamic Citizen Journey'}
+                        {j.title || 'Dynamic Citizen Journey'}
                       </h3>
-                      <p className="text-xs text-slate-400">{j.location_city || 'Vadodara'}, {j.location_state || 'Gujarat'}</p>
+                      <p className="text-xs text-slate-400">{profile?.location_city || 'Vadodara'}, {domicileState || 'Gujarat'}</p>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-amber-400">In Progress</span>
@@ -1359,7 +1359,17 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-400">Your verified documents</p>
           </div>
         </div>
-        <DocumentVault documents={userDocs} />
+        <DocumentVault documents={mockDocs.map(d => ({
+          id: d.id,
+          document_type: d.type,
+          document_name: d.name,
+          file_name: d.name,
+          file_size: 100,
+          status: 'COMPLETED',
+          verification_status: d.status,
+          is_synthetic: d.isDemo,
+          issued_by: d.source
+        })) as any} />
       </div>
 
       {/* 03 — APPLICATIONS */}
@@ -2119,7 +2129,17 @@ export default function DashboardPage() {
             </div>
           )}
           <DocumentVault 
-            documents={mockDocs} 
+            documents={mockDocs.map(d => ({
+              id: d.id,
+              document_type: d.type,
+              document_name: d.name,
+              file_name: d.name,
+              file_size: 100,
+              status: 'COMPLETED',
+              verification_status: d.status,
+              is_synthetic: d.isDemo,
+              issued_by: d.source
+            })) as any} 
             goalCategory={journeyAnalysis?.intent?.primary === 'STUDY_ABROAD' ? 'education' : 'business'}
             consistencyStatus={
               mockDocs.length > 0 ? {

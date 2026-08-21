@@ -55,6 +55,7 @@ export interface Consent {
   id: string;
   department: string;
   purpose: string;
+  requestedFields: string[];
   status: 'ACTIVE' | 'PENDING' | 'REVOKED' | 'EXPIRED';
   grantedDate?: string;
   expiryDate?: string;
@@ -159,11 +160,11 @@ const initialApplications: Application[] = [
 ];
 
 const initialConsents: Consent[] = [
-  { id: 'cst_001', department: 'UIDAI', purpose: 'Identity verification', status: 'ACTIVE', grantedDate: '18 Aug 2026', expiryDate: '18 Feb 2027' },
-  { id: 'cst_002', department: 'Education Department', purpose: 'Scholarship verification', status: 'ACTIVE', grantedDate: '21 Aug 2026', expiryDate: '21 Aug 2027' },
-  { id: 'cst_003', department: 'Transport Department', purpose: 'Driving licence application', status: 'PENDING' },
-  { id: 'cst_004', department: 'Municipal Corporation', purpose: 'Address verification', status: 'REVOKED', grantedDate: '15 Jan 2026', expiryDate: '15 Jul 2026' },
-  { id: 'cst_005', department: 'Income Tax Dept', purpose: 'Financial capacity check', status: 'ACTIVE', grantedDate: '22 Aug 2026', expiryDate: '22 Nov 2026' }
+  { id: 'cst_001', department: 'UIDAI', purpose: 'Identity verification', requestedFields: ['Name', 'DOB', 'Photo'], status: 'ACTIVE', grantedDate: '18 Aug 2026', expiryDate: '18 Feb 2027' },
+  { id: 'cst_002', department: 'Education Department', purpose: 'Scholarship verification', requestedFields: ['Academic Records'], status: 'ACTIVE', grantedDate: '21 Aug 2026', expiryDate: '21 Aug 2027' },
+  { id: 'cst_003', department: 'Transport Department', purpose: 'Driving licence application', requestedFields: ['Identity', 'Address'], status: 'PENDING' },
+  { id: 'cst_004', department: 'Municipal Corporation', purpose: 'Address verification', requestedFields: ['Property Records'], status: 'REVOKED', grantedDate: '15 Jan 2026', expiryDate: '15 Jul 2026' },
+  { id: 'cst_005', department: 'Income Tax Dept', purpose: 'Financial capacity check', requestedFields: ['PAN', 'Income'], status: 'ACTIVE', grantedDate: '22 Aug 2026', expiryDate: '22 Nov 2026' }
 ];
 
 const initialGovConnections: GovConnection[] = [
