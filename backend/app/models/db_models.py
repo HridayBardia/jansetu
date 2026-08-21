@@ -243,6 +243,12 @@ class ServiceRegistryDB(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     jurisdiction = Column(String, default="MAHARASHTRA") # MAHARASHTRA, CENTRAL, etc.
+    country = Column(String, default="India")
+    state = Column(String, nullable=True)
+    district = Column(String, nullable=True)
+    sla_hours = Column(Integer, default=48)
+    data_schema = Column(String, default="Common Data Model")
+    category = Column(String, default="general")
     connector = Column(String, default="modern_rest_connector") # modern_rest_connector, legacy_soap_connector
     api_version = Column(String, default="v1")
     health_status = Column(String, default="HEALTHY") # HEALTHY, DEGRADED, FAILED

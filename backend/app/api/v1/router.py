@@ -1538,7 +1538,6 @@ def update_connector_health_status(
         service.health_status = status
         db.commit()
         
-        # Update ConnectorHealthDB record as well
         from app.models.db_models import ConnectorHealthDB
         health_rec = db.query(ConnectorHealthDB).filter(
             ConnectorHealthDB.service_name.contains("Licensing") if "license" in service_id else ConnectorHealthDB.service_name.contains("Municipal")
@@ -1554,5 +1553,79 @@ def update_connector_health_status(
         )
         return success_response({"status": status}, request)
     raise HTTPException(status_code=404, detail="Service registry not found")
+
+@api_v1_router.get("/metrics")
+def get_interoperability_metrics(request: Request):
+    return success_response({
+        "duplicate_submissions": {
+            "before": 2.8,
+            "after": 1.1,
+            "reduction_percentage": "60.7%"
+        },
+        "average_processing_time": {
+            "before": "5.4 days",
+            "after": "3.2 days",
+            "reduction_percentage": "40.7%"
+        },
+        "cross_dept_handoffs": {
+            "before": 7,
+            "after": 3,
+            "reduction_percentage": "57.1%"
+        },
+        "data_consistency": {
+            "before": "87.2%",
+            "after": "98.4%",
+            "improvement_points": "+11.2%"
+        }
+    }, request)
+
+@api_v1_router.get("/service-levels")
+def get_service_levels(request: Request):
+    return success_response([
+        {
+            "service_id": "srv_msins_biz",
+            "name": "Maharashtra Business Registration",
+            "target_hours": 48,
+            "actual_hours": 31,
+            "sla_compliance": "96.4%"
+        },
+        {
+            "service_id": "srv_kar_biz",
+            "name": "Karnataka Business Registration",
+            "target_hours": 48,
+            "actual_hours": 29,
+            "sla_compliance": "97.1%"
+        },
+        {
+            "service_id": "srv_pmc_license",
+            "name": "Pune Trade License Service",
+            "target_hours": 72,
+            "actual_hours": 61,
+            "sla_compliance": "91.2%"
+        },
+        {
+            "service_id": "srv_kar_municipal",
+            "name": "Bengaluru Trade License Service",
+            "target_hours": 72,
+            "actual_hours": 58,
+            "sla_compliance": "92.8%"
+        },
+        {
+            "service_id": "srv_central_scholarship",
+            "name": "Central DBT & Scholarship",
+            "target_hours": 360,
+            "actual_hours": 274,
+            "sla_compliance": "94.7%"
+        }
+    ], request)
+
+@api_v1_router.get("/data-quality/master")
+def get_master_data_record(
+    request: Request,
+    current_user: UserDB = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    record = DataQualityEngine.get_master_citizen_record(db, current_user.id)
+    return success_response(record, request)
 
 

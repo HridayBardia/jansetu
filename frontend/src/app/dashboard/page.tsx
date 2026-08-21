@@ -26,7 +26,10 @@ import {
   fetchAuditLogsAPI,
   fetchConflictsAPI,
   resolveConflictAPI,
-  toggleConnectorHealthAPI
+  toggleConnectorHealthAPI,
+  fetchMetricsAPI,
+  fetchServiceLevelsAPI,
+  fetchMasterDataRecordAPI
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
@@ -453,6 +456,9 @@ export default function DashboardPage() {
   const [selectedConnector, setSelectedConnector] = useState<any | null>(null);
   const [showExchange, setShowExchange] = useState<boolean>(false);
   const [showCDM, setShowCDM] = useState<boolean>(false);
+  const [metrics, setMetrics] = useState<any>(null);
+  const [serviceLevels, setServiceLevels] = useState<any[]>([]);
+  const [masterRecord, setMasterRecord] = useState<any>(null);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
@@ -462,6 +468,9 @@ export default function DashboardPage() {
     fetchAuditLogsAPI().then((data) => setAuditLogs(data || []));
     fetchConflictsAPI().then((data) => setConflicts(data || []));
     fetchNotificationsAPI().then((data) => setNotifications(data || []));
+    fetchMetricsAPI().then((data) => setMetrics(data || null));
+    fetchServiceLevelsAPI().then((data) => setServiceLevels(data || []));
+    fetchMasterDataRecordAPI().then((data) => setMasterRecord(data || null));
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
@@ -697,7 +706,7 @@ export default function DashboardPage() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
             JS
           </div>
-          <span className="text-xs font-black text-slate-400 tracking-widest uppercase">AI Citizen Journey Engine</span>
+          <span className="text-xs font-black text-slate-400 tracking-widest uppercase">National GovTech Interoperability Platform</span>
         </div>
         <div className="flex items-center gap-4 text-xs font-medium text-slate-400 relative">
           {/* Notifications Bell */}
@@ -755,8 +764,11 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-black text-white tracking-tight">
             Good evening, {user?.full_name || 'Citizen'} 👋
           </h1>
-          <p className="text-xs text-slate-500">
-            Your personal authenticated citizen gateway to services, schemes, and documents.
+          <p className="text-xs font-black text-amber-500 tracking-wider uppercase">
+            ONE CITIZEN. ONE JOURNEY. CONNECTED GOVERNMENT SERVICES.
+          </p>
+          <p className="text-[11px] text-slate-500">
+            A jurisdiction-aware interoperability middleware layer orchestrating Central, State, and Municipal departments.
           </p>
         </div>
       </div>
@@ -2004,6 +2016,89 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* SLA Tracking & GovTech Impact Dashboards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* SLA Compliance */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Service Level Agreement (SLA) Tracking</span>
+              </h4>
+              <div className="space-y-4">
+                {serviceLevels && serviceLevels.length > 0 ? (
+                  serviceLevels.map((lvl) => (
+                    <div key={lvl.service_id} className="space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center text-slate-300">
+                        <span className="font-semibold">{lvl.name}</span>
+                        <span className="text-emerald-400 font-bold">{lvl.sla_compliance} Compliance</span>
+                      </div>
+                      <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div 
+                          className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" 
+                          style={{ width: lvl.sla_compliance }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-slate-500">
+                        <span>Target Processing: {lvl.target_hours}h</span>
+                        <span>Current Average: {lvl.actual_hours}h</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-500 text-xs">Loading SLA compliance data...</p>
+                )}
+              </div>
+            </div>
+
+            {/* Interoperability Impact */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Interoperability Impact Metrics (GovTech Outcomes)</span>
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
+                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Duplicate Submissions</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-black text-white">1.1</span>
+                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↓ 60.7%</span>
+                  </div>
+                  <span className="text-[9px] text-slate-600 block">Previously: 2.8 per journey</span>
+                </div>
+                
+                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
+                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Avg Processing Time</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-black text-white">3.2 Days</span>
+                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↓ 40.7%</span>
+                  </div>
+                  <span className="text-[9px] text-slate-600 block">Previously: 5.4 days</span>
+                </div>
+
+                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
+                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Dept Handoffs</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-black text-white">3</span>
+                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↓ 57.1%</span>
+                  </div>
+                  <span className="text-[9px] text-slate-600 block">Previously: 7 handoffs</span>
+                </div>
+
+                <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
+                  <span className="text-slate-500 text-[10px] font-bold block uppercase">Data Consistency</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-black text-white">98.4%</span>
+                    <span className="text-[10px] text-emerald-400 font-bold font-mono">↑ 11.2%</span>
+                  </div>
+                  <span className="text-[9px] text-slate-600 block">Previously: 87.2% consistent</span>
+                </div>
+              </div>
+              <p className="text-[9px] text-slate-500 text-center uppercase tracking-widest block pt-2">
+                *DEMO / SIMULATED GovTech IMPACT METRICS
+              </p>
+            </div>
+          </div>
+
           {/* Common Data Model mapping visualizer */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
             <div className="flex justify-between items-center">
@@ -2126,34 +2221,39 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-slate-950 border border-slate-850 rounded-xl p-5 space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Citizen Master ID</span>
-                  <span className="text-sm font-bold text-amber-400 font-mono">CIT-10482</span>
+              {masterRecord && masterRecord.fields ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Citizen Master ID</span>
+                    <span className="text-sm font-bold text-amber-400 font-mono">{masterRecord.citizen_id}</span>
+                  </div>
+                  {Object.entries(masterRecord.fields).map(([fieldName, info]: any) => (
+                    <div key={fieldName} className="space-y-0.5">
+                      <span className="text-slate-500 text-[9px] uppercase tracking-wider block">{fieldName.replace("_", " ").toUpperCase()}</span>
+                      <span className="text-sm font-bold text-white block">{info.value}</span>
+                      <span className="text-[9px] text-slate-500 block">Source: {info.source}</span>
+                      <span className="text-[8px] text-emerald-400 font-bold block">✓ {info.status} ({info.authority_level})</span>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Verified Name</span>
-                  <span className="text-sm font-bold text-white">{user?.full_name || 'Aarav Mehta'}</span>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Citizen Master ID</span>
+                    <span className="text-sm font-bold text-amber-400 font-mono">CIT-10482</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Verified Name</span>
+                    <span className="text-sm font-bold text-white">{user?.full_name || 'Aarav Mehta'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Authoritative DOB</span>
+                    <span className="text-sm font-bold text-white">
+                      {conflicts.find(c => c.field_name === 'date_of_birth' && c.status === 'RESOLVED')?.resolved_value || '10 Jan 2005 (Aadhaar)'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Authoritative DOB</span>
-                  <span className="text-sm font-bold text-white">
-                    {conflicts.find(c => c.field_name === 'date_of_birth' && c.status === 'RESOLVED')?.resolved_value || '10 Jan 2005 (Aadhaar)'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Verified Residence Address</span>
-                  <span className="text-sm font-bold text-white">Flat 402, Pune, Maharashtra</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Contact Verified</span>
-                  <span className="text-sm font-bold text-white">+91 98765 43210</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase tracking-wider block">Data Sources Connected</span>
-                  <span className="text-sm font-bold text-emerald-400">✓ UIDAI, State land registry</span>
-                </div>
-              </div>
+              )}
               <p className="text-[10px] text-slate-500 border-t border-slate-900 pt-3">
                 *Authoritative values are maintained separately from individual department source-system representations to protect citizen data privacy.
               </p>
@@ -2271,24 +2371,24 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-3">
             <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest font-black">
-              <span>Step {guidedStep} of 7</span>
-              <span>{guidedStep === 7 ? 'COMPLETED' : 'IN PROGRESS'}</span>
+              <span>Step {guidedStep} of 12</span>
+              <span>{guidedStep === 12 ? 'COMPLETED' : 'IN PROGRESS'}</span>
             </div>
             
             {guidedStep === 1 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 1: Enter Goal.</strong> Domicile State is pre-set to Maharashtra. Click the <strong>"Understand Goal"</strong> button to parse the goal and trigger mock registries.
+                  <strong>STEP 1: PAN-INDIA ALIGNMENT.</strong> Government systems don't need to be replaced. They need to be connected. Our platform sitting as middleware orchestrates Central, State, and Local services.
                 </p>
                 <button
                   onClick={() => {
                     setGuidedStep(2);
-                    // Force input value
-                    setGoalInput("I want to start a small food business in Pune.");
+                    setActiveTab('planner');
+                    setGoalInput("I want to start a small food business in Bengaluru.");
                   }}
                   className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                 >
-                  Next Step (Auto-fill & Submit)
+                  Next: Enter Karnataka Goal
                 </button>
               </div>
             )}
@@ -2296,16 +2396,15 @@ export default function DashboardPage() {
             {guidedStep === 2 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 2: Review Goal Steps.</strong> Look at the dynamic steps generated. Note status, departments, required data schema, and next actions.
+                  <strong>STEP 2: JURISDICTION DETECTION.</strong> The system dynamically parses city (Bengaluru) and maps it to Karnataka state, without hardcoded boundaries. Domicile is resolved to Karnataka.
                 </p>
                 <button
                   onClick={() => {
                     setGuidedStep(3);
-                    setActiveTab('applications');
                   }}
                   className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                 >
-                  Next Step: Open tracker tab
+                  Next: Understand Goal / AI Map
                 </button>
               </div>
             )}
@@ -2313,17 +2412,15 @@ export default function DashboardPage() {
             {guidedStep === 3 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 3: Track applications.</strong> 4 cards resolved across MSINS, PMC licensing, address check, and UIDAI e-KYC. Click <strong>"Business Registration"</strong> to see details.
+                  <strong>STEP 3: RUN PLATFORM MAPPING.</strong> AI maps required documents, matching local business single-windows and local municipal trade licenses. Click <strong>"Next"</strong> to explore the resolved categories.
                 </p>
                 <button
                   onClick={() => {
                     setGuidedStep(4);
-                    const bizApp = applications.find(a => a.service_id === 'srv_msins_biz');
-                    if (bizApp) setSelectedApp(bizApp);
                   }}
                   className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                 >
-                  Next Step: Open details modal
+                  Next: Review Journey Steps
                 </button>
               </div>
             )}
@@ -2331,17 +2428,16 @@ export default function DashboardPage() {
             {guidedStep === 4 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 4: Simulate Update.</strong> Click the amber <strong>"Simulate Status Update"</strong> button inside the modal to approve the registration and propagate updates.
+                  <strong>STEP 4: REVIEW STEP HIERARCHIES.</strong> The planner shows the Central (Identity, DigiLocker), State (Karnataka Business Registration), and Local (BMA trade licensing) levels.
                 </p>
                 <button
                   onClick={() => {
-                    setSelectedApp(null);
                     setGuidedStep(5);
-                    setActiveTab('consent');
+                    setActiveTab('applications');
                   }}
                   className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                 >
-                  Next Step: Open Consent Center
+                  Next: Open Application Tracker
                 </button>
               </div>
             )}
@@ -2349,16 +2445,15 @@ export default function DashboardPage() {
             {guidedStep === 5 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 5: Manage Consents.</strong> Look at PMC Food Licensing's pending consent request. Click <strong>"Allow Once"</strong> or <strong>"Allow Always"</strong> to authorize secure data reuse.
+                  <strong>STEP 5: UNIFIED TRACKING.</strong> View unified application status cards across different jurisdictions (Central, State, Municipal BMA) in a single profile tracking interface.
                 </p>
                 <button
                   onClick={() => {
                     setGuidedStep(6);
-                    setActiveTab('interop');
                   }}
                   className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                 >
-                  Next Step: View Interop Hub
+                  Next: Prevent Duplicate Uploader
                 </button>
               </div>
             )}
@@ -2366,16 +2461,17 @@ export default function DashboardPage() {
             {guidedStep === 6 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 6: Inspect interop layers.</strong> Explore the interactive SVG diagram. Note the SOAP municipal node and REST services. Click <strong>"Simulate Failure"</strong> to test exception handling.
+                  <strong>STEP 6: PREVENT DUPLICATES.</strong> The system reuses verified e-KYC credentials. Instead of prompting to upload address proof again, the platform requests authorization to reuse verified logs.
                 </p>
                 <button
                   onClick={() => {
                     setGuidedStep(7);
-                    setActiveTab('conflicts');
+                    const firstApp = applications[0];
+                    if (firstApp) setSelectedApp(firstApp);
                   }}
                   className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
                 >
-                  Next Step: Resolve conflicts
+                  Next: Inspect & Simulate Event
                 </button>
               </div>
             )}
@@ -2383,7 +2479,91 @@ export default function DashboardPage() {
             {guidedStep === 7 && (
               <div className="space-y-2 text-[11px]">
                 <p className="text-slate-200">
-                  <strong>STEP 7: Resolve discrepancies.</strong> In Data Quality, select <strong>"Use Authoritative Aadhaar"</strong> to fix the DOB discrepancy and synchronize the Master Record.
+                  <strong>STEP 7: WORKFLOW SIMULATION.</strong> Click <strong>"Simulate Status Update"</strong> inside the app details modal to trigger asynchronous state propagation events across systems.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedApp(null);
+                    setGuidedStep(8);
+                    setActiveTab('consent');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next: Open Consent Center
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 8 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 8: CONSENT CENTER.</strong> Authorize data reuse. Scoped tokens are granted per-department. Click <strong>"Allow Once"</strong> or <strong>"Allow Always"</strong> to trigger encrypted e-KYC reuse.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(9);
+                    setActiveTab('interop');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next: Inspect Interop Hub SVG
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 9 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 9: SVG TOPOLOGY NETWORK.</strong> Explore the national middleware network. Central, State, and Legacy SOAP municipal services are linked. Click any node to check raw payload logs.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(10);
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next: Simulate Connector Failure
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 10 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 10: FAULT TOLERANCE.</strong> Click <strong>"Simulate Failure"</strong> at the top right. PMC/BMA goes degraded, triggering automatic retries and secure fallback policies without crash.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(11);
+                    setActiveTab('conflicts');
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next: Resolve Data Discrepancy
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 11 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 11: DATA QUALITY & MDM.</strong> Check Master Profile. Click <strong>"Use Authoritative Aadhaar"</strong> to normalize conflicts into standard CDM models and resolve database discrepancies.
+                </p>
+                <button
+                  onClick={() => {
+                    setGuidedStep(12);
+                  }}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 rounded text-xs transition"
+                >
+                  Next: Performance & SLA Impact
+                </button>
+              </div>
+            )}
+
+            {guidedStep === 12 && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-slate-200">
+                  <strong>STEP 12: SLA AND GovTech IMPACT.</strong> Look at the SLA targets (e.g. 48h vs 31h) and GovTech impact metrics (60.7% duplicate submission reduction, +11.2% data consistency).
                 </p>
                 <button
                   onClick={() => {

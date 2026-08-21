@@ -975,4 +975,16 @@ export async function toggleConnectorHealthAPI(serviceId: string, status: string
   });
 }
 
+export async function fetchMetricsAPI(): Promise<any | null> {
+  return await apiFetch<any>(`/metrics`);
+}
+
+export async function fetchServiceLevelsAPI(): Promise<any[] | null> {
+  return await apiFetch<any[]>(`/service-levels`);
+}
+
+export async function fetchMasterDataRecordAPI(): Promise<any | null> {
+  return await apiFetch<any>(`/data-quality/master`);
+}
+
 

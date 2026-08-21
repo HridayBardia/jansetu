@@ -9,6 +9,29 @@ from app.core.database import engine, Base, get_db
 from app.core.websocket import ws_manager
 from app.api.v1.router import api_v1_router
 
+# Schema migrations
+def upgrade_service_registry_table():
+    from sqlalchemy import text
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    cols = [
+        ("country", "VARCHAR DEFAULT 'India'"),
+        ("state", "VARCHAR"),
+        ("district", "VARCHAR"),
+        ("sla_hours", "INTEGER DEFAULT 48"),
+        ("data_schema", "VARCHAR DEFAULT 'Common Data Model'"),
+        ("category", "VARCHAR DEFAULT 'general'")
+    ]
+    for col_name, col_type in cols:
+        try:
+            db.execute(text(f"ALTER TABLE service_registry ADD COLUMN {col_name} {col_type}"))
+            db.commit()
+        except Exception:
+            db.rollback()
+    db.close()
+
+upgrade_service_registry_table()
+
 # Ensure DB tables are created on startup
 Base.metadata.create_all(bind=engine)
 

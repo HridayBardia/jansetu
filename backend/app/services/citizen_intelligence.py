@@ -1471,18 +1471,75 @@ class CitizenIntelligenceEngine:
         journey.result_json = result_payload
         db.commit()
 
-        # Seed interconnected demo dataset if query contains 'food' or 'business' in Pune
-        if "pune" in query.lower() and ("food" in query.lower() or "business" in query.lower()):
+        # General dynamically-routed seeding logic for business/food setups
+        query_lower = query.lower()
+        target_state = None
+        target_city = None
+        biz_service = None
+        license_service = None
+        dept_name = None
+        municipal_dept = None
+        app_biz_id = None
+        app_lic_id = None
+        
+        if "pune" in query_lower or "maharashtra" in query_lower:
+            target_state = "Maharashtra"
+            target_city = "Pune"
+            biz_service = "srv_msins_biz"
+            license_service = "srv_pmc_license"
+            dept_name = "Maharashtra State Innovation Society"
+            municipal_dept = "Pune Municipal Corporation"
+            app_biz_id = "MH-BIZ-2026-01842"
+            app_lic_id = "MH-FBL-2026-00491"
+        elif "bengaluru" in query_lower or "bangalore" in query_lower or "karnataka" in query_lower:
+            target_state = "Karnataka"
+            target_city = "Bengaluru"
+            biz_service = "srv_kar_biz"
+            license_service = "srv_kar_municipal"
+            dept_name = "Department of Industries & Commerce, Govt of Karnataka"
+            municipal_dept = "Bengaluru Municipal Authority"
+            app_biz_id = "KA-BIZ-2026-01842"
+            app_lic_id = "KA-FBL-2026-00491"
+        elif "ahmedabad" in query_lower or "gujarat" in query_lower:
+            target_state = "Gujarat"
+            target_city = "Ahmedabad"
+            biz_service = "srv_guj_biz"
+            license_service = "srv_guj_municipal"
+            dept_name = "Industries Commissionerate, Govt of Gujarat"
+            municipal_dept = "Ahmedabad Municipal Corporation"
+            app_biz_id = "GJ-BIZ-2026-01842"
+            app_lic_id = "GJ-FBL-2026-00491"
+        elif "jaipur" in query_lower or "rajasthan" in query_lower:
+            target_state = "Rajasthan"
+            target_city = "Jaipur"
+            biz_service = "srv_raj_biz"
+            license_service = "srv_raj_municipal"
+            dept_name = "Single Window Clearance System, Govt of Rajasthan"
+            municipal_dept = "Jaipur Municipal Corporation"
+            app_biz_id = "RJ-BIZ-2026-01842"
+            app_lic_id = "RJ-FBL-2026-00491"
+        elif "central" in query_lower or "india" in query_lower:
+            target_state = "Central"
+            target_city = "New Delhi"
+            biz_service = "srv_central_tax"
+            license_service = "srv_central_scholarship"
+            dept_name = "Central Board of Direct Taxes (CBDT)"
+            municipal_dept = "Ministry of Education, Govt of India"
+            app_biz_id = "IN-TAX-2026-01842"
+            app_lic_id = "IN-SCH-2026-00491"
+
+        if target_state:
             from app.models.db_models import ApplicationDB, ConsentRecordDB, DataConflictDB, NotificationDB, AuditLogDB, CitizenProfileDB
             from app.services.interoperability_gateway import ServiceRegistry
             from datetime import timedelta
             import uuid
+            import random
 
-            # Dynamically override profile location to Pune, Maharashtra for this demo run
+            # Dynamically override profile location to targets
             profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == current_user.id).first()
             if profile:
-                profile.location_state = "Maharashtra"
-                profile.location_city = "Pune"
+                profile.location_state = target_state
+                profile.location_city = target_city
                 db.commit()
 
             # Seed service registry
@@ -1498,38 +1555,38 @@ class CitizenIntelligenceEngine:
             # 1. Seed applications
             apps_data = [
                 {
-                    "application_id": "MH-BIZ-2026-01842",
-                    "service_id": "srv_msins_biz",
-                    "department_id": "msins",
-                    "department_name": "Maharashtra State Innovation Society",
-                    "service_name": "Business Registration Service",
+                    "application_id": app_biz_id,
+                    "service_id": biz_service,
+                    "department_id": biz_service.split("_")[1],
+                    "department_name": dept_name,
+                    "service_name": "Business Registration Service" if "tax" not in biz_service else "Tax PAN Compliance Service",
                     "status": "UNDER_VERIFICATION",
                     "documents": ["AADHAAR", "PAN"],
                     "timeline": [
-                        {"status": "SUBMITTED", "title": "Application Created", "description": "Business registration form submitted.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Form submitted.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
                         {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Address/Identity checks initiated via Interop Gateway.", "timestamp": (datetime.utcnow() - timedelta(days=1)).isoformat()}
                     ],
                     "required_actions": []
                 },
                 {
-                    "application_id": "MH-FBL-2026-00491",
-                    "service_id": "srv_pmc_license",
-                    "department_id": "pmc",
-                    "department_name": "Pune Municipal Corporation",
-                    "service_name": "Food Business License",
+                    "application_id": app_lic_id,
+                    "service_id": license_service,
+                    "department_id": license_service.split("_")[1],
+                    "department_name": municipal_dept,
+                    "service_name": "Trade / Food Business License" if "scholarship" not in license_service else "Central Sector Scholarship Program",
                     "status": "DOCUMENTS_REQUIRED",
                     "documents": ["AADHAAR", "RENT_AGREEMENT"],
                     "timeline": [
-                        {"status": "SUBMITTED", "title": "Application Created", "description": "Food licensing application submitted.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
+                        {"status": "SUBMITTED", "title": "Application Created", "description": "Licensing application submitted.", "timestamp": (datetime.utcnow() - timedelta(days=2)).isoformat()},
                         {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Premises document required.", "timestamp": (datetime.utcnow() - timedelta(days=1)).isoformat()}
                     ],
                     "required_actions": [{"type": "UPLOAD_DOCUMENT", "document_type": "FIRE_NOC", "label": "Upload Fire NOC Certificate"}]
                 },
                 {
-                    "application_id": "ADDR-78421",
+                    "application_id": f"ADDR-{random.randint(10000, 99999)}",
                     "service_id": "srv_address",
                     "department_id": "revenue",
-                    "department_name": "Revenue Department, Govt of Maharashtra",
+                    "department_name": "Revenue Department",
                     "service_name": "Address Verification Service",
                     "status": "APPROVED",
                     "documents": ["AADHAAR"],
@@ -1540,7 +1597,7 @@ class CitizenIntelligenceEngine:
                     "required_actions": []
                 },
                 {
-                    "application_id": "ID-90812",
+                    "application_id": f"ID-{random.randint(10000, 99999)}",
                     "service_id": "srv_identity",
                     "department_id": "uidai",
                     "department_name": "UIDAI / Ministry of Electronics & IT",
@@ -1571,27 +1628,27 @@ class CitizenIntelligenceEngine:
             # 2. Seed consents
             consents_data = [
                 {
-                    "consent_id": "CONSENT-8821",
-                    "department_id": "msins",
-                    "department_name": "Maharashtra State Innovation Society",
+                    "consent_id": f"cns_{uuid.uuid4().hex[:8]}",
+                    "department_id": biz_service.split("_")[1],
+                    "department_name": dept_name,
                     "requested_fields": ["full_name", "date_of_birth", "gender"],
                     "purpose": "Process your business registration application.",
                     "granted": True,
                     "access_type": "ALWAYS"
                 },
                 {
-                    "consent_id": "CONSENT-9942",
-                    "department_id": "pmc",
-                    "department_name": "Food Licensing Service (PMC)",
+                    "consent_id": f"cns_{uuid.uuid4().hex[:8]}",
+                    "department_id": license_service.split("_")[1],
+                    "department_name": municipal_dept,
                     "requested_fields": ["verified_identity", "business_address", "contact_information"],
-                    "purpose": "Process your food business license application.",
+                    "purpose": "Process your licensing application.",
                     "granted": False,
                     "access_type": "ONCE"
                 },
                 {
-                    "consent_id": "CONSENT-1042",
+                    "consent_id": f"cns_{uuid.uuid4().hex[:8]}",
                     "department_id": "legacy_municipal",
-                    "department_name": "Example Legacy Municipal Service",
+                    "department_name": "Legacy Municipal Adapter Service",
                     "requested_fields": ["annual_income", "caste"],
                     "purpose": "Seeded legacy data check",
                     "granted": False,
@@ -1616,16 +1673,16 @@ class CitizenIntelligenceEngine:
                 field_name="date_of_birth",
                 source_a="Identity Service (UIDAI)",
                 value_a="10 Jan 2005",
-                source_b="Pune Municipal Corporation",
+                source_b="Local Municipal Registry",
                 value_b="11 Jan 2005",
                 status="DETECTED"
             ))
 
             # 4. Seed notifications
             notifs_data = [
-                {"title": "Unified Journey Generated", "message": "Your dynamic Pune Food Business setup journey has been mapped.", "category": "JOURNEY_CREATED"},
-                {"title": "Pending Action: Premises Document", "message": "PMC Food Licensing requests premises Rent Agreement / Fire NOC.", "category": "DOCUMENT_REQUIRED"},
-                {"title": "Identity Verified", "message": "Aadhaar e-KYC completed successfully via secure interop gate.", "category": "DOCUMENT_VERIFIED"}
+                {"title": "National Interoperability Journey Mapping", "message": f"Your Dynamic {target_state} setup journey has been resolved.", "category": "JOURNEY_CREATED"},
+                {"title": "Pending Action: Upload Premises Proof", "message": f"{municipal_dept} requests premises rent agreement or fire NOC.", "category": "DOCUMENT_REQUIRED"},
+                {"title": "Identity Verified", "message": "Authoritative Aadhaar verification completed via REST connector.", "category": "DOCUMENT_VERIFIED"}
             ]
             for n_item in notifs_data:
                 db.add(NotificationDB(
@@ -1638,10 +1695,10 @@ class CitizenIntelligenceEngine:
 
             # 5. Seed Audit Logs
             audit_events = [
-                {"actor": current_user.username, "action": "JOURNEY_INITIATE", "resource": "Pune Food Business Setup Journey", "status": "SUCCESS"},
-                {"actor": "SYSTEM_GATEWAY", "action": "API_REQUEST", "resource": "srv_identity e-KYC verification", "status": "SUCCESS"},
-                {"actor": current_user.username, "action": "CONSENT_GRANT", "resource": "CONSENT-8821 to Maharashtra State Innovation Society", "status": "SUCCESS"},
-                {"actor": "SYSTEM_DATA_QUALITY", "action": "DATA_CONFLICT", "resource": "date_of_birth difference flagged between UIDAI and PMC", "status": "CONFLICT"}
+                {"actor": current_user.username, "action": "JOURNEY_INITIATE", "resource": f"{target_state} Setup Journey", "status": "SUCCESS"},
+                {"actor": "SYSTEM_GATEWAY", "action": "API_REQUEST", "resource": "srv_identity e-KYC query", "status": "SUCCESS"},
+                {"actor": current_user.username, "action": "CONSENT_GRANT", "resource": f"Token granted to {dept_name}", "status": "SUCCESS"},
+                {"actor": "SYSTEM_DATA_QUALITY", "action": "DATA_CONFLICT", "resource": "date_of_birth mismatch flagged", "status": "CONFLICT"}
             ]
             for a_item in audit_events:
                 db.add(AuditLogDB(

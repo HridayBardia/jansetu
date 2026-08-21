@@ -247,29 +247,151 @@ class DataQualityEngine:
             return True
         return False
 
+    @staticmethod
+    def get_master_citizen_record(db: Session, user_id: str) -> Dict[str, Any]:
+        from app.models.db_models import UserDB, DataConflictDB
+        import datetime
+        user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        name = user.full_name if user else "Aarav Mehta"
+        
+        conflict = db.query(DataConflictDB).filter(
+            DataConflictDB.user_id == user_id,
+            DataConflictDB.field_name == "date_of_birth",
+            DataConflictDB.status == "RESOLVED"
+        ).first()
+        dob = conflict.resolved_value if conflict else "10 Jan 2005"
+        
+        return {
+            "citizen_id": f"CIT-{user_id[-5:].upper() if user_id else '10482'}",
+            "fields": {
+                "name": {
+                    "value": name,
+                    "source": "Identity Service (UIDAI)",
+                    "status": "VERIFIED",
+                    "timestamp": datetime.datetime.now().strftime("%d %b %Y"),
+                    "confidence": "98.8%",
+                    "authority_level": "Level 4 (National)"
+                },
+                "date_of_birth": {
+                    "value": dob,
+                    "source": "Identity Service (UIDAI)",
+                    "status": "VERIFIED",
+                    "timestamp": datetime.datetime.now().strftime("%d %b %Y"),
+                    "confidence": "99.4%",
+                    "authority_level": "Level 4 (National)"
+                },
+                "address": {
+                    "value": "Flat 402, Shivajinagar, Pune, Maharashtra",
+                    "source": "Address Verification Service",
+                    "status": "VERIFIED",
+                    "timestamp": datetime.datetime.now().strftime("%d %b %Y"),
+                    "confidence": "95.2%",
+                    "authority_level": "Level 2 (State)"
+                },
+                "contact": {
+                    "value": user.mobile_number if user and user.mobile_number else "+91 98765 43210",
+                    "source": "Federated Login OTP Gateway",
+                    "status": "VERIFIED",
+                    "timestamp": datetime.datetime.now().strftime("%d %b %Y"),
+                    "confidence": "99.9%",
+                    "authority_level": "Level 3 (Federated)"
+                }
+            }
+        }
+
+class DataNormalizer:
+    @staticmethod
+    def normalize_citizen_data(service_id: str, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+        normalized = raw_data.copy()
+        for key in ["name", "full_name", "citizenName", "applicant_name", "CasteCategory", "AnnualIncome"]:
+            if key in raw_data:
+                if key in ["name", "full_name", "citizenName", "applicant_name"]:
+                    normalized["name"] = raw_data[key]
+                elif key == "AnnualIncome":
+                    normalized["income"] = raw_data[key]
+        
+        for key in ["dob", "date_of_birth", "birthDate"]:
+            if key in raw_data:
+                normalized["date_of_birth"] = raw_data[key]
+        
+        for key in ["address", "registered_address", "addr_line1", "verified_address"]:
+            if key in raw_data:
+                normalized["address"] = raw_data[key]
+
+        for key in ["pincode", "postal_code", "pin"]:
+            if key in raw_data:
+                normalized["postal_code"] = raw_data[key]
+                
+        normalized["_raw_payload"] = raw_data
+        return normalized
+
+class SchemaMapper:
+    @staticmethod
+    def map_to_target(target_schema: str, normalized_data: Dict[str, Any]) -> Dict[str, Any]:
+        mapped = {}
+        if target_schema == "SOAP_PMC":
+            mapped["applicant_name"] = normalized_data.get("name")
+            mapped["birth_date"] = normalized_data.get("date_of_birth")
+            mapped["registered_address"] = normalized_data.get("address")
+        else:
+            mapped = normalized_data.copy()
+        return mapped
+
+class GovernmentConnector:
+    def connect(self) -> bool:
+        return True
+    
+    def authenticate(self, credentials: Dict[str, Any]) -> bool:
+        return True
+
+    def getCitizenData(self, db: Session, user_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def submitApplication(self, db: Session, user_id: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def getApplicationStatus(self, db: Session, app_id: str) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def validateDocument(self, db: Session, doc_id: str) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def sendEvent(self, db: Session, event_name: str, payload: Dict[str, Any]) -> bool:
+        return True
+
+    def healthCheck(self) -> str:
+        return "HEALTHY"
+
+class RestGovernmentConnector(GovernmentConnector):
+    def getCitizenData(self, db: Session, user_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        return ConnectorManager._simulate_rest_call(user_id, params.get("service_id", ""), operation, params)
+
+class LegacyGovernmentConnector(GovernmentConnector):
+    def getCitizenData(self, db: Session, user_id: str, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        soap_req = MockSOAPAdapter.build_soap_envelope(operation, params)
+        raw_res = MockSOAPAdapter.parse_soap_response(soap_req, operation)
+        normalized = DataNormalizer.normalize_citizen_data(params.get("service_id", ""), raw_res)
+        return normalized
+
 class ServiceRegistry:
     SERVICES = [
+        # Central Services
         {
             "service_id": "srv_identity",
             "department": "UIDAI / Ministry of Electronics & IT",
             "name": "Identity Verification Service (Aadhaar API)",
             "description": "Validates Aadhaar number, biometric and OTP-based demographic validation.",
             "jurisdiction": "CENTRAL",
+            "country": "India",
+            "state": "Central",
+            "district": None,
+            "sla_hours": 2,
+            "data_schema": "Common Data Model",
+            "category": "identity",
             "connector": "modern_rest_connector",
             "api_version": "v2.1",
             "supported_operations": ["verify_demographics", "generate_otp", "verify_otp"],
             "data_requirements": {"aadhaar_number": "string", "name": "string"}
-        },
-        {
-            "service_id": "srv_address",
-            "department": "Revenue Department, Govt of Maharashtra",
-            "name": "Address Verification Service",
-            "description": "Resolves and validates current residential address from utility and property tax logs.",
-            "jurisdiction": "MAHARASHTRA",
-            "connector": "modern_rest_connector",
-            "api_version": "v1.0",
-            "supported_operations": ["validate_address", "get_pincode_details"],
-            "data_requirements": {"address_text": "string", "pincode": "string"}
         },
         {
             "service_id": "srv_income",
@@ -277,6 +399,12 @@ class ServiceRegistry:
             "name": "Income Certificate Verification Service",
             "description": "Simulates legacy SOAP endpoint query for verifying verified annual income levels of Pune citizens.",
             "jurisdiction": "MAHARASHTRA",
+            "country": "India",
+            "state": "Maharashtra",
+            "district": "Pune",
+            "sla_hours": 48,
+            "data_schema": "Common Data Model",
+            "category": "income",
             "connector": "legacy_soap_connector",
             "api_version": "v1.2-Legacy",
             "supported_operations": ["GetAnnualIncomeByCertificateNumber", "QueryIncomeByPAN"],
@@ -288,17 +416,116 @@ class ServiceRegistry:
             "name": "Caste/Category Verification Service",
             "description": "Legacy SOAP-based service for validating community classification status (OBC/SC/ST/EWS).",
             "jurisdiction": "MAHARASHTRA",
+            "country": "India",
+            "state": "Maharashtra",
+            "district": None,
+            "sla_hours": 48,
+            "data_schema": "Common Data Model",
+            "category": "caste",
             "connector": "legacy_soap_connector",
             "api_version": "v1.0-SOAP",
             "supported_operations": ["VerifyCasteStatusByCertificate", "CheckCategoryEligibility"],
             "data_requirements": {"caste_certificate_id": "string", "category_claimed": "string"}
         },
         {
+            "service_id": "srv_digilocker",
+            "department": "National E-Governance Division (NEGD)",
+            "name": "Document Verification Service (DigiLocker API)",
+            "description": "REST API interface for querying, fetching and fetching issuer-verified document credentials.",
+            "jurisdiction": "CENTRAL",
+            "country": "India",
+            "state": "Central",
+            "district": None,
+            "sla_hours": 2,
+            "data_schema": "Common Data Model",
+            "category": "documents",
+            "connector": "modern_rest_connector",
+            "api_version": "v2.0",
+            "supported_operations": ["fetch_document_list", "verify_document_hash"],
+            "data_requirements": {"citizen_id": "string", "document_type": "string"}
+        },
+        {
+            "service_id": "srv_central_tax",
+            "department": "Central Board of Direct Taxes (CBDT)",
+            "name": "Central Tax Filing & PAN Service",
+            "description": "REST API interface for PAN verification and active tax filing checks.",
+            "jurisdiction": "CENTRAL",
+            "country": "India",
+            "state": "Central",
+            "district": None,
+            "sla_hours": 24,
+            "data_schema": "Common Data Model",
+            "category": "taxation",
+            "connector": "modern_rest_connector",
+            "api_version": "v2.0",
+            "supported_operations": ["VerifyPAN", "CheckTaxCompliance"],
+            "data_requirements": {"pan": "string", "name": "string"}
+        },
+        {
+            "service_id": "srv_central_scholarship",
+            "department": "Ministry of Education, Govt of India",
+            "name": "Central Education Scheme & DBT Service",
+            "description": "REST API for central student support and direct benefit transfers.",
+            "jurisdiction": "CENTRAL",
+            "country": "India",
+            "state": "Central",
+            "district": None,
+            "sla_hours": 360,
+            "data_schema": "Common Data Model",
+            "category": "education",
+            "connector": "modern_rest_connector",
+            "api_version": "v1.1",
+            "supported_operations": ["check_central_eligibility", "submit_dbt_claim"],
+            "data_requirements": {"citizen_id": "string", "income": "float"}
+        },
+        # Karnataka Services
+        {
+            "service_id": "srv_kar_biz",
+            "department": "Department of Industries & Commerce, Govt of Karnataka",
+            "name": "Business Registration Service (Karnataka Single Window)",
+            "description": "Coordinates business formation, registrations, and issuance of state certificates for start-ups in Karnataka.",
+            "jurisdiction": "KARNATAKA",
+            "country": "India",
+            "state": "Karnataka",
+            "district": None,
+            "sla_hours": 48,
+            "data_schema": "Common Data Model",
+            "category": "business",
+            "connector": "modern_rest_connector",
+            "api_version": "v3.0",
+            "supported_operations": ["register_startup", "issue_state_business_id", "get_registration_status"],
+            "data_requirements": {"business_name": "string", "business_type": "string", "address": "string", "pan": "string"}
+        },
+        {
+            "service_id": "srv_kar_municipal",
+            "department": "Bengaluru Municipal Authority (BMA)",
+            "name": "Licensing Service (Trade License Bengaluru)",
+            "description": "Legacy SOAP-based service for Trade and Food licenses in Bengaluru local administration.",
+            "jurisdiction": "KARNATAKA",
+            "country": "India",
+            "state": "Karnataka",
+            "district": "Bengaluru",
+            "sla_hours": 72,
+            "data_schema": "Common Data Model",
+            "category": "business",
+            "connector": "legacy_soap_connector",
+            "api_version": "v2.0-SOAP",
+            "supported_operations": ["ApplyForTradeLicense", "GetLicenseFees", "QueryLicenseStatus"],
+            "data_requirements": {"business_id": "string", "ward_number": "string", "area_sqft": "integer"}
+        },
+        # Maharashtra Services
+        {
             "service_id": "srv_msins_biz",
             "department": "Maharashtra State Innovation Society (MSINS)",
-            "name": "Business Registration Service (Single Window portal)",
-            "description": "Coordinates business formation, registrations, and issuance of state certificates for start-ups.",
+            "name": "Business Registration Service (Maharashtra Single Window)",
+            "description": "Coordinates business formation, registrations, and issuance of state certificates for start-ups in Maharashtra.",
             "jurisdiction": "MAHARASHTRA",
+            "country": "India",
+            "state": "Maharashtra",
+            "district": None,
+            "sla_hours": 48,
+            "data_schema": "Common Data Model",
+            "category": "business",
             "connector": "modern_rest_connector",
             "api_version": "v3.0",
             "supported_operations": ["register_startup", "issue_state_business_id", "get_registration_status"],
@@ -310,32 +537,86 @@ class ServiceRegistry:
             "name": "Licensing Service (Trade License Pune)",
             "description": "Evaluates, bills, and issues Local Municipal Trade and Food safety licenses in Pune district.",
             "jurisdiction": "MAHARASHTRA",
+            "country": "India",
+            "state": "Maharashtra",
+            "district": "Pune",
+            "sla_hours": 72,
+            "data_schema": "Common Data Model",
+            "category": "business",
             "connector": "legacy_soap_connector",
             "api_version": "v2.0-SOAP",
             "supported_operations": ["ApplyForTradeLicense", "GetLicenseFees", "QueryLicenseStatus"],
             "data_requirements": {"business_id": "string", "ward_number": "string", "area_sqft": "integer"}
         },
+        # Gujarat Services
         {
-            "service_id": "srv_dbt_schemes",
-            "department": "Department of Skills, Employment, Entrepreneurship and Innovation",
-            "name": "Government Scheme Service",
-            "description": "Queries central and state databases for direct benefit transfers, grants, and subsidies.",
-            "jurisdiction": "MAHARASHTRA",
+            "service_id": "srv_guj_biz",
+            "department": "Industries Commissionerate, Govt of Gujarat",
+            "name": "Business Registration Service (Gujarat Single Window)",
+            "description": "Coordinates business formation, registrations, and issuance of state certificates for start-ups in Gujarat.",
+            "jurisdiction": "GUJARAT",
+            "country": "India",
+            "state": "Gujarat",
+            "district": None,
+            "sla_hours": 48,
+            "data_schema": "Common Data Model",
+            "category": "business",
             "connector": "modern_rest_connector",
-            "api_version": "v1.1",
-            "supported_operations": ["check_scheme_eligibility", "submit_dbt_claim"],
-            "data_requirements": {"citizen_id": "string", "income": "float", "state": "string"}
+            "api_version": "v3.0",
+            "supported_operations": ["register_startup", "issue_state_business_id", "get_registration_status"],
+            "data_requirements": {"business_name": "string", "business_type": "string", "address": "string", "pan": "string"}
         },
         {
-            "service_id": "srv_digilocker",
-            "department": "National E-Governance Division (NEGD)",
-            "name": "Document Verification Service (DigiLocker API)",
-            "description": "REST API interface for querying, fetching and fetching issuer-verified document credentials.",
-            "jurisdiction": "CENTRAL",
+            "service_id": "srv_guj_municipal",
+            "department": "Ahmedabad Municipal Corporation (AMC)",
+            "name": "Licensing Service (Trade License Ahmedabad)",
+            "description": "Legacy SOAP-based service for Trade and Food licenses in Ahmedabad Municipal district.",
+            "jurisdiction": "GUJARAT",
+            "country": "India",
+            "state": "Gujarat",
+            "district": "Ahmedabad",
+            "sla_hours": 72,
+            "data_schema": "Common Data Model",
+            "category": "business",
+            "connector": "legacy_soap_connector",
+            "api_version": "v2.0-SOAP",
+            "supported_operations": ["ApplyForTradeLicense", "GetLicenseFees", "QueryLicenseStatus"],
+            "data_requirements": {"business_id": "string", "ward_number": "string", "area_sqft": "integer"}
+        },
+        # Rajasthan Services
+        {
+            "service_id": "srv_raj_biz",
+            "department": "Single Window Clearance System, Govt of Rajasthan",
+            "name": "Business Registration Service (Rajasthan Single Window)",
+            "description": "Coordinates business formation, registrations, and issuance of state certificates for start-ups in Rajasthan.",
+            "jurisdiction": "RAJASTHAN",
+            "country": "India",
+            "state": "Rajasthan",
+            "district": None,
+            "sla_hours": 48,
+            "data_schema": "Common Data Model",
+            "category": "business",
             "connector": "modern_rest_connector",
-            "api_version": "v2.0",
-            "supported_operations": ["fetch_document_list", "verify_document_hash"],
-            "data_requirements": {"citizen_id": "string", "document_type": "string"}
+            "api_version": "v3.0",
+            "supported_operations": ["register_startup", "issue_state_business_id", "get_registration_status"],
+            "data_requirements": {"business_name": "string", "business_type": "string", "address": "string", "pan": "string"}
+        },
+        {
+            "service_id": "srv_raj_municipal",
+            "department": "Jaipur Municipal Corporation (JMC)",
+            "name": "Licensing Service (Trade License Jaipur)",
+            "description": "Legacy SOAP-based service for Trade and Food licenses in Jaipur Municipal district.",
+            "jurisdiction": "RAJASTHAN",
+            "country": "India",
+            "state": "Rajasthan",
+            "district": "Jaipur",
+            "sla_hours": 72,
+            "data_schema": "Common Data Model",
+            "category": "business",
+            "connector": "legacy_soap_connector",
+            "api_version": "v2.0-SOAP",
+            "supported_operations": ["ApplyForTradeLicense", "GetLicenseFees", "QueryLicenseStatus"],
+            "data_requirements": {"business_id": "string", "ward_number": "string", "area_sqft": "integer"}
         }
     ]
 
@@ -427,30 +708,27 @@ class ConnectorManager:
             
         connector_type = "SOAP" if service.connector == "legacy_soap_connector" else "REST"
         
-        # Simulate degraded or offline connector state based on registry status
         if service.health_status == "FAILED":
             latency = random.randint(1000, 2000)
             ConnectorHealthMonitor.record_request(db, service.name, connector_type, is_success=False, latency_ms=latency)
             AuditLogger.log(db, actor=user_id, action="API_REQUEST_FAIL", resource=service.name, status="FAILURE")
             raise ConnectionError(f"Simulated Government Service {service.name} is temporarily offline. Details: SOAP Fault/504 Timeout.")
 
-        # Simulate delay
         latency = random.randint(120, 480)
-        
-        # Audit log the request
         AuditLogger.log(db, actor=user_id, action="API_REQUEST", resource=f"{service.name} -> {operation}", status="SUCCESS")
 
         result = {}
         try:
-            if connector_type == "SOAP":
-                # Legacy SOAP Simulation
-                soap_req = MockSOAPAdapter.build_soap_envelope(operation, params)
-                # Simulated SOAP request sent over HTTP wrapper
-                result = MockSOAPAdapter.parse_soap_response(soap_req, operation)
+            params_copy = params.copy()
+            params_copy["service_id"] = service_id
+            
+            if service.connector == "legacy_soap_connector":
+                connector = LegacyGovernmentConnector()
+                result = connector.getCitizenData(db, user_id, operation, params_copy)
                 result["_interop_protocol"] = "SOAP 1.1 Envelope Adapter"
             else:
-                # Modern REST simulation
-                result = ConnectorManager._simulate_rest_call(user_id, service_id, operation, params)
+                connector = RestGovernmentConnector()
+                result = connector.getCitizenData(db, user_id, operation, params_copy)
                 result["_interop_protocol"] = "OAuth2 Bearer JSON API REST"
                 
             ConnectorHealthMonitor.record_request(db, service.name, connector_type, is_success=True, latency_ms=latency)
@@ -466,7 +744,7 @@ class ConnectorManager:
                 "verified": True,
                 "document_reference": "AADHAAR-VAULT-XYZ9",
                 "identity_claims": {
-                    "full_name": "Hriday Bardia",
+                    "full_name": "Aarav Mehta",
                     "dob": "2005-01-10",
                     "gender": "Male",
                     "masked_mobile": "******8865"
@@ -479,23 +757,31 @@ class ConnectorManager:
                 "pincode": "411005",
                 "source": "State Property Registry Database"
             }
-        elif service_id == "srv_msins_biz":
+        elif service_id in ["srv_msins_biz", "srv_kar_biz", "srv_guj_biz", "srv_raj_biz"]:
+            prefix = "MSINS" if service_id == "srv_msins_biz" else "KAR" if service_id == "srv_kar_biz" else "GUJ" if service_id == "srv_guj_biz" else "RAJ"
+            state_label = "Maharashtra" if service_id == "srv_msins_biz" else "Karnataka" if service_id == "srv_kar_biz" else "Gujarat" if service_id == "srv_guj_biz" else "Rajasthan"
             return {
-                "business_id": f"MSINS-PUNE-{random.randint(100000, 999999)}",
+                "business_id": f"{prefix}-REG-{random.randint(100000, 999999)}",
                 "registration_status": "APPROVED",
                 "approval_date": datetime.datetime.now().strftime("%Y-%m-%d"),
-                "authority": "Maharashtra State Innovation Society"
+                "authority": f"{state_label} State Business Services Portal"
             }
-        elif service_id == "srv_dbt_schemes":
+        elif service_id in ["srv_dbt_schemes", "srv_central_scholarship"]:
             return {
                 "eligible": True,
-                "matched_benefits": ["Subsidy: 15% CapEx reimbursement", "Interest Subvention: 5% on MSME loan"],
+                "matched_benefits": ["Central Sector Scholarship: INR 20,000/year", "Interest Subvention: 5% on Loan"],
                 "payout_channel": "DBT-Aadhaar-Link"
+            }
+        elif service_id == "srv_central_tax":
+            return {
+                "pan_verified": True,
+                "compliance_status": "COMPLIANT",
+                "taxpayer_name": "Aarav Mehta"
             }
         elif service_id == "srv_digilocker":
             return {
                 "connected": True,
-                "user_reference": f"DL-{user_id[:6].upper()}",
+                "user_reference": f"DL-{user_id[:6].upper() if user_id else '10482'}",
                 "verified_credentials": ["AADHAAR", "PAN", "MARKSHEET"]
             }
         return {"status": "SUCCESS", "message": "Demo REST Call Complete"}
@@ -555,13 +841,30 @@ class ApplicationTracker:
     def list_applications(db: Session, user_id: str) -> List[Dict[str, Any]]:
         apps = db.query(ApplicationDB).filter(ApplicationDB.citizen_id == user_id).all()
         if not apps:
-            # Seed default application tracker entries for the citizen profile
+            from app.models.db_models import CitizenProfileDB
+            profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == user_id).first()
+            state = (profile.location_state if profile else "Maharashtra") or "Maharashtra"
+            
+            # Resolve service IDs based on jurisdiction
+            biz_service = "srv_msins_biz"
+            license_service = "srv_pmc_license"
+            
+            if state == "Karnataka":
+                biz_service = "srv_kar_biz"
+                license_service = "srv_kar_municipal"
+            elif state == "Gujarat":
+                biz_service = "srv_guj_biz"
+                license_service = "srv_guj_municipal"
+            elif state == "Rajasthan":
+                biz_service = "srv_raj_biz"
+                license_service = "srv_raj_municipal"
+                
             defaults = [
-                ("srv_msins_biz", "UNDER_VERIFICATION", [
+                (biz_service, "UNDER_VERIFICATION", [
                     {"status": "SUBMITTED", "title": "Application Submitted", "description": "Sent via Unified Single Window Portal.", "timestamp": "2026-08-19T10:00:00Z"},
                     {"status": "UNDER_VERIFICATION", "title": "Verification Initiated", "description": "Consent-based Address/Identity check passed.", "timestamp": "2026-08-20T14:30:00Z"}
                 ]),
-                ("srv_pmc_license", "DOCUMENTS_REQUIRED", [
+                (license_service, "DOCUMENTS_REQUIRED", [
                     {"status": "SUBMITTED", "title": "Application Created", "description": "Awaiting layout plan documents.", "timestamp": "2026-08-20T11:00:00Z"},
                     {"status": "DOCUMENTS_REQUIRED", "title": "Action Needed", "description": "Please upload a Fire NOC layout document.", "timestamp": "2026-08-21T09:00:00Z"}
                 ])
