@@ -318,20 +318,22 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     import time
     import json
     from app.core.config import settings
-    from app.services.location_engine import LocationEngine, STATES_AND_UTS
+    from app.services.location_engine import LocationEngine, STATES_AND_UTS, CITY_DISTRICT_MAP
     from sqlalchemy import or_, and_
     from datetime import datetime
+    from typing import List, Dict, Any, Optional
 
     warnings = []
     start_time = time.time()
 
     # 1. Natural Language Intent Parsing & Location Extraction
     query_lower = query.lower().strip()
-    
+    query_clean = " ".join(query_lower.split())
+
     # Check for international destination country
     dest_country = None
     for country in ["australia", "canada", "uk", "united kingdom", "usa", "united states", "germany", "ireland", "new zealand", "abroad", "foreign"]:
-        if country in query_lower:
+        if country in query_clean:
             if country in ["uk", "united kingdom"]:
                 dest_country = "United Kingdom"
             elif country in ["usa", "united states"]:
@@ -345,123 +347,311 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     # Extract target Indian state/city
     target_state = None
     target_city = None
-    
+
     # 1. Direct State Match
     for code, info in STATES_AND_UTS.items():
-        if info["name"].lower() in query_lower:
+        if info["name"].lower() in query_clean:
             target_state = info["name"]
             break
-            
-    # 2. City Match
-    city_state_map = {
-        "bangalore": "Karnataka",
-        "bengaluru": "Karnataka",
-        "jaipur": "Rajasthan",
-        "udaipur": "Rajasthan",
-        "vadodara": "Gujarat",
-        "pune": "Maharashtra",
-        "mumbai": "Maharashtra",
-        "delhi": "Delhi",
-        "ahmedabad": "Gujarat",
-        "guwahati": "Assam",
-        "dispur": "Assam"
-    }
-    for city, state in city_state_map.items():
-        if city in query_lower:
-            target_city = city.title()
-            target_state = state
+
+    # 2. City Match using location engine's CITY_DISTRICT_MAP
+    for city_key, (state_code, dist_name) in CITY_DISTRICT_MAP.items():
+        if city_key in query_clean:
+            target_city = city_key.title()
+            target_state = STATES_AND_UTS[state_code]["name"]
             break
 
-    # Intent Classification
-    legacy_intent_primary = "GENERAL"
-    legacy_intent_sub = "General Assistance"
-    legacy_category = "general"
-    goal_category_full = "OTHER"
-    
-    if any(w in query_lower for w in ["study", "masters", "master", "university", "college", "school", "abroad", "graduation"]):
-        legacy_intent_primary = "STUDY_ABROAD"
-        legacy_intent_sub = f"Masters education in {dest_country}" if dest_country and "master" in query_lower else f"Higher education in {dest_country}" if dest_country else "Higher education abroad"
-        legacy_category = "education"
-        goal_category_full = "INTERNATIONAL_EDUCATION" if dest_country else "EDUCATION"
-    elif any(w in query_lower for w in ["scholarship", "fellowship", "stipend"]):
-        legacy_intent_primary = "SCHOLARSHIP"
-        legacy_intent_sub = "Apply for student financial aid"
-        legacy_category = "education"
-        goal_category_full = "EDUCATION"
-    elif any(w in query_lower for w in ["hospital", "clinic", "healthcare facility"]):
-        legacy_intent_primary = "HEALTHCARE_FACILITY"
-        legacy_intent_sub = "Establish and register a healthcare facility"
-        legacy_category = "business"
-        goal_category_full = "BUSINESS"
-    elif any(w in query_lower for w in ["land", "plot", "property registry", "buy land", "purchase land"]):
-        if any(w in query_lower for w in ["farmer", "farming", "kisan", "agriculture"]):
-            legacy_intent_primary = "FARMER_BENEFITS"
-            legacy_intent_sub = "Apply for agricultural support"
-            legacy_category = "agriculture"
-            goal_category_full = "AGRICULTURE"
+    # Intent Classification Taxonomy
+    primary_intent = "OTHER_CITIZEN_SERVICE"
+    secondary_intents = []
+    action_val = "SUPPORT"
+    object_val = "CERTIFICATE"
+
+    # Action detection
+    ACTIONS = {
+        "PURCHASE": ["buy", "purchase", "acquire", "get", "plot", "securing", "secure", "procure", "need plot", "need land"],
+        "SALE": ["sell", "sale", "dispose", "vend", "selling"],
+        "CONSTRUCTION": ["build", "construct", "construction", "erect", "erecting", "structuring"],
+        "ESTABLISH": ["start", "open", "establish", "run", "setup", "set up", "begin", "launch", "operate", "operating", "infrastructure"],
+        "REGISTRATION": ["register", "registration", "enlist", "enrolling", "enroll"],
+        "RENEWAL": ["renew", "renewal", "renewing", "extend", "extending"],
+        "APPLICATION": ["apply", "applying", "application", "request", "requesting"],
+        "EDUCATION": ["study", "masters", "master", "graduation", "graduate", "college", "university", "education", "course", "degree"],
+        "TRAVEL": ["travel", "fly", "go to", "migrate", "visit", "abroad", "foreign"],
+        "ACQUISITION": ["get", "obtain", "receive", "fetch", "retrieve", "gaining"],
+        "FINANCING": ["loan", "borrow", "finance", "money", "funding", "credit", "subsidy", "subsidies"],
+        "SUPPORT": ["support", "help", "assistance", "subsidy", "aid", "welfare", "scheme", "schemes", "benefit", "benefits"]
+    }
+
+    # Objects keywords
+    OBJECTS = {
+        "LAND": ["land", "plot", "real estate", "property registry", "land registry", "ground", "acre"],
+        "HOSPITAL": ["hospital", "clinic", "medical center", "healthcare facility", "medical facility", "nursing home", "dispensary"],
+        "BUSINESS": ["business", "company", "startup", "msme", "firm", "enterprise", "clothing business", "venture", "industry"],
+        "RESTAURANT": ["restaurant", "cafe", "eatery", "food joint", "dhaba", "food business", "bakery"],
+        "SCHOOL": ["school", "college", "university", "academy", "institute", "classroom"],
+        "PASSPORT": ["passport", "travel document"],
+        "SCHOLARSHIP": ["scholarship", "fellowship", "stipend", "student aid", "fee waiver", "anupriti", "rgs", "mysy", "ssp"],
+        "DRIVING_LICENSE": ["driving licence", "driving license", "dl", "licence", "license", "driver licence", "driver license"],
+        "CERTIFICATE": ["certificate", "praman", "praman patra", "birth certificate", "death certificate", "marriage certificate", "domicile certificate", "income certificate", "caste certificate"],
+        "HOUSE": ["house", "home", "flat", "villa", "apartment", "housing", "awas", "pmay"],
+        "FACTORY": ["factory", "manufacturing", "plant", "mill", "workshop"]
+    }
+
+    # Find Action
+    for act, keywords in ACTIONS.items():
+        if any(kw in query_clean for kw in keywords):
+            action_val = act
+            break
+
+    # Find Object
+    for obj, keywords in OBJECTS.items():
+        if any(kw in query_clean for kw in keywords):
+            object_val = obj
+            break
+
+    # Primary Intent Rules based on keyword combination matching
+    if any(w in query_clean for w in ["renew", "renewal"]) and any(w in query_clean for w in ["licence", "license", "dl"]):
+        primary_intent = "LICENSE_RENEWAL"
+    elif any(w in query_clean for w in ["driving", "dl"]) and any(w in query_clean for w in ["licence", "license"]):
+        primary_intent = "DRIVING_LICENSE"
+    elif any(w in query_clean for w in ["study", "masters", "master", "graduation", "graduate", "college", "university"]) and any(w in query_clean for w in ["abroad", "foreign", "australia", "canada", "uk", "usa"]):
+        primary_intent = "STUDY_ABROAD"
+    elif any(w in query_clean for w in ["scholarship", "fellowship", "stipend", "anupriti", "rgs", "mysy", "ssp", "aid"]):
+        primary_intent = "SCHOLARSHIP"
+    elif any(w in query_clean for w in ["build", "construct", "start", "open", "establish"]) and "hospital" in query_clean:
+        primary_intent = "HOSPITAL"
+    elif any(w in query_clean for w in ["start", "open", "establish"]) and "clinic" in query_clean:
+        primary_intent = "CLINIC"
+    elif any(w in query_clean for w in ["start", "open", "establish"]) and "pharmacy" in query_clean:
+        primary_intent = "PHARMACY"
+    elif "healthcare facility" in query_clean or "medical facility" in query_clean or "medical clinic" in query_clean:
+        primary_intent = "HEALTHCARE_FACILITY"
+    elif "passport" in query_clean:
+        primary_intent = "PASSPORT"
+    elif "visa" in query_clean:
+        primary_intent = "VISA"
+    elif any(w in query_clean for w in ["kisan", "farmer", "farming", "crop", "pmkisan", "kcc"]):
+        primary_intent = "FARMER_SUPPORT"
+    elif any(w in query_clean for w in ["restaurant", "cafe", "dhaba", "food joint"]):
+        primary_intent = "RESTAURANT"
+    elif any(w in query_clean for w in ["build", "construct", "start", "open", "establish"]) and "school" in query_clean:
+        primary_intent = "SCHOOL"
+    elif "college" in query_clean:
+        primary_intent = "COLLEGE"
+    elif "university" in query_clean:
+        primary_intent = "UNIVERSITY"
+    elif any(w in query_clean for w in ["buy", "purchase", "acquire", "get", "registry", "plot"]) and "land" in query_clean:
+        primary_intent = "LAND_PURCHASE"
+    elif any(w in query_clean for w in ["sell", "dispose"]) and "land" in query_clean:
+        primary_intent = "LAND_SALE"
+    elif any(w in query_clean for w in ["register", "registration"]) and "land" in query_clean:
+        primary_intent = "PROPERTY_REGISTRATION"
+    elif any(w in query_clean for w in ["build", "construct", "construction"]) and any(w in query_clean for w in ["house", "home", "flat", "apartment"]):
+        primary_intent = "HOME_CONSTRUCTION"
+    elif any(w in query_clean for w in ["buy", "purchase", "acquire"]) and any(w in query_clean for w in ["house", "home", "flat", "apartment"]):
+        primary_intent = "HOME_PURCHASE"
+    elif any(w in query_clean for w in ["loan", "finance", "mortgage"]) and any(w in query_clean for w in ["house", "home", "flat", "apartment"]):
+        primary_intent = "PROPERTY_LOAN"
+    elif "startup" in query_clean:
+        primary_intent = "STARTUP"
+    elif "msme" in query_clean:
+        primary_intent = "MSME"
+    elif any(w in query_clean for w in ["register", "registration"]) and any(w in query_clean for w in ["company", "business"]):
+        primary_intent = "COMPANY_REGISTRATION"
+    elif "factory" in query_clean or "manufacturing" in query_clean:
+        primary_intent = "FACTORY"
+    elif any(w in query_clean for w in ["loan", "finance"]) and any(w in query_clean for w in ["business", "shop", "startup", "msme"]):
+        primary_intent = "BUSINESS_LOAN"
+    elif any(w in query_clean for w in ["money", "funding"]) and any(w in query_clean for w in ["business", "shop", "startup", "msme"]):
+        primary_intent = "BUSINESS_FINANCE"
+    elif "caste" in query_clean:
+        primary_intent = "CASTE_CERTIFICATE"
+    elif "income" in query_clean:
+        primary_intent = "INCOME_CERTIFICATE"
+    elif "domicile" in query_clean:
+        primary_intent = "DOMICILE_CERTIFICATE"
+    elif "birth" in query_clean:
+        primary_intent = "BIRTH_CERTIFICATE"
+    elif "death" in query_clean:
+        primary_intent = "DEATH_CERTIFICATE"
+    elif "marriage" in query_clean:
+        primary_intent = "MARRIAGE_CERTIFICATE"
+    elif "business" in query_clean:
+        if any(w in query_clean for w in ["start", "open", "create", "setup"]):
+            primary_intent = "BUSINESS_START"
+        elif any(w in query_clean for w in ["register", "registration"]):
+            primary_intent = "BUSINESS_REGISTRATION"
         else:
-            legacy_intent_primary = "LAND_PURCHASE"
-            legacy_intent_sub = "Purchase land or real estate property"
-            legacy_category = "business"
-            goal_category_full = "PROPERTY"
-    elif any(w in query_lower for w in ["business", "shop", "restaurant", "manufacturing", "trade", "company", "startup", "register", "clothing", "factory"]):
-        legacy_intent_primary = "BUSINESS_REGISTRATION"
-        legacy_intent_sub = "Register business and obtain license"
+            primary_intent = "BUSINESS_START"
+    elif "government job" in query_clean or "sarkari naukri" in query_clean:
+        primary_intent = "GOVERNMENT_JOB"
+    elif any(w in query_clean for w in ["financial", "monetary"]) and any(w in query_clean for w in ["assistance", "help", "support", "aid"]):
+        primary_intent = "FINANCIAL_ASSISTANCE"
+    elif any(w in query_clean for w in ["loan", "borrow"]) and any(w in query_clean for w in ["government", "govt"]):
+        primary_intent = "GOVERNMENT_LOAN"
+    elif "subsidy" in query_clean or "subsidies" in query_clean:
+        primary_intent = "SUBSIDY"
+    elif "pension" in query_clean:
+        primary_intent = "PENSION"
+    elif "insurance" in query_clean:
+        primary_intent = "INSURANCE"
+    elif "welfare" in query_clean:
+        primary_intent = "WELFARE"
+    elif any(w in query_clean for w in ["housing support", "awas yojana", "pmay"]):
+        primary_intent = "HOUSING_SUPPORT"
+    else:
+        # Fallback to Action/Object combination mapping
+        if action_val == "PURCHASE" and object_val == "LAND":
+            primary_intent = "LAND_PURCHASE"
+        elif action_val == "SALE" and object_val == "LAND":
+            primary_intent = "LAND_SALE"
+        elif action_val == "PURCHASE" and object_val == "HOUSE":
+            primary_intent = "HOME_PURCHASE"
+        elif action_val == "CONSTRUCTION" and object_val == "HOUSE":
+            primary_intent = "HOME_CONSTRUCTION"
+        elif action_val == "ESTABLISH" and object_val == "HOSPITAL":
+            primary_intent = "HOSPITAL"
+        elif action_val == "ESTABLISH" and object_val == "RESTAURANT":
+            primary_intent = "RESTAURANT"
+        elif action_val == "ESTABLISH" and object_val == "SCHOOL":
+            primary_intent = "SCHOOL"
+        elif action_val == "ESTABLISH" and object_val == "BUSINESS":
+            primary_intent = "BUSINESS_START"
+        elif action_val == "REGISTRATION" and object_val == "BUSINESS":
+            primary_intent = "BUSINESS_REGISTRATION"
+        elif action_val == "FINANCING" and object_val == "BUSINESS":
+            primary_intent = "BUSINESS_LOAN"
+        elif action_val == "FINANCING" and object_val == "HOUSE":
+            primary_intent = "PROPERTY_LOAN"
+        elif action_val == "RENEWAL" and object_val == "DRIVING_LICENSE":
+            primary_intent = "LICENSE_RENEWAL"
+        elif action_val == "ACQUISITION" and object_val == "DRIVING_LICENSE":
+            primary_intent = "DRIVING_LICENSE"
+        elif action_val == "ACQUISITION" and object_val == "PASSPORT":
+            primary_intent = "PASSPORT"
+        elif action_val == "SUPPORT" and object_val == "SCHOLARSHIP":
+            primary_intent = "SCHOLARSHIP"
+        elif action_val == "SUPPORT" and object_val == "WELFARE":
+            primary_intent = "FINANCIAL_ASSISTANCE"
+        else:
+            primary_intent = "OTHER_CITIZEN_SERVICE"
+
+    # Secondary Intent Extraction logic
+    if primary_intent in ["HOSPITAL", "RESTAURANT", "SCHOOL", "FACTORY"]:
+        secondary_intents.append("BUSINESS_START")
+    if any(w in query_clean for w in ["loan", "finance", "borrow", "money", "funding"]):
+        if primary_intent in ["HOSPITAL", "RESTAURANT", "BUSINESS_START", "BUSINESS_REGISTRATION", "STARTUP", "MSME", "FACTORY"]:
+            secondary_intents.extend(["BUSINESS_LOAN", "BUSINESS_FINANCE"])
+        elif primary_intent in ["LAND_PURCHASE", "HOME_CONSTRUCTION", "HOME_PURCHASE"]:
+            secondary_intents.append("PROPERTY_LOAN")
+        else:
+            secondary_intents.append("GOVERNMENT_LOAN")
+    if any(w in query_clean for w in ["register", "registration"]):
+        if primary_intent in ["HOSPITAL", "RESTAURANT", "BUSINESS_START"]:
+            secondary_intents.append("BUSINESS_REGISTRATION")
+        elif primary_intent in ["LAND_PURCHASE", "HOME_PURCHASE"]:
+            secondary_intents.append("PROPERTY_REGISTRATION")
+    if any(w in query_clean for w in ["scholarship", "study", "masters"]):
+        if primary_intent == "STUDY_ABROAD":
+            secondary_intents.append("SCHOLARSHIP")
+
+    # Clean duplicates in secondary intents
+    secondary_intents = list(set([si for si in secondary_intents if si != primary_intent]))
+
+    # Map universal category
+    category_map = {
+        "PROPERTY": ["LAND_PURCHASE", "LAND_SALE", "PROPERTY_PURCHASE", "PROPERTY_SALE", "PROPERTY_REGISTRATION", "HOME_CONSTRUCTION", "HOME_PURCHASE", "PROPERTY_LOAN", "PROPERTY_DOCUMENTATION"],
+        "BUSINESS": ["BUSINESS_START", "BUSINESS_REGISTRATION", "STARTUP", "MSME", "BUSINESS_LOAN", "BUSINESS_FINANCE", "SHOP", "RESTAURANT", "MANUFACTURING", "FACTORY", "SERVICE_BUSINESS", "COMPANY_REGISTRATION"],
+        "HEALTHCARE": ["HOSPITAL", "CLINIC", "PHARMACY", "HEALTHCARE_FACILITY", "MEDICAL_BUSINESS"],
+        "EDUCATION": ["SCHOOL", "COLLEGE", "UNIVERSITY", "STUDY", "SCHOLARSHIP", "EDUCATION_FINANCE", "STUDY_ABROAD"],
+        "TRAVEL": ["PASSPORT", "VISA", "INTERNATIONAL_TRAVEL", "MIGRATION", "STUDY_ABROAD"],
+        "AGRICULTURE": ["FARMING", "FARMER_SUPPORT", "AGRICULTURE", "IRRIGATION", "AGRICULTURAL_LOAN", "AGRICULTURAL_EQUIPMENT"],
+        "TRANSPORT": ["DRIVING_LICENSE", "LICENSE_RENEWAL", "VEHICLE_REGISTRATION", "VEHICLE_TRANSFER", "TRANSPORT_SERVICE"],
+        "IDENTITY/CERTIFICATES": ["AADHAAR", "PAN", "BIRTH_CERTIFICATE", "DEATH_CERTIFICATE", "MARRIAGE_CERTIFICATE", "DOMICILE_CERTIFICATE", "INCOME_CERTIFICATE", "CASTE_CERTIFICATE", "RESIDENCE_CERTIFICATE"],
+        "EMPLOYMENT": ["GOVERNMENT_JOB", "PRIVATE_EMPLOYMENT", "SKILL_DEVELOPMENT", "TRAINING", "EMPLOYMENT_SUPPORT"],
+        "FINANCIAL_SUPPORT": ["GOVERNMENT_LOAN", "SUBSIDY", "FINANCIAL_ASSISTANCE", "PENSION", "INSURANCE", "WELFARE"],
+        "SOCIAL_SUPPORT": ["WOMEN_SUPPORT", "CHILD_SUPPORT", "SENIOR_CITIZEN_SUPPORT", "DISABILITY_SUPPORT", "HOUSING_SUPPORT"]
+    }
+    
+    category_val = "OTHER_CITIZEN_SERVICE"
+    for cat, intents in category_map.items():
+        if primary_intent in intents:
+            category_val = cat
+            break
+
+    # Legacy Category Mapping for frontend/DB compatibility
+    legacy_category = "general"
+    if category_val == "EDUCATION":
+        legacy_category = "education"
+    elif category_val in ["BUSINESS", "HEALTHCARE"]:
         legacy_category = "business"
-        goal_category_full = "BUSINESS"
-    elif any(w in query_lower for w in ["driving", "licence", "license", "dl"]):
-        legacy_intent_primary = "DRIVING_LICENCE"
-        legacy_intent_sub = "Renew or apply for driving licence"
-        legacy_category = "documents"
-        goal_category_full = "LICENSING"
-    elif any(w in query_lower for w in ["passport", "travel document"]):
-        legacy_intent_primary = "TRAVEL"
-        legacy_intent_sub = "Apply for passport"
-        legacy_category = "documents"
-        goal_category_full = "TRAVEL"
-    elif any(w in query_lower for w in ["farmer", "farming", "agricultural", "agriculture", "kisan"]):
-        legacy_intent_primary = "FARMER_BENEFITS"
-        legacy_intent_sub = "Apply for agricultural support"
+    elif category_val == "AGRICULTURE":
         legacy_category = "agriculture"
-        goal_category_full = "AGRICULTURE"
-    elif any(w in query_lower for w in ["caste", "category"]):
-        legacy_intent_primary = "DOMICILE_CERTIFICATE"
-        legacy_intent_sub = "Apply for caste certificate"
+    elif category_val in ["TRAVEL", "TRANSPORT", "IDENTITY/CERTIFICATES"]:
         legacy_category = "documents"
-        goal_category_full = "CERTIFICATES"
-    elif any(w in query_lower for w in ["income certificate", "aay praman"]):
-        legacy_intent_primary = "DOMICILE_CERTIFICATE"
-        legacy_intent_sub = "Apply for income certificate"
-        legacy_category = "documents"
-        goal_category_full = "CERTIFICATES"
-    elif any(w in query_lower for w in ["domicile certificate", "residence certificate"]):
-        legacy_intent_primary = "DOMICILE_CERTIFICATE"
-        legacy_intent_sub = "Apply for state domicile certificate"
-        legacy_category = "documents"
-        goal_category_full = "CERTIFICATES"
-    elif any(w in query_lower for w in ["school", "build school", "open school"]):
-        legacy_intent_primary = "SCHOOL_CONSTRUCTION"
-        legacy_intent_sub = "Build and establish a school"
-        legacy_category = "business"
-        goal_category_full = "BUSINESS"
-    elif any(w in query_lower for w in ["house", "buy house", "home loan", "awas yojana", "pmay"]):
-        legacy_intent_primary = "HOUSING"
-        legacy_intent_sub = "Purchase a house / Home Loan"
-        legacy_category = "general"
-        goal_category_full = "HOUSING"
+
+    # Map legacy_intent_primary for unit test matching
+    def get_legacy_intent_primary(prim: str) -> str:
+        if prim == "STUDY_ABROAD":
+            return "STUDY_ABROAD"
+        elif prim in ["DRIVING_LICENSE", "LICENSE_RENEWAL"]:
+            return "DRIVING_LICENCE"
+        elif prim in ["BUSINESS_START", "BUSINESS_REGISTRATION", "STARTUP", "MSME", "RESTAURANT", "MANUFACTURING", "FACTORY", "SHOP", "COMPANY_REGISTRATION", "BUSINESS_LOAN", "BUSINESS_FINANCE", "SERVICE_BUSINESS"]:
+            return "BUSINESS_REGISTRATION"
+        elif prim in ["FARMING", "FARMER_SUPPORT", "AGRICULTURE", "IRRIGATION", "AGRICULTURAL_LOAN", "AGRICULTURAL_EQUIPMENT"]:
+            return "FARMER_BENEFITS"
+        elif prim == "SCHOLARSHIP":
+            return "SCHOLARSHIP"
+        elif prim in ["HOSPITAL", "CLINIC", "PHARMACY", "HEALTHCARE_FACILITY", "MEDICAL_BUSINESS"]:
+            return "HEALTHCARE_FACILITY"
+        elif prim in ["LAND_PURCHASE", "LAND_SALE", "PROPERTY_REGISTRATION", "PROPERTY_PURCHASE", "PROPERTY_SALE", "PROPERTY_DOCUMENTATION", "PROPERTY_LOAN"]:
+            return "LAND_PURCHASE"
+        elif prim in ["PASSPORT", "VISA", "INTERNATIONAL_TRAVEL", "MIGRATION"]:
+            return "TRAVEL"
+        elif prim in ["SCHOOL", "COLLEGE", "UNIVERSITY"]:
+            return "SCHOOL_CONSTRUCTION"
+        elif prim in ["HOME_CONSTRUCTION", "HOME_PURCHASE", "HOUSING_SUPPORT"]:
+            return "HOUSING"
+        elif prim in ["DOMICILE_CERTIFICATE", "INCOME_CERTIFICATE", "CASTE_CERTIFICATE", "BIRTH_CERTIFICATE", "DEATH_CERTIFICATE", "MARRIAGE_CERTIFICATE", "RESIDENCE_CERTIFICATE"]:
+            return "DOMICILE_CERTIFICATE"
+        return "GENERAL"
+
+    legacy_intent_primary = get_legacy_intent_primary(primary_intent)
+
+    # Legacy intent sub description mapping
+    legacy_intent_sub = "General Assistance"
+    if legacy_intent_primary == "STUDY_ABROAD":
+        legacy_intent_sub = f"Masters education in {dest_country}" if dest_country and "master" in query_clean else f"Higher education in {dest_country}" if dest_country else "Higher education abroad"
+    elif legacy_intent_primary == "SCHOLARSHIP":
+        legacy_intent_sub = "Apply for student financial aid"
+    elif legacy_intent_primary == "HEALTHCARE_FACILITY":
+        legacy_intent_sub = "Establish and register a healthcare facility"
+    elif legacy_intent_primary == "LAND_PURCHASE":
+        legacy_intent_sub = "Purchase land or real estate property"
+    elif legacy_intent_primary == "BUSINESS_REGISTRATION":
+        legacy_intent_sub = "Register business and obtain license"
+    elif legacy_intent_primary == "DRIVING_LICENCE":
+        legacy_intent_sub = "Renew or apply for driving licence"
+    elif legacy_intent_primary == "TRAVEL":
+        legacy_intent_sub = "Apply for passport"
+    elif legacy_intent_primary == "FARMER_BENEFITS":
+        legacy_intent_sub = "Apply for agricultural support"
+    elif legacy_intent_primary == "DOMICILE_CERTIFICATE":
+        legacy_intent_sub = f"Apply for {primary_intent.replace('_', ' ').lower()}"
 
     # Setup extracted metadata dictionary to keep compatibility with other backend layers
     extracted = {
         "goal": query,
-        "goal_category": goal_category_full,
+        "goal_category": category_val,
         "sub_category": legacy_intent_sub,
         "user_domicile": domicile,
         "current_residence": domicile,
         "district": target_city,
         "current_city": target_city,
         "target_location": dest_country or target_state,
-        "working_location": target_state if "work" in query_lower else None,
-        "business_location": target_state if any(w in query_lower for w in ["business", "shop", "restaurant", "startup", "company", "clothing", "manufacturing", "hospital", "clinic", "land", "school"]) else None,
+        "working_location": target_state if "work" in query_clean else None,
+        "business_location": target_state if any(w in query_clean for w in ["business", "shop", "restaurant", "startup", "company", "clothing", "manufacturing", "hospital", "clinic", "land", "school"]) else None,
         "destination_country": dest_country,
         "destination_state": target_state if dest_country is None else None,
         "required_authorities": [],
@@ -485,7 +675,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             authorities.append(f"{target_city} Municipal Corporation")
         else:
             authorities.append(f"Local Municipal Authority, {biz_state}")
-        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
+        if "restaurant" in query_clean or "food" in query_clean or "cafe" in query_clean:
             authorities.extend(["Food Safety and Standards Authority of India (FSSAI)", f"{biz_state} Fire Department"])
     elif legacy_intent_primary == "HEALTHCARE_FACILITY":
         biz_state = target_state or domicile
@@ -509,15 +699,15 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     # Determine Goal Title
     goal_title = query.title()
     if len(query) > 40:
-        if "restaurant" in query_lower:
+        if "restaurant" in query_clean:
             goal_title = f"Open Restaurant in {target_city}" if target_city else "Open Restaurant"
-        elif "clothing" in query_lower:
+        elif "clothing" in query_clean:
             goal_title = f"Start Clothing Business in {target_state}" if target_state else "Start Clothing Business"
-        elif "hospital" in query_lower or "clinic" in query_lower:
+        elif "hospital" in query_clean or "clinic" in query_clean:
             goal_title = f"Build Hospital in {target_city}" if target_city else "Healthcare Facility Setup"
-        elif "land" in query_lower:
+        elif "land" in query_clean:
             goal_title = f"Land Purchase in {target_city}" if target_city else "Land Purchase Journey"
-        elif "business" in query_lower or "shop" in query_lower:
+        elif "business" in query_clean or "shop" in query_clean:
             goal_title = f"Start Business in {target_city}" if target_city else "Business Registration"
         elif legacy_intent_primary == "STUDY_ABROAD":
             goal_title = f"Study in {dest_country}" if dest_country else "Study Abroad"
@@ -604,7 +794,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         print(f"[WARN] Failed to query user documents: {de}")
         warnings.append("Document vault data could not be refreshed right now.")
 
-    # Target Document Definitions based on Goal/Category
+    # Target Document Definitions
     all_defs = {
         "AADHAAR": {"name": "Aadhaar Card", "authority": "UIDAI", "reason": "Primary identity verification", "how_to": "Download from UIDAI portal using OTP verification.", "official_source": "https://uidai.gov.in", "processing_time": "Immediate (OTP Download)"},
         "PAN": {"name": "PAN Card", "authority": "Income Tax Department", "reason": "Required for financial and tax transactions", "how_to": "Apply online via NSDL e-Gov portal.", "official_source": "https://www.incometax.gov.in", "processing_time": "3-5 days"},
@@ -639,40 +829,199 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "BUILDING_SAFETY_CERTIFICATE": {"name": "Building Safety Certificate", "authority": "Public Works Department", "reason": "Safety clearance for commercial school buildings", "how_to": "Apply to PWD engineer for structural inspection.", "official_source": "https://serviceonline.gov.in", "processing_time": "7-15 days"},
         "AFFILIATION_CERTIFICATE": {"name": "School Recognition/Affiliation Certificate", "authority": "Education Board / CBSE", "reason": "Official school affiliation from state/national board", "how_to": "Apply on CBSE SARAS portal or state board portal.", "official_source": "https://saras.cbse.gov.in", "processing_time": "30-60 days"},
         "TITLE_DEED": {"name": "Title Clearance Certificate", "authority": "Revenue Department", "reason": "Establish absolute ownership of the property", "how_to": "Obtain certified copy of title deed from sub-registrar office.", "official_source": "https://serviceonline.gov.in", "processing_time": "2-3 days"},
-        "LOAN_SANCTION_LETTER": {"name": "Home Loan Sanction Letter", "authority": "Commercial Bank", "reason": "Proof of transaction funding from lender", "how_to": "Apply for home loan online or at bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "7-10 days"}
+        "LOAN_SANCTION_LETTER": {"name": "Home Loan Sanction Letter", "authority": "Commercial Bank", "reason": "Proof of transaction funding from lender", "how_to": "Apply for home loan online or at bank branch.", "official_source": "https://digilocker.gov.in", "processing_time": "7-10 days"},
+        "ADMISSION_LETTER": {"name": "Admission Letter / Fee Receipt", "authority": "Educational Institution", "reason": "Proof of active admission to verify enrollment", "how_to": "Obtain signed admission letter or fee receipt from your college/school.", "official_source": "https://serviceonline.gov.in", "processing_time": "1-2 days"}
     }
 
-    # Populate current requirements based on intent
-    current_reqs = []
-    if legacy_intent_primary == "STUDY_ABROAD":
-        current_reqs = [
-            {"type": "AADHAAR", "priority": "Required"},
-            {"type": "PAN", "priority": "Required"},
-            {"type": "PASSPORT", "priority": "Required"},
-            {"type": "10TH_MARKSHEET", "priority": "Required"},
-            {"type": "12TH_MARKSHEET", "priority": "Required"},
-            {"type": "ACADEMIC_TRANSCRIPTS", "priority": "Required"},
-            {"type": "ENGLISH_TEST", "priority": "Conditional"},
-            {"type": "FINANCIAL_DOCUMENTS", "priority": "Conditional"},
-            {"type": "MARKSHEET", "priority": "Recommended"},
-            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
-            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "LAND_PURCHASE":
-        current_reqs = [
+    # Populate current requirements based on intent ontology
+    intent_docs_map = {
+        "LAND_PURCHASE": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "PAN", "priority": "Required"},
             {"type": "LAND_RECORD", "priority": "Required"},
             {"type": "SALE_AGREEMENT", "priority": "Required"},
             {"type": "STAMP_DUTY_RECEIPT", "priority": "Conditional"},
+            {"type": "ENCUMBRANCE_CERTIFICATE", "priority": "Recommended"},
             {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
             {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
             {"type": "BANK_PROOF", "priority": "Recommended"},
-            {"type": "PROPERTY_TAX_RECEIPT", "priority": "Recommended"},
-            {"type": "ENCUMBRANCE_CERTIFICATE", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "HEALTHCARE_FACILITY":
-        current_reqs = [
+            {"type": "PROPERTY_TAX_RECEIPT", "priority": "Recommended"}
+        ],
+        "LAND_SALE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "PROPERTY_TAX_RECEIPT", "priority": "Recommended"}
+        ],
+        "PROPERTY_PURCHASE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "STAMP_DUTY_RECEIPT", "priority": "Conditional"},
+            {"type": "ENCUMBRANCE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "PROPERTY_SALE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "PROPERTY_TAX_RECEIPT", "priority": "Recommended"}
+        ],
+        "PROPERTY_REGISTRATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "STAMP_DUTY_RECEIPT", "priority": "Required"},
+            {"type": "ENCUMBRANCE_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "HOME_CONSTRUCTION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BUILDING_PLAN_APPROVAL", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "LOAN_SANCTION_LETTER", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "HOME_PURCHASE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "TITLE_DEED", "priority": "Required"},
+            {"type": "LOAN_SANCTION_LETTER", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "PROPERTY_LOAN": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "SALE_AGREEMENT", "priority": "Required"},
+            {"type": "TITLE_DEED", "priority": "Required"},
+            {"type": "LOAN_SANCTION_LETTER", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "PROPERTY_DOCUMENTATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "BUSINESS_START": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "BUSINESS_REGISTRATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "STARTUP": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "MSME": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "BUSINESS_LOAN": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"}
+        ],
+        "BUSINESS_FINANCE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "SHOP": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "RESTAURANT": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "FSSAI_LICENSE", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Conditional"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "MANUFACTURING": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Conditional"},
+            {"type": "POLLUTION_CONTROL_NOC", "priority": "Conditional"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"}
+        ],
+        "FACTORY": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Required"},
+            {"type": "POLLUTION_CONTROL_NOC", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"}
+        ],
+        "SERVICE_BUSINESS": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"}
+        ],
+        "COMPANY_REGISTRATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "GST_CERTIFICATE", "priority": "Conditional"}
+        ],
+        "HOSPITAL": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "PAN", "priority": "Required"},
             {"type": "LAND_RECORD", "priority": "Required"},
@@ -685,51 +1034,41 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
             {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
             {"type": "BANK_PROOF", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "BUSINESS_REGISTRATION":
-        current_reqs = [
+        ],
+        "CLINIC": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "PAN", "priority": "Required"},
             {"type": "RENT_AGREEMENT", "priority": "Required"},
-            {"type": "UDYAM_CERTIFICATE", "priority": "Required"},
+            {"type": "CLINICAL_ESTABLISHMENT_REGISTRATION", "priority": "Required"},
             {"type": "TRADE_LICENSE", "priority": "Required"},
-            {"type": "GST_CERTIFICATE", "priority": "Conditional"},
-            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
-            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"},
-            {"type": "BANK_PROOF", "priority": "Recommended"}
-        ]
-        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
-            current_reqs.extend([
-                {"type": "FSSAI_LICENSE", "priority": "Required"},
-                {"type": "FIRE_NOC", "priority": "Conditional"}
-            ])
-    elif legacy_intent_primary == "DRIVING_LICENCE":
-        current_reqs = [
-            {"type": "AADHAAR", "priority": "Required"},
-            {"type": "DRIVING_LICENCE", "priority": "Required"},
-            {"type": "MEDICAL_CERTIFICATE", "priority": "Conditional"},
+            {"type": "STAFF_REGISTRATION", "priority": "Conditional"},
             {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "TRAVEL":
-        current_reqs = [
+        ],
+        "PHARMACY": [
             {"type": "AADHAAR", "priority": "Required"},
-            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"},
-            {"type": "PAN", "priority": "Recommended"},
-            {"type": "10TH_MARKSHEET", "priority": "Recommended"},
-            {"type": "PASSPORT", "priority": "Conditional"},
-            {"type": "BANK_PROOF", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "FARMER_BENEFITS":
-        current_reqs = [
+            {"type": "PAN", "priority": "Required"},
+            {"type": "RENT_AGREEMENT", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"}
+        ],
+        "HEALTHCARE_FACILITY": [
             {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
             {"type": "LAND_RECORD", "priority": "Required"},
-            {"type": "BANK_PROOF", "priority": "Required"},
-            {"type": "PAN", "priority": "Recommended"},
-            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
-            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "SCHOOL_CONSTRUCTION":
-        current_reqs = [
+            {"type": "BUILDING_PLAN_APPROVAL", "priority": "Required"},
+            {"type": "CLINICAL_ESTABLISHMENT_REGISTRATION", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Required"},
+            {"type": "POLLUTION_CONTROL_NOC", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"},
+            {"type": "STAFF_REGISTRATION", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "MEDICAL_BUSINESS": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "CLINICAL_ESTABLISHMENT_REGISTRATION", "priority": "Required"},
+            {"type": "TRADE_LICENSE", "priority": "Required"}
+        ],
+        "SCHOOL": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "PAN", "priority": "Required"},
             {"type": "LAND_RECORD", "priority": "Required"},
@@ -739,20 +1078,31 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             {"type": "AFFILIATION_CERTIFICATE", "priority": "Conditional"},
             {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
             {"type": "BANK_PROOF", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "HOUSING":
-        current_reqs = [
+        ],
+        "COLLEGE": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "PAN", "priority": "Required"},
-            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
-            {"type": "SALE_AGREEMENT", "priority": "Required"},
-            {"type": "TITLE_DEED", "priority": "Required"},
-            {"type": "LOAN_SANCTION_LETTER", "priority": "Conditional"},
-            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
-            {"type": "BANK_PROOF", "priority": "Recommended"}
-        ]
-    elif legacy_intent_primary == "SCHOLARSHIP":
-        current_reqs = [
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SOCIETY_REGISTRATION", "priority": "Required"},
+            {"type": "BUILDING_SAFETY_CERTIFICATE", "priority": "Required"},
+            {"type": "FIRE_NOC", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "UNIVERSITY": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "SOCIETY_REGISTRATION", "priority": "Required"},
+            {"type": "BUILDING_SAFETY_CERTIFICATE", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "STUDY": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "10TH_MARKSHEET", "priority": "Required"},
+            {"type": "12TH_MARKSHEET", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "SCHOLARSHIP": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "10TH_MARKSHEET", "priority": "Required"},
             {"type": "12TH_MARKSHEET", "priority": "Required"},
@@ -760,14 +1110,229 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             {"type": "DOMICILE_CERTIFICATE", "priority": "Required"},
             {"type": "ADMISSION_LETTER", "priority": "Required"},
             {"type": "BANK_PROOF", "priority": "Recommended"}
-        ]
-    else:
-        current_reqs = [
+        ],
+        "EDUCATION_FINANCE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "10TH_MARKSHEET", "priority": "Required"},
+            {"type": "12TH_MARKSHEET", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "STUDY_ABROAD": [
             {"type": "AADHAAR", "priority": "Required"},
             {"type": "PAN", "priority": "Required"},
+            {"type": "PASSPORT", "priority": "Required"},
+            {"type": "10TH_MARKSHEET", "priority": "Required"},
+            {"type": "12TH_MARKSHEET", "priority": "Required"},
+            {"type": "ACADEMIC_TRANSCRIPTS", "priority": "Required"},
+            {"type": "ENGLISH_TEST", "priority": "Conditional"},
+            {"type": "FINANCIAL_DOCUMENTS", "priority": "Conditional"},
+            {"type": "MARKSHEET", "priority": "Recommended"},
             {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
             {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "PASSPORT": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"},
+            {"type": "PAN", "priority": "Recommended"},
+            {"type": "10TH_MARKSHEET", "recommended": "Recommended"},
+            {"type": "PASSPORT", "priority": "Conditional"},
+            {"type": "BANK_PROOF", "priority": "Recommended"}
+        ],
+        "VISA": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PASSPORT", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "INTERNATIONAL_TRAVEL": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PASSPORT", "priority": "Required"}
+        ],
+        "MIGRATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PASSPORT", "priority": "Required"}
+        ],
+        "FARMING": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"},
+            {"type": "PAN", "priority": "Recommended"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "FARMER_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"},
+            {"type": "PAN", "priority": "Recommended"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "AGRICULTURE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "IRRIGATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "AGRICULTURAL_LOAN": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "AGRICULTURAL_EQUIPMENT": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "LAND_RECORD", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"}
+        ],
+        "DRIVING_LICENSE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DRIVING_LICENCE", "priority": "Required"},
+            {"type": "MEDICAL_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "LICENSE_RENEWAL": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DRIVING_LICENCE", "priority": "Required"},
+            {"type": "MEDICAL_CERTIFICATE", "priority": "Conditional"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "VEHICLE_REGISTRATION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Recommended"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "VEHICLE_TRANSFER": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "TRANSPORT_SERVICE": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "AADHAAR": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "PAN": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"}
+        ],
+        "BIRTH_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "DEATH_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "MARRIAGE_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "DOMICILE_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"}
+        ],
+        "INCOME_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"}
+        ],
+        "CASTE_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"}
+        ],
+        "RESIDENCE_CERTIFICATE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Required"}
+        ],
+        "GOVERNMENT_JOB": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "10TH_MARKSHEET", "priority": "Required"},
+            {"type": "12TH_MARKSHEET", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "PRIVATE_EMPLOYMENT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "SKILL_DEVELOPMENT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "TRAINING": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "EMPLOYMENT_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "GOVERNMENT_LOAN": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "BANK_PROOF", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "SUBSIDY": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "FINANCIAL_ASSISTANCE": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"},
+            {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"}
+        ],
+        "PENSION": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"}
+        ],
+        "INSURANCE": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "WELFARE": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "WOMEN_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "CHILD_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "SENIOR_CITIZEN_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "DISABILITY_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"}
+        ],
+        "HOUSING_SUPPORT": [
+            {"type": "AADHAAR", "priority": "Required"},
+            {"type": "PAN", "priority": "Required"},
+            {"type": "INCOME_CERTIFICATE", "priority": "Required"}
         ]
+    }
+
+    # Combine requirements from primary and secondary intents
+    required_types = set()
+    combined_reqs = []
+    
+    # 1. Base requirements from primary intent
+    base_docs = intent_docs_map.get(primary_intent, [
+        {"type": "AADHAAR", "priority": "Required"},
+        {"type": "PAN", "priority": "Required"},
+        {"type": "DOMICILE_CERTIFICATE", "priority": "Recommended"},
+        {"type": "INCOME_CERTIFICATE", "priority": "Recommended"}
+    ])
+    for d in base_docs:
+        required_types.add(d["type"])
+        combined_reqs.append(d)
+        
+    # 2. Add extra requirements from secondary intents if they are not already present
+    for sec_intent in secondary_intents:
+        sec_docs = intent_docs_map.get(sec_intent, [])
+        for d in sec_docs:
+            if d["type"] not in required_types:
+                required_types.add(d["type"])
+                combined_reqs.append(d)
 
     # Map required/available/missing docs
     available_docs = []
@@ -781,7 +1346,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                 return user_doc_types[t]
         return None
 
-    for req in current_reqs:
+    for req in combined_reqs:
         rtype = req["type"]
         p_val = req["priority"]
         r_def = all_defs.get(rtype, {"name": rtype.title().replace("_", " "), "authority": "Government Authority", "reason": "Required for this journey", "how_to": "Apply on official portal.", "official_source": "https://india.gov.in", "processing_time": "10 days"})
@@ -834,18 +1399,26 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                 "official_source": r_def["official_source"]
             })
 
-    # 3. Government Scheme Engine (Strict Category & Jurisdiction Mapping)
-    def map_goal_to_scheme_categories(intent: str) -> List[str]:
-        cat = intent.upper()
-        if cat in ["STUDY_ABROAD", "SCHOLARSHIP", "EDUCATION"]:
-            return ["education", "general"]
-        elif cat in ["BUSINESS_REGISTRATION", "BUSINESS", "LEGAL_REGISTRATION", "HEALTHCARE_FACILITY", "SCHOOL_CONSTRUCTION", "LAND_PURCHASE"]:
-            return ["business", "general"]
-        elif cat in ["FARMER_BENEFITS", "AGRICULTURE"]:
-            return ["agriculture", "general"]
-        elif cat in ["DRIVING_LICENCE", "LICENSING", "TRAVEL", "CERTIFICATES", "DOMICILE_CERTIFICATE"]:
-            return ["documents", "general"]
-        return ["general"]
+    # 3. Government Scheme Engine (Strict Search via Intent Params)
+    # Map intent to search categories and matching keywords
+    def map_intent_to_search_params(intent: str) -> tuple[List[str], List[str]]:
+        if intent in ["STUDY_ABROAD", "SCHOLARSHIP", "STUDY", "COLLEGE", "UNIVERSITY", "SCHOOL", "EDUCATION_FINANCE"]:
+            return ["education", "general"], ["scholarship", "overseas", "foreign", "education", "study", "student", "stipend", "school", "college", "anupriti", "rgs", "mysy", "ssp", "vidyalaxmi", "loan"]
+        elif intent in ["HOSPITAL", "CLINIC", "PHARMACY", "HEALTHCARE_FACILITY", "MEDICAL_BUSINESS"]:
+            return ["business", "general"], ["hospital", "healthcare", "clinic", "medical", "health", "waste", "pollution", "doctor", "nurse"]
+        elif intent in ["FARMING", "FARMER_SUPPORT", "AGRICULTURE", "IRRIGATION", "AGRICULTURAL_LOAN", "AGRICULTURAL_EQUIPMENT"]:
+            return ["agriculture", "general"], ["farmer", "kisan", "farming", "agriculture", "crop", "fertilizer", "irrigation", "tractor", "insurance", "credit", "kcc", "bima", "pmkisan"]
+        elif intent in ["DRIVING_LICENSE", "LICENSE_RENEWAL"]:
+            return ["documents", "general"], ["license", "licence", "driving", "road", "transport"]
+        elif intent in ["PASSPORT", "VISA", "INTERNATIONAL_TRAVEL", "MIGRATION"]:
+            return ["documents", "general"], ["passport", "visa", "travel", "external", "overseas"]
+        elif intent in ["HOME_CONSTRUCTION", "HOME_PURCHASE", "HOUSING_SUPPORT", "PROPERTY_LOAN"]:
+            return ["general"], ["housing", "awas", "pmay", "home", "house", "construction", "loan"]
+        elif intent in ["BUSINESS_START", "BUSINESS_REGISTRATION", "STARTUP", "MSME", "SHOP", "RESTAURANT", "MANUFACTURING", "FACTORY", "SERVICE_BUSINESS", "COMPANY_REGISTRATION", "BUSINESS_LOAN", "BUSINESS_FINANCE"]:
+            return ["business", "general"], ["business", "startup", "msme", "udyam", "loan", "trade", "commercial", "industry", "manufacturing", "subsidy", "svanidhi", "pmegp"]
+        return ["general"], []
+        
+    target_categories, search_keywords = map_intent_to_search_params(primary_intent)
 
     schemes_db = []
     retrieved_count = 0
@@ -860,8 +1433,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         if target_state and target_state not in search_states and target_state.lower() not in ["australia", "canada", "uk", "usa"]:
             search_states.append(target_state)
 
-        target_categories = map_goal_to_scheme_categories(legacy_intent_primary)
-        
         # Base ACTIVE query
         schemes_query = db.query(SchemeDB).filter(SchemeDB.status == "ACTIVE")
         retrieved_count = schemes_query.count()
@@ -915,7 +1486,6 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                 why_match.append(f"✓ Target Location Match: Operating/studying in {target_state}")
                 jurisdiction_compatible = True
                 
-        # Skip schemes that are not for Central, Domicile state, or Target state
         if not jurisdiction_compatible:
             continue
 
@@ -951,7 +1521,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         req_occ = rules.get("occupation")
         if req_occ:
             implied_occupation = None
-            if "kisan" in query_lower or "farmer" in query_lower or "farming" in query_lower or "agriculture" in query_lower:
+            if "kisan" in query_clean or "farmer" in query_clean or "farming" in query_clean or "agriculture" in query_clean:
                 implied_occupation = "farmer"
             
             user_occ = implied_occupation or (user_profile.occupation if user_profile else None)
@@ -986,18 +1556,23 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
                 is_eligible = False
                 incompatibility_reasons.append("Requires course involving studies abroad")
 
-        # Score calculation out of 100
+        # Score calculation based on structured keywords & query terms
         goal_relevance_score = 0
         query_words = [w.lower() for w in query.split() if len(w) > 3]
         match_score = 0
         for w in query_words:
             if w in s.name.lower():
-                match_score += 15
+                match_score += 20
             elif w in s.description.lower():
                 match_score += 5
-        goal_relevance_score = min(match_score, 40)
+        for kw in search_keywords:
+            if kw in s.name.lower():
+                match_score += 15
+            elif kw in s.description.lower():
+                match_score += 5
+        goal_relevance_score = min(match_score, 60)
         
-        category_score = 20 if s.category == legacy_category else 10
+        category_score = 15 if s.category in target_categories else 0
         location_score = 10 if s.level == "CENTRAL" else 15
         
         if not is_eligible:
@@ -1006,10 +1581,10 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             eligibility_score = 0
         elif missing_info:
             match_status = "POSSIBLE_MATCH"
-            eligibility_score = 8
+            eligibility_score = 15
         else:
             match_status = "HIGH_MATCH"
-            eligibility_score = 15
+            eligibility_score = 25
             
         freshness_score = 10 if s.status == "ACTIVE" else 0
         total_relevance = goal_relevance_score + category_score + location_score + eligibility_score + freshness_score
@@ -1167,7 +1742,7 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
             {"name": "Udyam MSME Portal", "url": "https://udyamregistration.gov.in", "last_verified": "19 August 2026"},
             {"name": "GST Portal", "url": "https://gst.gov.in", "last_verified": "19 August 2026"}
         ]
-        if "restaurant" in query_lower or "food" in query_lower or "cafe" in query_lower:
+        if "restaurant" in query_clean or "food" in query_clean or "cafe" in query_clean:
             sources.append({"name": "FSSAI FoSCoS Portal", "url": "https://foscos.fssai.gov.in", "last_verified": "19 August 2026"})
     elif legacy_intent_primary == "DRIVING_LICENCE":
         sources = [
@@ -1225,15 +1800,31 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         else:
             state_list.append(s)
 
+    # Empty schemes fallback notice
+    if not central_list and not state_list and not target_loc_list:
+        warnings.append("No highly matched scheme was found for this goal.")
+
+    # Universal Structured Intent schema compliance (Requirement 3 & 22)
+    intent_val = {
+        "primary": primary_intent,
+        "secondary": secondary_intents,
+        "action": action_val,
+        "object": object_val,
+        "location": target_city or "",
+        "state": target_state or ""
+    }
+
     # 7. Formulate structured JSON payload
     result_payload = {
         "success": True,
         "journeyId": journey.id,
         "status": "COMPLETE",
+        "rawGoal": query,
         "goal": {
             "title": goal_title,
             "category": legacy_intent_primary
         },
+        "intent": intent_val,
         "domicile": {
             "state": domicile
         },
@@ -1247,7 +1838,10 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
         "schemes": {
             "central": central_list[:15],
             "state": state_list[:15],
-            "targetLocation": target_loc_list[:15]
+            "targetLocation": target_loc_list[:15],
+            "domicileState": state_list[:15],
+            "targetState": target_loc_list[:15],
+            "otherRelevant": []
         },
         "nextSteps": next_steps,
         "sources": sources,
@@ -1262,8 +1856,11 @@ def _do_analyze_journey(query: str, domicile: str, current_user: UserDB, db: Ses
     }
 
     # Prints for development debug logs
-    print(f"GOAL: {query}")
-    print(f"INTENT: {legacy_intent_primary}")
+    print(f"RAW GOAL: {query}")
+    print(f"PRIMARY INTENT: {primary_intent}")
+    print(f"SECONDARY INTENTS: {secondary_intents}")
+    print(f"ACTION: {action_val}")
+    print(f"OBJECT: {object_val}")
     print(f"DOMICILE: {domicile}")
     print(f"TARGET LOCATION: {target_loc_val}")
     print(f"DOCUMENTS IN VAULT: {list(user_doc_types.keys())}")
