@@ -345,6 +345,24 @@ export async function fetchJourneyByIdAPI(id: string): Promise<any | null> {
   return await apiFetch<any>(`/journeys/${id}`);
 }
 
+export async function fetchWorkflowsAPI(): Promise<any[]> {
+  const res = await apiFetch<any[]>('/workflows');
+  return res || [];
+}
+
+export async function createWorkflowAPI(payload: any): Promise<any> {
+  return await apiFetch<any>('/workflows', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteWorkflowAPI(workflowId: string): Promise<any> {
+  return await apiFetch<any>(`/workflows/${workflowId}`, {
+    method: 'DELETE'
+  });
+}
+
 export async function completeStepAPI(journeyId: string, stepKey: string): Promise<boolean> {
   const res = await apiFetch<any>(`/journeys/${journeyId}/steps/${stepKey}/complete`, {
     method: 'POST'

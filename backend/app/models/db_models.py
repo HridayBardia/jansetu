@@ -338,4 +338,32 @@ class DataConflictDB(Base):
     resolved_value = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class WorkflowTemplateDB(Base):
+    __tablename__ = "workflow_templates"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, nullable=False)
+    category = Column(String, nullable=False, unique=True) # e.g. business, education
+    department = Column(String, nullable=False)
+    status = Column(String, default="ACTIVE") # ACTIVE, DRAFT
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    steps = relationship("WorkflowTemplateStepDB", back_populates="template", cascade="all, delete-orphan", order_by="WorkflowTemplateStepDB.order_index")
+
+class WorkflowTemplateStepDB(Base):
+    __tablename__ = "workflow_template_steps"
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    template_id = Column(String, ForeignKey("workflow_templates.id"), nullable=False)
+    step_key = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    step_type = Column(String, nullable=False) # Ingestion, Validation, Security, Action, Processing
+    target = Column(String, nullable=False) # e.g. UIDAI Aadhaar API, Service ID
+    prerequisite_step_key = Column(String, nullable=True) # dependency
+    order_index = Column(Integer, default=0)
+    
+    template = relationship("WorkflowTemplateDB", back_populates="steps")
+
+
 

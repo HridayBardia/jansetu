@@ -314,3 +314,44 @@ class AdminDiagnostics(BaseModel):
     expired_schemes: int = 0
     total_states_covered: int = 36
 
+# Workflow Templates
+class WorkflowTemplateStepSchema(BaseModel):
+    id: str
+    template_id: str
+    step_key: str
+    name: str
+    step_type: str
+    target: str
+    prerequisite_step_key: Optional[str] = None
+    order_index: int
+
+class WorkflowTemplateSchema(BaseModel):
+    id: str
+    name: str
+    category: str
+    department: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    steps: List[WorkflowTemplateStepSchema] = []
+
+class WorkflowTemplateStepCreate(BaseModel):
+    step_key: str
+    name: str
+    step_type: str
+    target: str
+    prerequisite_step_key: Optional[str] = None
+    order_index: int
+
+class WorkflowTemplateCreate(BaseModel):
+    name: str
+    category: str
+    department: str
+    steps: List[WorkflowTemplateStepCreate] = []
+
+class WorkflowTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    department: Optional[str] = None
+    status: Optional[str] = None
+    steps: Optional[List[WorkflowTemplateStepCreate]] = None

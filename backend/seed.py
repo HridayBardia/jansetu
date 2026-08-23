@@ -8,7 +8,8 @@ from datetime import datetime
 from app.core.database import engine, Base, SessionLocal
 from app.models.db_models import (
     UserDB, JourneyDB, JourneyStepDB, StepDependencyDB,
-    GovernmentSourceDB, UserDocumentDB, UserConsentDB, SystemAlertDB, SchemeDB
+    GovernmentSourceDB, UserDocumentDB, UserConsentDB, SystemAlertDB, SchemeDB,
+    WorkflowTemplateDB, WorkflowTemplateStepDB
 )
 from app.services.dependency_engine import DependencyEngine
 
@@ -515,6 +516,102 @@ def seed_database(drop_tables: bool = True):
         ]
         for a in alerts:
             db.add(a)
+        db.commit()
+
+        # =====================================================================
+        # SEEDING WORKFLOW TEMPLATES
+        # =====================================================================
+        logger.info("Seeding Workflow Templates...")
+        
+        # Business Workflow Template
+        biz_template = WorkflowTemplateDB(
+            id="wt_business",
+            name="Default Business Workflow",
+            category="business",
+            department="Cross-Departmental"
+        )
+        db.add(biz_template)
+        
+        biz_template_steps = [
+            WorkflowTemplateStepDB(
+                template_id="wt_business",
+                step_key="business_structure",
+                name="Select Business Entity & Legal Structure",
+                step_type="Validation",
+                target="Portal Selection",
+                order_index=1
+            ),
+            WorkflowTemplateStepDB(
+                template_id="wt_business",
+                step_key="premises_proof",
+                name="Obtain Business Premises Proof",
+                step_type="Validation",
+                target="Revenue Dept API",
+                prerequisite_step_key="business_structure",
+                order_index=2
+            ),
+            WorkflowTemplateStepDB(
+                template_id="wt_business",
+                step_key="shop_establishment",
+                name="Register under Shop & Establishment Act",
+                step_type="Action",
+                target="Labour Dept Portal",
+                prerequisite_step_key="premises_proof",
+                order_index=3
+            ),
+            WorkflowTemplateStepDB(
+                template_id="wt_business",
+                step_key="udyam_msme",
+                name="Apply for Udyam MSME Registration",
+                step_type="Action",
+                target="MSME Udyam API",
+                prerequisite_step_key="business_structure",
+                order_index=4
+            )
+        ]
+        for step in biz_template_steps:
+            db.add(step)
+            
+        # Education Workflow Template
+        edu_template = WorkflowTemplateDB(
+            id="wt_education",
+            name="Default Education Workflow",
+            category="education",
+            department="Cross-Departmental"
+        )
+        db.add(edu_template)
+        
+        edu_template_steps = [
+            WorkflowTemplateStepDB(
+                template_id="wt_education",
+                step_key="eligibility_check",
+                name="Verify College Admission & Income Eligibility",
+                step_type="Validation",
+                target="Education Dept API",
+                order_index=1
+            ),
+            WorkflowTemplateStepDB(
+                template_id="wt_education",
+                step_key="document_prep",
+                name="Prepare Academic Records & Income Certificate",
+                step_type="Ingestion",
+                target="DigiLocker API",
+                prerequisite_step_key="eligibility_check",
+                order_index=2
+            ),
+            WorkflowTemplateStepDB(
+                template_id="wt_education",
+                step_key="vidya_lakshmi",
+                name="Apply on Vidya Lakshmi National Portal",
+                step_type="Action",
+                target="Vidya Lakshmi API",
+                prerequisite_step_key="document_prep",
+                order_index=3
+            )
+        ]
+        for step in edu_template_steps:
+            db.add(step)
+            
         db.commit()
 
         # =====================================================================
