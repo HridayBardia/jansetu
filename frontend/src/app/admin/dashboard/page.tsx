@@ -76,11 +76,11 @@ export default function AdminDashboardPage() {
               }} 
             />
           ) : null}
-          {tab === 'citizens' && <AdminCitizensView />}
-          {tab === 'applications' && <AdminApplicationsView />}
+          {tab === 'citizens' && <AdminCitizensView adminUsername={user?.username || ''} />}
+          {tab === 'applications' && <AdminApplicationsView adminUsername={user?.username || ''} />}
           {tab === 'interop' && <AdminInteropView />}
-          {tab === 'workflow' && <AdminWorkflowView />}
-          {tab === 'data_quality' && <AdminDataQualityView />}
+          {tab === 'workflow' && <AdminWorkflowView adminUsername={user?.username || ''} />}
+          {tab === 'data_quality' && <AdminDataQualityView adminUsername={user?.username || ''} />}
         </div>
       </main>
     </div>

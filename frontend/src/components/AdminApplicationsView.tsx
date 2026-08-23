@@ -1,101 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X, FileText, ChevronDown } from 'lucide-react';
+import { getApplicationsForAdmin, AdminApplication } from '@/lib/adminData';
 
-const mockGlobalApplications = [
-  {
-    id: 'APP-GJ-2026-001',
-    citizen: 'Hriday Bardia',
-    citizenId: 'CIT-8921-HRD',
-    service: 'Business Registration',
-    department: 'Industries Commissionerate, Gujarat',
-    state: 'Gujarat',
-    status: 'UNDER_VERIFICATION',
-    sla: 'On Track',
-    lastUpdated: new Date().toLocaleString(),
-    submittedDate: new Date(Date.now() - 2 * 86400000).toLocaleDateString(),
-  },
-  {
-    id: 'APP-GJ-2026-002',
-    citizen: 'Hriday Bardia',
-    citizenId: 'CIT-8921-HRD',
-    service: 'Trade License',
-    department: 'Ahmedabad Municipal Corporation',
-    state: 'Gujarat',
-    status: 'DOCUMENTS_REQUIRED',
-    sla: 'Action Required',
-    lastUpdated: new Date(Date.now() - 86400000).toLocaleString(),
-    submittedDate: new Date(Date.now() - 3 * 86400000).toLocaleDateString(),
-  },
-  {
-    id: 'APP-MH-2026-003',
-    citizen: 'Varad Kanade',
-    citizenId: 'CIT-4412-VRD',
-    service: 'Higher Education Scholarship',
-    department: 'Ministry of Education',
-    state: 'Maharashtra',
-    status: 'DOCUMENTS_REQUIRED',
-    sla: 'On Track',
-    lastUpdated: new Date(Date.now() - 5 * 3600000).toLocaleString(),
-    submittedDate: new Date(Date.now() - 5 * 86400000).toLocaleDateString(),
-  },
-  {
-    id: 'APP-KA-2026-004',
-    citizen: 'Satwik',
-    citizenId: 'CIT-7734-STW',
-    service: 'Property Registration',
-    department: 'Kaveri Online Services, Karnataka',
-    state: 'Karnataka',
-    status: 'SUBMITTED',
-    sla: 'On Track',
-    lastUpdated: new Date(Date.now() - 2 * 86400000).toLocaleString(),
-    submittedDate: new Date(Date.now() - 1 * 86400000).toLocaleDateString(),
-  },
-  {
-    id: 'APP-RJ-2026-005',
-    citizen: 'Ayush',
-    citizenId: 'CIT-1198-AYH',
-    service: 'Government Scholarship Application',
-    department: 'National Scholarship Portal',
-    state: 'Rajasthan',
-    status: 'ACTION_REQUIRED',
-    sla: 'Needs Attention',
-    lastUpdated: new Date(Date.now() - 12 * 3600000).toLocaleString(),
-    submittedDate: new Date(Date.now() - 7 * 86400000).toLocaleDateString(),
-  }
-];
+interface Props {
+  adminUsername: string;
+}
 
-import { useAuth } from '@/context/AuthContext';
-import { fetchApplicationsAPI, fetchCitizensAPI } from '@/lib/api';
+const STATUS_COLORS: Record<string, string> = {
+  SUBMITTED: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20',
+  UNDER_VERIFICATION: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+  UNDER_REVIEW: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+  DOCUMENTS_REQUIRED: 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse',
+  ACTION_REQUIRED: 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse',
+  APPROVED: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+  REJECTED: 'bg-red-500/10 text-red-400 border border-red-500/20',
+  COMPLETED: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+};
 
-export const AdminApplicationsView = () => {
-  const { user } = useAuth();
+export const AdminApplicationsView = ({ adminUsername }: Props) => {
+  const applications = useMemo(() => getApplicationsForAdmin(adminUsername), [adminUsername]);
   const [filter, setFilter] = useState('All');
-  const [selectedApp, setSelectedApp] = useState<any>(null);
-  const [adminApps, setAdminApps] = useState<any[]>([]);
-  const [citizens, setCitizens] = useState<any[]>([]);
+  const [selectedApp, setSelectedApp] = useState<AdminApplication | null>(null);
 
-  React.useEffect(() => {
-    fetchApplicationsAPI().then(data => {
-      if (data) setAdminApps(data);
+  const filteredApps = useMemo(() => {
+    if (filter === 'All') return applications;
+    return applications.filter(app => {
+      if (filter === 'Submitted') return app.status === 'SUBMITTED';
+      if (filter === 'Under Verification') return app.status === 'UNDER_VERIFICATION' || app.status === 'UNDER_REVIEW';
+      if (filter === 'Documents Required') return app.status === 'DOCUMENTS_REQUIRED';
+      if (filter === 'Action Required') return app.status === 'ACTION_REQUIRED';
+      if (filter === 'Approved') return app.status === 'APPROVED';
+      if (filter === 'Completed') return app.status === 'COMPLETED';
+      return true;
     });
-    fetchCitizensAPI().then(data => {
-      if (data) setCitizens(data);
-    });
-  }, []);
+  }, [applications, filter]);
 
-  const getCitizenInfo = (userId: string) => {
-    const c = citizens.find(cit => cit.id === userId);
-    return c ? { name: c.full_name, citId: `CIT-${c.id.substring(0, 4).toUpperCase()}` } : { name: 'Unknown Citizen', citId: userId };
-  };
-
-  const filteredApps = adminApps.filter(app => {
-    if (filter === 'All') return true;
-    if (filter === 'Action Required') return app.status === 'DOCUMENTS_REQUIRED' || app.status === 'UNDER_VERIFICATION';
-    if (filter === 'SLA Breach') return false; // Add SLA logic later if needed
-    return true;
-  });
+  const stats = useMemo(() => ({
+    total: applications.length,
+    submitted: applications.filter(a => a.status === 'SUBMITTED').length,
+    inProgress: applications.filter(a => ['UNDER_VERIFICATION', 'UNDER_REVIEW'].includes(a.status)).length,
+    docsRequired: applications.filter(a => a.status === 'DOCUMENTS_REQUIRED').length,
+    actionRequired: applications.filter(a => a.status === 'ACTION_REQUIRED').length,
+    completed: applications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length,
+  }), [applications]);
 
   return (
     <div className="space-y-6">
@@ -106,184 +55,200 @@ export const AdminApplicationsView = () => {
             <span>Application Monitor</span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Global view of all citizen applications, workflow states, and SLA tracking.
+            Track and manage citizen applications across departments.
           </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-500" />
-          <select 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-sm text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500"
-          >
-            <option value="All">All Applications</option>
-            <option value="Action Required">Action Required</option>
-            <option value="SLA Breach">SLA Breaches</option>
-          </select>
         </div>
       </div>
 
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: 'Total', count: stats.total, color: 'text-white' },
+          { label: 'Submitted', count: stats.submitted, color: 'text-cyan-400' },
+          { label: 'In Progress', count: stats.inProgress, color: 'text-blue-400' },
+          { label: 'Docs Required', count: stats.docsRequired, color: 'text-red-400' },
+          { label: 'Action Required', count: stats.actionRequired, color: 'text-amber-400' },
+        ].map((s, i) => (
+          <div key={i} className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
+            <p className="text-[10px] text-slate-500 uppercase font-bold">{s.label}</p>
+            <p className={`text-xl font-bold mt-0.5 ${s.color}`}>{s.count}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Filter className="w-4 h-4 text-slate-500" />
+        {['All', 'Submitted', 'Under Verification', 'Documents Required', 'Action Required', 'Approved', 'Completed'].map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              filter === f ? 'bg-purple-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {/* Applications Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-        {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950/50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-6 py-4 font-medium">Application ID</th>
-                <th className="px-6 py-4 font-medium">Citizen</th>
-                <th className="px-6 py-4 font-medium">Service & Dept</th>
-                <th className="px-6 py-4 font-medium">State</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">SLA</th>
-                <th className="px-6 py-4 font-medium">Last Updated</th>
-                <th className="px-6 py-4"></th>
+                <th className="px-5 py-4 font-medium">Application ID</th>
+                <th className="px-5 py-4 font-medium">Citizen</th>
+                <th className="px-5 py-4 font-medium">Service</th>
+                <th className="px-5 py-4 font-medium">Department</th>
+                <th className="px-5 py-4 font-medium">Status</th>
+                <th className="px-5 py-4 font-medium">Submitted</th>
+                <th className="px-5 py-4 font-medium">Next Action</th>
+                <th className="px-5 py-4"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50">
               {filteredApps.map(app => (
-                <tr key={app.id} className="hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4 font-mono text-xs text-slate-200 font-bold">{app.application_id}</td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-slate-200">{getCitizenInfo(app.user_id).name}</div>
-                    <div className="text-[10px] font-mono text-slate-500">{getCitizenInfo(app.user_id).citId}</div>
+                <tr key={app.id} className="hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelectedApp(app)}>
+                  <td className="px-5 py-4 font-mono text-xs text-purple-400 font-bold">{app.id}</td>
+                  <td className="px-5 py-4">
+                    <div className="font-medium text-slate-200 text-xs">{app.citizenName}</div>
+                    <div className="text-[10px] font-mono text-slate-500">{app.citizenId}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-slate-200">{app.service_name}</div>
-                    <div className="text-xs text-slate-400">{app.department_name}</div>
-                  </td>
-                  <td className="px-6 py-4">-</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                      app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                      app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
-                      'bg-slate-900 text-slate-400 border border-slate-800'
-                    }`}>
-                      {app.status.replace("_", " ")}
+                  <td className="px-5 py-4 text-xs text-slate-200">{app.service}</td>
+                  <td className="px-5 py-4 text-xs text-slate-400 max-w-[200px] truncate">{app.department}</td>
+                  <td className="px-5 py-4">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[app.status] || 'bg-slate-800 text-slate-400'}`}>
+                      {app.status.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="flex items-center gap-1 text-xs text-emerald-400">
-                      <CheckCircle2 className="w-3 h-3" />
-                      On Track
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-400">{new Date(app.updated_at || app.submitted_at).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => setSelectedApp(app)}
-                      className="text-purple-400 hover:text-purple-300 text-xs font-medium flex items-center gap-1 ml-auto"
-                    >
+                  <td className="px-5 py-4 text-xs text-slate-400">{app.submittedDate}</td>
+                  <td className="px-5 py-4 text-xs text-slate-400 max-w-[180px] truncate">{app.nextAction}</td>
+                  <td className="px-5 py-4 text-right">
+                    <button className="text-purple-400 hover:text-purple-300 text-xs font-medium flex items-center gap-1 ml-auto">
                       Inspect <ArrowRight className="w-3 h-3" />
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredApps.length === 0 && (
+                <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-500 text-sm">No applications match your filter.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Mobile Card View */}
+        {/* Mobile Cards */}
         <div className="md:hidden divide-y divide-slate-800/50">
           {filteredApps.map(app => (
-            <div key={app.id} className="p-4 space-y-3">
+            <div key={app.id} className="p-4 space-y-2 cursor-pointer" onClick={() => setSelectedApp(app)}>
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-bold text-slate-200">{app.service_name}</div>
-                  <div className="text-[10px] font-mono text-slate-400">{app.application_id}</div>
+                  <div className="font-bold text-slate-200 text-sm">{app.service}</div>
+                  <div className="text-[10px] font-mono text-purple-400">{app.id}</div>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                  app.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                  app.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse' :
-                  app.status === 'UNDER_VERIFICATION' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
-                  'bg-slate-900 text-slate-400 border border-slate-800'
-                }`}>
-                  {app.status.replace("_", " ")}
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${STATUS_COLORS[app.status] || 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                  {app.status.replace(/_/g, ' ')}
                 </span>
               </div>
-              
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Citizen</span>
-                  <span className="text-slate-300">{getCitizenInfo(app.user_id).name}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-bold">State</span>
-                  <span className="text-slate-300">-</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center pt-2">
-                <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400">
-                  <CheckCircle2 className="w-3 h-3" />
-                  On Track
-                </span>
-                <button 
-                  onClick={() => setSelectedApp(app)}
-                  className="text-purple-400 hover:text-purple-300 text-[11px] font-bold bg-purple-500/10 px-3 py-1.5 rounded"
-                >
-                  Inspect Details
-                </button>
-              </div>
+              <div className="text-xs text-slate-400">Citizen: {app.citizenName}</div>
+              <div className="text-xs text-slate-500">{app.nextAction}</div>
             </div>
           ))}
-          {filteredApps.length === 0 && (
-            <div className="p-8 text-center text-slate-500 text-sm">
-              No applications match your filter.
-            </div>
-          )}
         </div>
       </div>
 
+      {/* Application Detail Modal */}
       {selectedApp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-start">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-800 flex justify-between items-start sticky top-0 bg-slate-900 z-10">
               <div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Briefcase className="w-6 h-6 text-purple-400" />
-                  {selectedApp.application_id}
+                  {selectedApp.id}
                 </h2>
-                <p className="text-xs text-slate-400 mt-1">{selectedApp.service_name} - {getCitizenInfo(selectedApp.user_id).name}</p>
+                <p className="text-xs text-slate-400 mt-1">{selectedApp.service} — {selectedApp.citizenName}</p>
               </div>
-              <button 
-                onClick={() => setSelectedApp(null)}
-                className="text-slate-500 hover:text-white bg-slate-800 hover:bg-slate-700 p-1.5 rounded-lg transition-colors"
-              >
+              <button onClick={() => setSelectedApp(null)} className="text-slate-500 hover:text-white bg-slate-800 hover:bg-slate-700 p-1.5 rounded-lg transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
-              <div className="relative border-l border-slate-800 ml-3 pl-6 space-y-6 text-sm">
-                
-                {selectedApp.timeline && selectedApp.timeline.length > 0 ? (
-                  selectedApp.timeline.map((evt: any, idx: number) => (
-                    <div key={idx} className="relative">
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><p className="text-xs text-slate-500 mb-1">Citizen</p><p className="text-slate-200 font-medium">{selectedApp.citizenName} ({selectedApp.citizenId})</p></div>
+                <div><p className="text-xs text-slate-500 mb-1">Status</p>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${STATUS_COLORS[selectedApp.status] || 'bg-slate-800 text-slate-400'}`}>
+                    {selectedApp.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div><p className="text-xs text-slate-500 mb-1">Department</p><p className="text-slate-200">{selectedApp.department}</p></div>
+                <div><p className="text-xs text-slate-500 mb-1">Location</p><p className="text-slate-200">{selectedApp.location}</p></div>
+                <div><p className="text-xs text-slate-500 mb-1">Submitted</p><p className="text-slate-200">{selectedApp.submittedDate}</p></div>
+                <div><p className="text-xs text-slate-500 mb-1">Last Updated</p><p className="text-slate-200">{selectedApp.lastUpdated}</p></div>
+                <div className="col-span-2"><p className="text-xs text-slate-500 mb-1">Next Action</p><p className="text-amber-400 font-medium">{selectedApp.nextAction}</p></div>
+              </div>
+
+              {/* Documents */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Documents</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedApp.documents.map((doc, i) => (
+                    <div key={i} className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs">
+                      <span className="text-slate-300 flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        {doc.name}
+                      </span>
+                      {doc.status === 'verified' ? (
+                        <span className="text-emerald-400 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</span>
+                      ) : (
+                        <span className="text-amber-400 font-bold flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {doc.status === 'pending' ? 'Pending' : 'Required'}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Workflow */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Workflow</h3>
+                <div className="relative border-l border-slate-800 ml-3 pl-6 space-y-4">
+                  {selectedApp.workflow.map((step, i) => (
+                    <div key={i} className="relative">
                       <div className={`absolute -left-[31px] top-1 w-3 h-3 rounded-full border border-slate-900 ${
-                        evt.status === 'APPROVED' ? 'bg-emerald-500' : 
-                        evt.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500 animate-pulse' : 
-                        'bg-cyan-500'
+                        step.status === 'completed' ? 'bg-emerald-500' :
+                        step.status === 'current' ? 'bg-blue-500 animate-pulse' :
+                        'bg-slate-700'
                       }`} />
-                      <div>
-                        <h4 className="font-bold text-sm text-slate-300">{evt.title}</h4>
-                        <p className="text-xs text-slate-400 mt-1">{evt.description}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{new Date(evt.timestamp).toLocaleString()}</p>
+                      <div className={`text-sm ${step.status === 'current' ? 'text-white font-bold' : step.status === 'completed' ? 'text-slate-300' : 'text-slate-500'}`}>
+                        {step.step}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] top-1 w-3 h-3 rounded-full bg-emerald-500 border border-slate-900" />
-                    <div>
-                      <h4 className="font-bold text-emerald-400 text-sm">Citizen Form Submission</h4>
-                      <p className="text-xs text-slate-400 mt-1">Data mapped from Interoperability Registry.</p>
-                    </div>
-                  </div>
-                )}
-                
+                  ))}
+                </div>
               </div>
+
+              {/* Timeline */}
+              {selectedApp.timeline.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Timeline</h3>
+                  <div className="space-y-3">
+                    {selectedApp.timeline.map((evt, i) => (
+                      <div key={i} className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs">
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-slate-300">{evt.title}</span>
+                          <span className="text-[10px] text-slate-500">{evt.timestamp}</span>
+                        </div>
+                        <p className="text-slate-400 mt-1">{evt.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

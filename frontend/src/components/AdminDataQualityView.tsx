@@ -10,10 +10,15 @@ import {
   fetchConflictsAPI as fetchAdminConflictsAPI
 } from '@/lib/api';
 import { EntityMatchReview } from './EntityMatchReview';
+import { calculateDataQuality } from '@/lib/adminData';
 
 const SERVICE_IDS = ['srv_mca', 'srv_uidai', 'srv_kar_municipal'];
 
-export const AdminDataQualityView = () => {
+interface Props {
+  adminUsername: string;
+}
+
+export const AdminDataQualityView = ({ adminUsername }: Props) => {
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [health, setHealth] = useState<any>({});
   const [simulating, setSimulating] = useState<string | null>(null);
@@ -23,37 +28,15 @@ export const AdminDataQualityView = () => {
   const [viewMode, setViewMode] = useState<'conflicts' | 'entity_match'>('conflicts');
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
-  const [dataQuality, setDataQuality] = useState({
-    totalRecords: 1248,
-    validRecords: 1182,
-    missingFields: 31,
-    duplicates: 14,
-    staleRecords: 21,
-    invalidRecords: 66,
-    qualityScore: 94.7
-  });
+  const [dataQuality, setDataQuality] = useState(() => calculateDataQuality(adminUsername));
 
   const handleRefresh = async () => {
     setIsRefreshingData(true);
     showToast('Refreshing data quality metrics...');
     await loadData();
-    // Recalculate data quality metrics with slight variations
-    const base = 1200 + Math.floor(Math.random() * 100);
-    const valid = Math.floor(base * (0.93 + Math.random() * 0.05));
-    const missing = Math.floor(Math.random() * 40) + 10;
-    const dupes = Math.floor(Math.random() * 20) + 5;
-    const stale = Math.floor(Math.random() * 30) + 10;
-    const invalid = base - valid;
-    const score = ((valid / base) * 100).toFixed(1);
-    setDataQuality({
-      totalRecords: base,
-      validRecords: valid,
-      missingFields: missing,
-      duplicates: dupes,
-      staleRecords: stale,
-      invalidRecords: invalid,
-      qualityScore: parseFloat(score)
-    });
+    // Recalculate from underlying admin data
+    const recalculated = calculateDataQuality(adminUsername);
+    setDataQuality(recalculated);
     const now = new Date();
     setLastRefreshed(now.toLocaleString());
     setIsRefreshingData(false);
