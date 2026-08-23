@@ -11,16 +11,98 @@ export const AdminWorkflowView = () => {
   const [editSteps, setEditSteps] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const MOCK_ACTIVE_WORKFLOWS = [
+    {
+      id: 'wf_001',
+      name: 'Business Registration — Gujarat',
+      category: 'business',
+      department: 'Industries Commissionerate, Gujarat',
+      status: 'ACTIVE',
+      citizen: 'Hriday Bardia',
+      currentStep: 'Document Verification',
+      progress: 60,
+      lastActivity: '2 hours ago',
+      nextAction: 'Upload premises rent agreement',
+      steps: [
+        { id: 's1', step_key: 'identity_verify', name: 'Identity Verification', step_type: 'Validation', target: 'UIDAI Aadhaar API', prerequisite_step_key: null, order_index: 1 },
+        { id: 's2', step_key: 'address_verify', name: 'Address Verification', step_type: 'Validation', target: 'State Land Registry', prerequisite_step_key: 'identity_verify', order_index: 2 },
+        { id: 's3', step_key: 'doc_collection', name: 'Document Collection', step_type: 'Action', target: 'Citizen Vault', prerequisite_step_key: 'address_verify', order_index: 3 },
+        { id: 's4', step_key: 'udyam_register', name: 'Udyam MSME Registration', step_type: 'Processing', target: 'udyamregistration.gov.in', prerequisite_step_key: 'doc_collection', order_index: 4 },
+        { id: 's5', step_key: 'trade_license', name: 'Trade License Application', step_type: 'Action', target: 'Municipal Corporation', prerequisite_step_key: 'doc_collection', order_index: 5 }
+      ]
+    },
+    {
+      id: 'wf_002',
+      name: 'Higher Education Assistance — Study Abroad',
+      category: 'education',
+      department: 'Ministry of Education',
+      status: 'ACTIVE',
+      citizen: 'Varad Kanade',
+      currentStep: 'Eligibility Review',
+      progress: 40,
+      lastActivity: '5 hours ago',
+      nextAction: 'Submit English proficiency test scores',
+      steps: [
+        { id: 's1', step_key: 'passport_check', name: 'Passport Verification', step_type: 'Validation', target: 'Passport Seva Portal', prerequisite_step_key: null, order_index: 1 },
+        { id: 's2', step_key: 'academic_verify', name: 'Academic Records Verification', step_type: 'Validation', target: 'DigiLocker / University', prerequisite_step_key: 'passport_check', order_index: 2 },
+        { id: 's3', step_key: 'english_test', name: 'English Proficiency Test', step_type: 'Action', target: 'IELTS/PTE Portal', prerequisite_step_key: 'academic_verify', order_index: 3 },
+        { id: 's4', step_key: 'scholarship_apply', name: 'Scholarship Application', step_type: 'Processing', target: 'National Scholarship Portal', prerequisite_step_key: 'academic_verify', order_index: 4 }
+      ]
+    },
+    {
+      id: 'wf_003',
+      name: 'Property Registration — Bangalore',
+      category: 'property',
+      department: 'Kaveri Online Services, Karnataka',
+      status: 'PENDING',
+      citizen: 'Satwik',
+      currentStep: 'Application Review',
+      progress: 75,
+      lastActivity: '1 day ago',
+      nextAction: 'Await sub-registrar slot confirmation',
+      steps: [
+        { id: 's1', step_key: 'title_verify', name: 'Title Verification', step_type: 'Validation', target: 'Kaveri Online', prerequisite_step_key: null, order_index: 1 },
+        { id: 's2', step_key: 'stamp_duty', name: 'Stamp Duty Payment', step_type: 'Processing', target: 'Karnataka GRAS Portal', prerequisite_step_key: 'title_verify', order_index: 2 },
+        { id: 's3', step_key: 'slot_booking', name: 'Sub-Registrar Slot Booking', step_type: 'Action', target: 'Kaveri Online', prerequisite_step_key: 'stamp_duty', order_index: 3 },
+        { id: 's4', step_key: 'final_registration', name: 'Final Registration', step_type: 'Action', target: 'Sub-Registrar Office', prerequisite_step_key: 'slot_booking', order_index: 4 }
+      ]
+    },
+    {
+      id: 'wf_004',
+      name: 'Government Scholarship Application',
+      category: 'education',
+      department: 'National Scholarship Portal',
+      status: 'ACTION_REQUIRED',
+      citizen: 'Ayush',
+      currentStep: 'Document Collection',
+      progress: 30,
+      lastActivity: '1 day ago',
+      nextAction: 'Upload income certificate',
+      steps: [
+        { id: 's1', step_key: 'income_cert', name: 'Income Certificate Upload', step_type: 'Action', target: 'Revenue Department', prerequisite_step_key: null, order_index: 1 },
+        { id: 's2', step_key: 'caste_cert', name: 'Category Certificate Upload', step_type: 'Action', target: 'Revenue Department', prerequisite_step_key: null, order_index: 2 },
+        { id: 's3', step_key: 'nsp_apply', name: 'NSP Application Submission', step_type: 'Processing', target: 'scholarships.gov.in', prerequisite_step_key: 'income_cert', order_index: 3 },
+        { id: 's4', step_key: 'verification', name: 'Institutional Verification', step_type: 'Validation', target: 'College / University', prerequisite_step_key: 'nsp_apply', order_index: 4 }
+      ]
+    }
+  ];
+
   const loadWorkflows = async () => {
     setIsLoading(true);
     try {
       const data = await fetchWorkflowsAPI();
-      setWorkflows(data);
-      if (data.length > 0 && !selectedWf) {
-        setSelectedWf(data[0]);
+      if (data && data.length > 0) {
+        setWorkflows(data);
+      } else {
+        setWorkflows(MOCK_ACTIVE_WORKFLOWS);
+      }
+      if ((data && data.length > 0) || !selectedWf) {
+        setSelectedWf((data && data.length > 0) ? data[0] : MOCK_ACTIVE_WORKFLOWS[0]);
       }
     } catch (e) {
       console.error(e);
+      setWorkflows(MOCK_ACTIVE_WORKFLOWS);
+      if (!selectedWf) setSelectedWf(MOCK_ACTIVE_WORKFLOWS[0]);
     }
     setIsLoading(false);
   };

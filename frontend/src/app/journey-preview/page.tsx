@@ -6,10 +6,13 @@ import { FileText, Compass, CheckCircle2, AlertTriangle, ArrowLeft } from 'lucid
 
 const testJourney = {
   id: "preview-test",
-  goal: "I live in Udaipur and want to go to Australia for masters",
+  goal: "Citizen Goal Preview",
+  domicile: {
+    state: "Not specified"
+  },
   jurisdiction: {
-    domicile_state: "Rajasthan",
-    destination_country: "Australia"
+    domicile_state: "Not specified",
+    destination_country: null
   },
   documents_available: [
     { name: "Aadhaar Card", status: "Verified", demo: true },
@@ -57,8 +60,11 @@ export default function JourneyPreviewPage() {
 
   // Extract variables safely
   const goalTitle = activeJourney?.goal?.title || activeJourney?.goal || "Citizen Goal";
-  const domicileState = activeJourney?.location?.domicile_state || activeJourney?.jurisdiction?.domicile_state || "Rajasthan";
-  const targetCountry = activeJourney?.location?.destination || activeJourney?.jurisdiction?.destination_country || "Australia";
+  const domicileState = activeJourney?.domicile?.state || activeJourney?.location?.domicile_state || activeJourney?.jurisdiction?.domicile_state || "Not specified";
+  const targetLocation = activeJourney?.targetLocation || activeJourney?.location || null;
+  const targetCountry = targetLocation?.country || activeJourney?.jurisdiction?.destination_country || null;
+  const targetState = targetLocation?.state || null;
+  const targetCity = targetLocation?.city || targetLocation?.location || null;
 
   const rawHave = Array.isArray(activeJourney?.documents?.available) 
     ? activeJourney.documents.available 
@@ -115,7 +121,12 @@ export default function JourneyPreviewPage() {
             <span className="bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
               🏡 Domicile: <strong className="text-white font-bold">{domicileState}</strong>
             </span>
-            {targetCountry && (
+            {targetCity && (
+              <span className="bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
+                📍 Location: <strong className="text-white font-bold">{targetCity}{targetState ? `, ${targetState}` : ''}</strong>
+              </span>
+            )}
+            {targetCountry && !targetCity && (
               <span className="bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
                 ✈️ Destination: <strong className="text-white font-bold">{targetCountry}</strong>
               </span>

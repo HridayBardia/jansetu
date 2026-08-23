@@ -612,7 +612,7 @@ export async function analyzeJourneyAPI(query: string, domicileState: string): P
  */
 function _clientSideJourneyFallback(query: string, domicileState: string): any {
   const q = (query || '').toLowerCase();
-  const domicile = domicileState || 'Rajasthan';
+  const domicile = domicileState || 'Not specified';
   const journeyId = (typeof crypto !== 'undefined' && crypto.randomUUID)
     ? crypto.randomUUID()
     : `fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;

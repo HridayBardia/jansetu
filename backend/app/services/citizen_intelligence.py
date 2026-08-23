@@ -873,7 +873,7 @@ class SchemeMatcher:
             target_categories.append("documents")
         elif primary_intent in ["PASSPORT", "VISA", "INTERNATIONAL_TRAVEL", "MIGRATION"]:
             target_categories.append("documents")
-        elif primary_intent in ["HOME_CONSTRUCTION", "HOME_PURCHASE", "HOUSING_SUPPORT", "PROPERTY_LOAN"]:
+        elif primary_intent in ["HOME_CONSTRUCTION", "HOME_PURCHASE", "HOUSING_SUPPORT", "PROPERTY_LOAN", "LAND_PURCHASE", "LAND_SALE", "PROPERTY_REGISTRATION"]:
             target_categories.append("housing")
         elif primary_intent in ["BUSINESS_START", "BUSINESS_REGISTRATION", "STARTUP", "MSME", "SHOP", "RESTAURANT", "MANUFACTURING", "FACTORY", "SERVICE_BUSINESS", "COMPANY_REGISTRATION", "BUSINESS_LOAN", "BUSINESS_FINANCE"]:
             target_categories.append("business")
@@ -1403,8 +1403,9 @@ class CitizenIntelligenceEngine:
             
         # Target location value formulation
         target_loc_val = None
-        if target_state or dest_country:
+        if target_state or dest_country or target_city:
             target_loc_val = {
+                "city": target_city or "",
                 "state": target_state or "",
                 "country": dest_country or "India"
             }
@@ -1474,9 +1475,10 @@ class CitizenIntelligenceEngine:
         db.commit()
 
         # General dynamically-routed seeding logic for business/food setups
+        # NOTE: Use local variables so we don't overwrite the resolved target_state/target_city
         query_lower = query.lower()
-        target_state = None
-        target_city = None
+        seed_target_state = None
+        seed_target_city = None
         biz_service = None
         license_service = None
         dept_name = None
@@ -1485,8 +1487,8 @@ class CitizenIntelligenceEngine:
         app_lic_id = None
         
         if "pune" in query_lower or "maharashtra" in query_lower:
-            target_state = "Maharashtra"
-            target_city = "Pune"
+            seed_target_state = "Maharashtra"
+            seed_target_city = "Pune"
             biz_service = "srv_msins_biz"
             license_service = "srv_pmc_license"
             dept_name = "Maharashtra State Innovation Society"
@@ -1494,8 +1496,8 @@ class CitizenIntelligenceEngine:
             app_biz_id = "MH-BIZ-2026-01842"
             app_lic_id = "MH-FBL-2026-00491"
         elif "bengaluru" in query_lower or "bangalore" in query_lower or "karnataka" in query_lower:
-            target_state = "Karnataka"
-            target_city = "Bengaluru"
+            seed_target_state = "Karnataka"
+            seed_target_city = "Bengaluru"
             biz_service = "srv_kar_biz"
             license_service = "srv_kar_municipal"
             dept_name = "Department of Industries & Commerce, Govt of Karnataka"
@@ -1503,8 +1505,8 @@ class CitizenIntelligenceEngine:
             app_biz_id = "KA-BIZ-2026-01842"
             app_lic_id = "KA-FBL-2026-00491"
         elif "ahmedabad" in query_lower or "gujarat" in query_lower:
-            target_state = "Gujarat"
-            target_city = "Ahmedabad"
+            seed_target_state = "Gujarat"
+            seed_target_city = "Ahmedabad"
             biz_service = "srv_guj_biz"
             license_service = "srv_guj_municipal"
             dept_name = "Industries Commissionerate, Govt of Gujarat"
@@ -1512,8 +1514,8 @@ class CitizenIntelligenceEngine:
             app_biz_id = "GJ-BIZ-2026-01842"
             app_lic_id = "GJ-FBL-2026-00491"
         elif "jaipur" in query_lower or "rajasthan" in query_lower:
-            target_state = "Rajasthan"
-            target_city = "Jaipur"
+            seed_target_state = "Rajasthan"
+            seed_target_city = "Jaipur"
             biz_service = "srv_raj_biz"
             license_service = "srv_raj_municipal"
             dept_name = "Single Window Clearance System, Govt of Rajasthan"
@@ -1521,8 +1523,8 @@ class CitizenIntelligenceEngine:
             app_biz_id = "RJ-BIZ-2026-01842"
             app_lic_id = "RJ-FBL-2026-00491"
         elif "central" in query_lower or "india" in query_lower:
-            target_state = "Central"
-            target_city = "New Delhi"
+            seed_target_state = "Central"
+            seed_target_city = "New Delhi"
             biz_service = "srv_central_tax"
             license_service = "srv_central_scholarship"
             dept_name = "Central Board of Direct Taxes (CBDT)"
@@ -1530,19 +1532,15 @@ class CitizenIntelligenceEngine:
             app_biz_id = "IN-TAX-2026-01842"
             app_lic_id = "IN-SCH-2026-00491"
 
-        if target_state:
-            from app.models.db_models import ApplicationDB, ConsentRecordDB, DataConflictDB, NotificationDB, AuditLogDB, CitizenProfileDB
+        if seed_target_state:
+            from app.models.db_models import ApplicationDB, ConsentRecordDB, DataConflictDB, NotificationDB, AuditLogDB
             from app.services.interoperability_gateway import ServiceRegistry
             from datetime import timedelta
             import uuid
             import random
 
-            # Dynamically override profile location to targets
+            # Do NOT override profile location to targets - keep original domicile
             profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == current_user.id).first()
-            if profile:
-                profile.location_state = target_state
-                profile.location_city = target_city
-                db.commit()
 
             # Seed service registry
             ServiceRegistry.seed_services(db)
@@ -1682,7 +1680,7 @@ class CitizenIntelligenceEngine:
 
             # 4. Seed notifications
             notifs_data = [
-                {"title": "National Interoperability Journey Mapping", "message": f"Your Dynamic {target_state} setup journey has been resolved.", "category": "JOURNEY_CREATED"},
+                {"title": "National Interoperability Journey Mapping", "message": f"Your Dynamic {seed_target_state} setup journey has been resolved.", "category": "JOURNEY_CREATED"},
                 {"title": "Pending Action: Upload Premises Proof", "message": f"{municipal_dept} requests premises rent agreement or fire NOC.", "category": "DOCUMENT_REQUIRED"},
                 {"title": "Identity Verified", "message": "Authoritative Aadhaar verification completed via REST connector.", "category": "DOCUMENT_VERIFIED"}
             ]
@@ -1697,7 +1695,7 @@ class CitizenIntelligenceEngine:
 
             # 5. Seed Audit Logs
             audit_events = [
-                {"actor": current_user.username, "action": "JOURNEY_INITIATE", "resource": f"{target_state} Setup Journey", "status": "SUCCESS"},
+                {"actor": current_user.username, "action": "JOURNEY_INITIATE", "resource": f"{seed_target_state} Setup Journey", "status": "SUCCESS"},
                 {"actor": "SYSTEM_GATEWAY", "action": "API_REQUEST", "resource": "srv_identity e-KYC query", "status": "SUCCESS"},
                 {"actor": current_user.username, "action": "CONSENT_GRANT", "resource": f"Token granted to {dept_name}", "status": "SUCCESS"},
                 {"actor": "SYSTEM_DATA_QUALITY", "action": "DATA_CONFLICT", "resource": "date_of_birth mismatch flagged", "status": "CONFLICT"}

@@ -97,14 +97,14 @@ const initialProfile: Profile = {
   name: 'Hriday Bardia',
   relationship: 'Self',
   location: 'Bangalore, Karnataka',
-  domicile: 'Rajasthan',
+  domicile: 'Gujarat',
   verifiedAttributes: 8
 };
 
 const initialFamily: Profile[] = [
-  { id: 'cit_002', name: 'Rajesh Bardia', relationship: 'Father', location: 'Ahmedabad, Gujarat', domicile: 'Rajasthan', verifiedAttributes: 5 },
-  { id: 'cit_003', name: 'Meena Bardia', relationship: 'Mother', location: 'Ahmedabad, Gujarat', domicile: 'Rajasthan', verifiedAttributes: 5 },
-  { id: 'cit_004', name: 'Aarav Bardia', relationship: 'Brother', location: 'Bangalore, Karnataka', domicile: 'Rajasthan', verifiedAttributes: 3 }
+  { id: 'cit_002', name: 'Rajesh Bardia', relationship: 'Father', location: 'Ahmedabad, Gujarat', domicile: 'Gujarat', verifiedAttributes: 5 },
+  { id: 'cit_003', name: 'Meena Bardia', relationship: 'Mother', location: 'Ahmedabad, Gujarat', domicile: 'Gujarat', verifiedAttributes: 5 },
+  { id: 'cit_004', name: 'Aarav Bardia', relationship: 'Brother', location: 'Bangalore, Karnataka', domicile: 'Gujarat', verifiedAttributes: 3 }
 ];
 
 const initialDocuments: DocumentRecord[] = [

@@ -348,7 +348,7 @@ async def analyze_journey(
     db: Session = Depends(get_db)
 ):
     query = req.query.strip()
-    domicile = (req.domicileState or req.domicile_state or "Rajasthan").strip()
+    domicile = (req.domicileState or req.domicile_state or "").strip()
     
     # 1. Basic validation
     if not query:

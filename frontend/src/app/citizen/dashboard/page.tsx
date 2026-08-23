@@ -119,7 +119,7 @@ function groupMatchedSchemes(matched: any[], domicile: string, targetState: stri
 
 function matchGovernmentSchemes(query: string, domicileState: string, allSchemes: any[]): any[] {
   const q = query.toLowerCase();
-  const domicile = domicileState || 'Rajasthan';
+  const domicile = domicileState || 'Not specified';
 
   // 1. Identify category
   let category = 'general';
@@ -260,7 +260,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
       },
       location: {
         current_location: "Udaipur",
-        domicile_state: domicileState || "Rajasthan",
+        domicile_state: domicileState || "Not specified",
         destination: "Australia"
       },
       intent: {
@@ -308,7 +308,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
       },
       location: {
         current_location: "Bengaluru",
-        domicile_state: domicileState || "Karnataka",
+        domicile_state: domicileState || "Not specified",
         destination: null
       },
       intent: {
@@ -355,7 +355,7 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
       },
       location: {
         current_location: targetState === "Gujarat" ? "Vadodara" : "Bengaluru",
-        domicile_state: domicileState || "Rajasthan",
+        domicile_state: domicileState || "Not specified",
         destination: null
       },
       intent: {
@@ -395,8 +395,8 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
       description: "Detailed regulatory checklist for your citizen query."
     },
     location: {
-      current_location: "Udaipur",
-      domicile_state: domicileState || "Rajasthan",
+      current_location: "Not specified",
+      domicile_state: domicileState || "Not specified",
       destination: null
     },
     intent: {
@@ -712,7 +712,7 @@ export default function DashboardPage() {
     setTimeout(() => setGenerationStage(3), 1000);
     setTimeout(() => setGenerationStage(4), 1500);
 
-    const locState = journeyAnalysis.location.domicile_state || 'Rajasthan';
+    const locState = journeyAnalysis.location?.domicile_state || domicileState || 'Not specified';
     const locCity = journeyAnalysis.location.current_location || 'Udaipur';
 
     const res = await generateJourneyAPI({
@@ -1302,6 +1302,10 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Sections 01-04 (Journey, Documents, Applications, Govt Support) removed from Goal Planner page.
+          These are available via dedicated navigation tabs. */}
+      {false && (
+      <>
       {/* 01 — YOUR JOURNEY */}
       <div className="space-y-4 mt-8">
         <div className="flex items-center gap-3">
@@ -1516,6 +1520,8 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      </>
+      )}
       </>
       )}
 
