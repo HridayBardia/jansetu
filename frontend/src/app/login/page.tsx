@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Building, Users } from 'lucide-react';
+import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Building, Users, CheckCircle2, FileText } from 'lucide-react';
+import TermsConsentModal, { getStoredConsent, storeConsent } from '@/components/TermsConsentModal';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,10 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPin, setShowPin] = useState(false);
+
+  // Consent state
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const pinRefs = [
     useRef<HTMLInputElement>(null),
@@ -36,6 +41,17 @@ export default function LoginPage() {
       }
     }
   }, [isAuthenticated, isLoading, user, router]);
+
+  // Check for existing valid consent when login type changes
+  useEffect(() => {
+    if (loginType) {
+      const role = loginType === 'CITIZEN' ? 'citizen' : 'admin';
+      const existing = getStoredConsent(role);
+      setConsentAccepted(!!existing);
+    } else {
+      setConsentAccepted(false);
+    }
+  }, [loginType]);
 
   if (isLoading) {
     return (
@@ -68,6 +84,18 @@ export default function LoginPage() {
     }
   };
 
+  // Terms consent acceptance handler
+  const handleTermsAccept = () => {
+    const role = loginType === 'CITIZEN' ? 'citizen' : 'admin';
+    storeConsent(role);
+    setConsentAccepted(true);
+    setShowTermsModal(false);
+  };
+
+  // Open terms modal
+  const handleTermsClick = () => {
+    setShowTermsModal(true);
+  };
 
   const handleLogin = async () => {
     const pin = pinDigits.join('');
@@ -79,6 +107,10 @@ export default function LoginPage() {
     }
     if (pin.length < 6) {
       setErrorMsg('Please enter your complete 6-digit PIN.');
+      return;
+    }
+    if (!consentAccepted) {
+      setErrorMsg('Please accept the Terms & Conditions before logging in.');
       return;
     }
 
@@ -103,6 +135,8 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
+
+  const termsRole = loginType === 'ADMIN' ? 'admin' : 'citizen';
 
   return (
     <div style={{
@@ -224,7 +258,7 @@ export default function LoginPage() {
         {loginType && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <button 
-              onClick={() => { setLoginType(null); setErrorMsg(null); setUsername(''); setPinDigits(['','','','','','']); }}
+              onClick={() => { setLoginType(null); setErrorMsg(null); setUsername(''); setPinDigits(['','','','','','']); setConsentAccepted(false); }}
               style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px', padding: 0 }}
             >
               ← Back to role selection
@@ -271,7 +305,7 @@ export default function LoginPage() {
             </div>
 
             {/* PIN Field */}
-            <div style={{ marginBottom: '28px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
                   6-Digit PIN
@@ -305,20 +339,87 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* ===== TERMS & CONDITIONS CONSENT LINE ===== */}
+            <div style={{ marginBottom: '20px' }}>
+              <button
+                onClick={handleTermsClick}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: `1px solid ${consentAccepted ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                  background: consentAccepted ? 'rgba(34,197,94,0.05)' : 'rgba(255,255,255,0.02)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textAlign: 'left',
+                }}
+                onMouseOver={(e) => {
+                  if (!consentAccepted) {
+                    e.currentTarget.style.background = 'rgba(59,130,246,0.06)';
+                    e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = consentAccepted ? 'rgba(34,197,94,0.05)' : 'rgba(255,255,255,0.02)';
+                  e.currentTarget.style.borderColor = consentAccepted ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)';
+                }}
+              >
+                {consentAccepted ? (
+                  <CheckCircle2 size={16} color="#22c55e" style={{ flexShrink: 0 }} />
+                ) : (
+                  <FileText size={16} color="#64748b" style={{ flexShrink: 0 }} />
+                )}
+                <span style={{
+                  color: consentAccepted ? '#22c55e' : '#94a3b8',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  lineHeight: 1.4,
+                }}>
+                  {consentAccepted ? (
+                    '✓ Terms & Conditions accepted'
+                  ) : (
+                    <>By continuing, you agree to the{' '}
+                      <span style={{ color: '#60a5fa', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                        Terms & Conditions
+                      </span>
+                      {' '}and Privacy & Data Consent.
+                    </>
+                  )}
+                </span>
+              </button>
+            </div>
+
+            {/* Login Button - DISABLED without consent */}
             <button
               onClick={handleLogin}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !consentAccepted}
               style={{
                 width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
-                background: 'linear-gradient(135deg, #2563eb, #4f46e5)', color: 'white',
-                fontSize: '15px', fontWeight: 600, cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                background: (isSubmitting || !consentAccepted)
+                  ? 'rgba(255,255,255,0.05)'
+                  : 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                color: (isSubmitting || !consentAccepted) ? '#475569' : 'white',
+                fontSize: '15px', fontWeight: 600,
+                cursor: (isSubmitting || !consentAccepted) ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)', transition: 'all 0.2s', opacity: isSubmitting ? 0.7 : 1
+                boxShadow: (isSubmitting || !consentAccepted) ? 'none' : '0 4px 14px rgba(37, 99, 235, 0.3)',
+                transition: 'all 0.2s',
+                opacity: isSubmitting ? 0.7 : 1,
               }}
             >
               {isSubmitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : 'Login Securely'}
               {!isSubmitting && <ArrowRight size={18} />}
             </button>
+
+            {/* Consent required hint when not accepted */}
+            {!consentAccepted && (
+              <p style={{ color: '#64748b', fontSize: '12px', textAlign: 'center', marginTop: '10px', marginBottom: 0 }}>
+                Please accept the Terms & Conditions to enable login.
+              </p>
+            )}
             
             {loginType === 'CITIZEN' && (
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -329,12 +430,16 @@ export default function LoginPage() {
                 </div>
                 <button
                   onClick={() => {
-                    // Mock Federated SSO - autofill HRIDAY's demo credentials
+                    // DigiLocker SSO button — also requires consent
+                    if (!consentAccepted) {
+                      setErrorMsg('Please accept the Terms & Conditions before using DigiLocker SSO.');
+                      return;
+                    }
+                    // Mock Federated SSO - autofill demo credentials
                     setUsername('hriday');
                     const pin = '123456';
                     setPinDigits(pin.split(''));
                     setTimeout(() => {
-                      // Trigger login after state updates
                       handleLogin();
                     }, 500);
                   }}
@@ -358,6 +463,14 @@ export default function LoginPage() {
         )}
       </div>
 
+      {/* Terms & Conditions Modal */}
+      <TermsConsentModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={handleTermsAccept}
+        role={termsRole}
+      />
+
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(5px); }
@@ -367,4 +480,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
