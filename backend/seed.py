@@ -12,6 +12,7 @@ from app.models.db_models import (
     WorkflowTemplateDB, WorkflowTemplateStepDB
 )
 from app.services.dependency_engine import DependencyEngine
+from seed_interop import seed_interop_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
@@ -1112,6 +1113,9 @@ def seed_database(drop_tables: bool = True):
             db.add(scheme)
         db.commit()
         logger.info(f"Seeded {len(schemes_data)} government schemes successfully!")
+
+        logger.info("Starting Interoperability Seeding...")
+        seed_interop_data(db)
 
         logger.info("Database seeding completed successfully!")
     finally:

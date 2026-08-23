@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Radio, Database, Shield, Server, ArrowRight, Activity, ArrowRightLeft, ArrowDownCircle, Network } from 'lucide-react';
+import { ExceptionCenter } from './ExceptionCenter';
 
 const mockNodes = [
   {
@@ -68,7 +69,7 @@ const mockNodes = [
 
 export const AdminInteropView = () => {
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'topology' | 'registry'>('topology');
+  const [viewMode, setViewMode] = useState<'topology' | 'registry' | 'exceptions'>('topology');
 
   return (
     <div className="space-y-8">
@@ -99,6 +100,14 @@ export const AdminInteropView = () => {
             }`}
           >
             Connector Registry
+          </button>
+          <button
+            onClick={() => setViewMode('exceptions')}
+            className={`px-3 py-1.5 rounded-lg transition ${
+              viewMode === 'exceptions' ? 'bg-pink-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Exception Center
           </button>
         </div>
       </div>
@@ -145,6 +154,12 @@ export const AdminInteropView = () => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {viewMode === 'exceptions' && (
+        <div className="animate-in fade-in">
+          <ExceptionCenter />
         </div>
       )}
 

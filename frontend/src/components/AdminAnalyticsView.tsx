@@ -3,6 +3,7 @@
 import React from 'react';
 import { BarChart2, ShieldCheck, Clock, CheckCircle2, TrendingUp, BookOpen, Layers } from 'lucide-react';
 import { AnalyticsSummary } from '@/types';
+import { ImpactDashboard } from './ImpactDashboard';
 
 interface AdminAnalyticsViewProps {
   analytics: AnalyticsSummary;
@@ -90,6 +91,10 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
             </ul>
           </div>
         </div>
+      </div>
+      
+      <div className="pt-8 border-t border-slate-800">
+        <ImpactDashboard />
       </div>
     </div>
   );
