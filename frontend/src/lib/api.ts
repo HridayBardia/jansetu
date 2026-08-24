@@ -141,7 +141,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     }
     console.warn(`API fetch error [${endpoint}]:`, e);
     if (e.message && (e.message.includes('fetch') || e.message.includes('Network'))) {
-      throw new Error("Backend server is unreachable. Please ensure the Python backend is running.");
+      throw new Error("JANSETU service is temporarily unreachable. Please try again in a moment.");
     }
     throw e;
   }

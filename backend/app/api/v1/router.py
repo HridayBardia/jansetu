@@ -100,6 +100,14 @@ def select_demo_citizen(citizen_key: str, request: Request, db: Session = Depend
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
+    """
+    Authentication dependency: extracts and validates the user from the
+    Authorization Bearer token or the citizen_session cookie.
+
+    SECURITY: Never falls back to a default user. Every request must
+    carry a valid, non-expired JWT. If the token is missing, expired,
+    or the referenced user does not exist, a 401 is raised.
+    """
     token = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -107,36 +115,15 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
     if not token:
         token = request.cookies.get("citizen_session")
 
-    def get_fallback_user() -> Optional[UserDB]:
-        fallback = db.query(UserDB).filter(UserDB.username == "hriday").first()
-        if fallback:
-            return fallback
-        return db.query(UserDB).first()
-
     if not token:
-        user_id_param = request.query_params.get("user_id")
-        if user_id_param:
-            user = db.query(UserDB).filter(UserDB.id == user_id_param).first()
-            if user:
-                return user
-        
-        fallback = get_fallback_user()
-        if fallback:
-            return fallback
         raise HTTPException(status_code=401, detail="Authentication required. Please log in.")
 
     payload = decode_access_token(token)
     if not payload or not payload.get("sub"):
-        fallback = get_fallback_user()
-        if fallback:
-            return fallback
         raise HTTPException(status_code=401, detail="Invalid or expired session. Please log in again.")
 
     user = db.query(UserDB).filter(UserDB.id == payload["sub"]).first()
     if not user:
-        fallback = get_fallback_user()
-        if fallback:
-            return fallback
         raise HTTPException(status_code=401, detail="Citizen record not found.")
     return user
 
@@ -1821,7 +1808,7 @@ def get_master_data_record(
 
 
 
-@api_v1_router.get("/metrics")
+@api_v1_router.get("/admin/metrics")
 def get_admin_metrics(
     request: Request,
     current_user: UserDB = Depends(get_current_admin),

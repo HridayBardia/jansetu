@@ -36,7 +36,7 @@ class Settings(BaseModel):
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
     # Security & Auth (Username + PIN)
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "super-secret-citizen-journey-key-2026")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", os.urandom(32).hex())
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Login rate limiting

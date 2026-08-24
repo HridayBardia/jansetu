@@ -7,8 +7,9 @@ SYNTHETIC_WATERMARK = "DEMO / SYNTHETIC DOCUMENT — NOT A GOVERNMENT RECORD"
 
 class DigiLockerMockConnector:
     """
-    Sandbox connector simulating official issuer fetch for hackathon/demo.
+    Simulated DigiLocker sandbox connector for prototype demonstration.
     To satisfy Legal/Trust Rule: Returns DEMO_SYNTHETIC status (NEVER falsely claims ISSUER_VERIFIED).
+    In production, replace with real DigiLocker API integration.
     """
     @staticmethod
     def is_sandbox() -> bool:
@@ -126,7 +127,7 @@ class DocumentOCRService:
         """Simulates or calls actual OCR engine for document text parsing"""
         fname_lower = filename.lower()
         
-        # Rule/Keyword simulation based on file content/filename for hackathon demo
+        # Rule/Keyword simulation based on file content/filename for prototype demo
         if "aadhaar" in fname_lower:
             raw_text = "GOVERNMENT OF INDIA UNIQUE IDENTIFICATION AUTHORITY OF INDIA Aadhaar Aarav Mehta DOB: 12/04/2004 Male XXXX XXXX 4821 Address: Alkapuri, Vadodara, Gujarat - 390007"
             lang = "en"

@@ -344,7 +344,7 @@ export default function DashboardPage() {
       clearTimeout(timer2);
       clearTimeout(timer3);
       console.error(err);
-      setErrorMessage("We couldn't create your journey. Please try again.");
+      setErrorMessage("JANSETU couldn't complete the journey analysis. Your goal description has been saved — please try again.");
       setIsAnalyzing(false);
     }
   };
