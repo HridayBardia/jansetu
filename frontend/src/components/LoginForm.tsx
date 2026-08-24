@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShieldCheck, User, Lock, ArrowRight, Loader2, X, AlertCircle, Eye, EyeOff, FileText, CheckCircle2 } from 'lucide-react';
-import TermsConsentModal, { getStoredConsent, storeConsent } from '@/components/TermsConsentModal';
+import TermsConsentModal, { storeConsent } from '@/components/TermsConsentModal';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -13,7 +13,7 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, setSessionConsent } = useAuth();
 
   const [username, setUsername] = useState('');
   const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '', '', '']);
@@ -34,11 +34,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
     useRef<HTMLInputElement>(null),
   ];
 
-  // Check for existing valid consent on mount
-  useEffect(() => {
-    const existing = getStoredConsent('citizen');
-    setConsentAccepted(!!existing);
-  }, []);
+  // Consent always starts as false for new login sessions — do NOT restore from localStorage
 
   const handlePinInput = (index: number, value: string) => {
     const digit = value.replace(/\D/g, '').slice(-1);
@@ -67,10 +63,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
     pinRefs[Math.min(pasted.length, 5)]?.current?.focus();
   };
 
-  // Terms consent acceptance handler
+  // Terms consent acceptance handler — session-level only
   const handleTermsAccept = () => {
-    storeConsent('citizen');
+    storeConsent('citizen'); // Store for audit trail
     setConsentAccepted(true);
+    setSessionConsent(true); // Mark session consent as accepted
     setShowTermsModal(false);
   };
 

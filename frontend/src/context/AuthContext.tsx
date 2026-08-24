@@ -35,6 +35,9 @@ interface AuthContextType {
   profile: CitizenProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Session-level T&C consent (must be accepted every login session)
+  sessionConsentAccepted: boolean;
+  setSessionConsent: (accepted: boolean) => void;
   // Modal state (for Navbar login button & OnboardingModal)
   isAuthModalOpen: boolean;
   isOnboardingModalOpen: boolean;
@@ -53,6 +56,8 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   isAuthenticated: false,
   isLoading: true,
+  sessionConsentAccepted: false,
+  setSessionConsent: () => {},
   isAuthModalOpen: false,
   isOnboardingModalOpen: false,
   openAuthModal: () => {},
@@ -70,6 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  // Session-level T&C consent — starts false on every fresh session
+  const [sessionConsentAccepted, setSessionConsent] = useState(false);
+
+  const setSessionConsentHandler = (accepted: boolean) => {
+    setSessionConsent(accepted);
+  };
 
   const refreshUser = async () => {
     try {
@@ -112,6 +123,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await logoutAPI();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('citizen_token');
+      localStorage.removeItem('demo_citizen');
+      // Clear session consent — next login MUST require T&C again
+      setSessionConsent(false);
+      // Clear any stored consent records from localStorage
+      try {
+        const { clearConsent } = await import('@/components/TermsConsentModal');
+        clearConsent();
+      } catch {
+        // If import fails, manually remove the consent key
+        localStorage.removeItem('jansetu_consent_records');
+      }
     }
     setUser(null);
     setProfile(null);
@@ -130,6 +152,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         isAuthenticated: !!user,
         isLoading,
+        sessionConsentAccepted,
+        setSessionConsent: setSessionConsentHandler,
         isAuthModalOpen,
         isOnboardingModalOpen,
         openAuthModal,

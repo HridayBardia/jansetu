@@ -58,6 +58,28 @@ export function storeConsent(role: 'citizen' | 'admin'): ConsentRecord {
   return record;
 }
 
+/**
+ * Clears stored consent for a specific role or all roles.
+ * Called on logout to ensure T&C must be accepted again on next login.
+ */
+export function clearConsent(role?: 'citizen' | 'admin'): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (role) {
+      const raw = localStorage.getItem(CONSENT_STORAGE_KEY);
+      if (!raw) return;
+      let records: ConsentRecord[] = JSON.parse(raw);
+      const version = role === 'citizen' ? CITIZEN_TERMS_VERSION : ADMIN_TERMS_VERSION;
+      records = records.filter(r => !(r.role === role && r.termsVersion === version));
+      localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(records));
+    } else {
+      localStorage.removeItem(CONSENT_STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 // ============================================================
 // CITIZEN TERMS CONTENT
 // ============================================================

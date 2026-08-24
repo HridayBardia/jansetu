@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Building, Users, CheckCircle2, FileText } from 'lucide-react';
-import TermsConsentModal, { getStoredConsent, storeConsent } from '@/components/TermsConsentModal';
+import TermsConsentModal, { storeConsent } from '@/components/TermsConsentModal';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, login } = useAuth();
+  const { user, isAuthenticated, isLoading, login, setSessionConsent, sessionConsentAccepted } = useAuth();
 
   const [loginType, setLoginType] = useState<'CITIZEN' | 'ADMIN' | null>(null);
   
@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPin, setShowPin] = useState(false);
 
-  // Consent state
+  // Consent state — always starts false for every new login session
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -31,27 +31,18 @@ export default function LoginPage() {
     useRef<HTMLInputElement>(null),
   ];
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated AND has session consent
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
+    if (!isLoading && isAuthenticated && sessionConsentAccepted && user) {
       if (user.role === 'ADMIN') {
         router.replace('/admin/dashboard');
       } else {
         router.replace('/citizen/dashboard');
       }
     }
-  }, [isAuthenticated, isLoading, user, router]);
+  }, [isAuthenticated, isLoading, sessionConsentAccepted, user, router]);
 
-  // Check for existing valid consent when login type changes
-  useEffect(() => {
-    if (loginType) {
-      const role = loginType === 'CITIZEN' ? 'citizen' : 'admin';
-      const existing = getStoredConsent(role);
-      setConsentAccepted(!!existing);
-    } else {
-      setConsentAccepted(false);
-    }
-  }, [loginType]);
+  // Consent always starts as false for new login sessions — do NOT restore from localStorage
 
   if (isLoading) {
     return (
@@ -84,11 +75,12 @@ export default function LoginPage() {
     }
   };
 
-  // Terms consent acceptance handler
+  // Terms consent acceptance handler — session-level only
   const handleTermsAccept = () => {
     const role = loginType === 'CITIZEN' ? 'citizen' : 'admin';
-    storeConsent(role);
+    storeConsent(role); // Store for audit trail
     setConsentAccepted(true);
+    setSessionConsent(true); // Mark session consent as accepted
     setShowTermsModal(false);
   };
 

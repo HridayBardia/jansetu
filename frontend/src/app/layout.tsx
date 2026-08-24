@@ -20,7 +20,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 function AppContent({ children, sandboxMode, setSandboxMode }: { children: React.ReactNode; sandboxMode: boolean; setSandboxMode: (val: boolean) => void }) {
-  const { isAuthModalOpen, closeAuthModal, isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, isAuthenticated, isLoading, user, sessionConsentAccepted } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -28,10 +28,12 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
     if (!isLoading) {
       const protectedRoutes = ['/citizen', '/journeys', '/alerts', '/help', '/privacy', '/admin'];
       const isProtected = pathname ? protectedRoutes.some(route => pathname.startsWith(route)) : false;
-      if (isProtected && !isAuthenticated) {
+      // Require BOTH authentication AND current-session T&C consent for protected routes
+      if (isProtected && (!isAuthenticated || !sessionConsentAccepted)) {
         router.replace('/login');
       }
-      if (pathname && pathname === '/login' && isAuthenticated && user) {
+      // Redirect to appropriate dashboard if already authenticated and consented on login page
+      if (pathname && pathname === '/login' && isAuthenticated && sessionConsentAccepted && user) {
         if (user.role === 'ADMIN' || user.role === 'admin') {
           router.replace('/admin/dashboard');
         } else {
@@ -39,7 +41,7 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
         }
       }
     }
-  }, [isLoading, isAuthenticated, user, pathname, router]);
+  }, [isLoading, isAuthenticated, sessionConsentAccepted, user, pathname, router]);
 
   if (isLoading) {
     return (
