@@ -205,6 +205,15 @@ export async function loginAPI(username: string, pin: string): Promise<any> {
 }
 
 export async function fetchMeAPI(): Promise<any> {
+  // Security: Only attempt to restore user if there's an active session token.
+  // This prevents stale user identity from leaking to the public/login page.
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('citizen_token');
+    if (!token) {
+      // No active session — do NOT reconstruct user from cached data.
+      return null;
+    }
+  }
   try {
     const res = await apiFetch('/auth/me');
     if (res) return res;

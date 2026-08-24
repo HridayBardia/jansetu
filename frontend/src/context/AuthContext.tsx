@@ -83,6 +83,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUser = async () => {
+    // Security: If no active session token exists, do NOT attempt to restore
+    // user identity from any source (API, localStorage, cookies, etc.).
+    // This prevents the last logged-in user's name from appearing on the
+    // public login page after logout.
+    if (typeof window !== 'undefined' && !localStorage.getItem('citizen_token')) {
+      setUser(null);
+      setProfile(null);
+      setIsLoading(false);
+      return;
+    }
     try {
       const data = await fetchMeAPI();
       if (data && data.user) {
@@ -109,6 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const closeOnboardingModal = () => setIsOnboardingModalOpen(false);
 
   const login = async (username: string, pin: string) => {
+    // Clear any stale identity from previous user before setting new one
+    setUser(null);
+    setProfile(null);
+
     const res = await loginAPI(username, pin);
     if (res && res.user) {
       setUser(res.user);
@@ -120,23 +134,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await logoutAPI();
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('citizen_token');
-      localStorage.removeItem('demo_citizen');
-      // Clear session consent — next login MUST require T&C again
-      setSessionConsent(false);
-      // Clear any stored consent records from localStorage
-      try {
-        const { clearConsent } = await import('@/components/TermsConsentModal');
-        clearConsent();
-      } catch {
-        // If import fails, manually remove the consent key
-        localStorage.removeItem('jansetu_consent_records');
-      }
-    }
+    // Clear React state FIRST so UI immediately reflects logged-out state
     setUser(null);
     setProfile(null);
+    setSessionConsent(false);
+
+    if (typeof window !== 'undefined') {
+      // Clear ALL authentication-related localStorage keys
+      localStorage.removeItem('citizen_token');
+      localStorage.removeItem('demo_citizen');
+      localStorage.removeItem('jansetu_consent_records');
+
+      // Also clear sessionStorage auth-related data
+      sessionStorage.removeItem('last_user_goal_query');
+      sessionStorage.removeItem('last_user_domicile');
+    }
+
+    // Call backend logout to invalidate server session/cookie
+    try {
+      await logoutAPI();
+    } catch {
+      // Backend may be unreachable — already cleared client-side state
+    }
   };
 
   const updateProfile = async (profileData: Partial<CitizenProfile>) => {
