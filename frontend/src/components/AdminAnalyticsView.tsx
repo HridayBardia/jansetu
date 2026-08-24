@@ -15,7 +15,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
       <div className="flex items-center justify-between">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-            SIH Judge & Product Analytics
+            Product Analytics
           </span>
           <h1 className="text-2xl font-extrabold text-slate-100 mt-1 flex items-center gap-2">
             <BarChart2 className="w-6 h-6 text-amber-400" />

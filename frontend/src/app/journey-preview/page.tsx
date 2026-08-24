@@ -368,11 +368,6 @@ export default function JourneyPreviewPage() {
           )}
         </div>
 
-        {/* Diagnostic Footer */}
-        <div className="text-center pt-6 border-t border-slate-900 text-slate-600 text-[10px] font-mono">
-          DEMO MODE — Diagnostic Page
-        </div>
-
       </div>
     </div>
   );
