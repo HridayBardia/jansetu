@@ -143,14 +143,13 @@ async def add_request_id_header(request: Request, call_next):
 # Middleware: Route /api/backend and /api/journey internally
 @app.middleware("http")
 async def rewrite_api_backend_path(request: Request, call_next):
-    if request.url.path.startswith("/api/backend"):
-        scope = request.scope.copy()
-        scope["path"] = request.url.path.replace("/api/backend", "/api/v1", 1)
-        request = Request(scope, receive=request._receive)
-    elif request.url.path.startswith("/api/journey"):
-        scope = request.scope.copy()
-        scope["path"] = request.url.path.replace("/api/journey", "/api/v1/journey", 1)
-        request = Request(scope, receive=request._receive)
+    original_path = request.url.path
+    if original_path.startswith("/api/backend"):
+        request.scope["path"] = original_path.replace("/api/backend", "/api/v1", 1)
+        request.scope["raw_path"] = request.scope["path"].encode("utf-8")
+    elif original_path.startswith("/api/journey"):
+        request.scope["path"] = original_path.replace("/api/journey", "/api/v1/journey", 1)
+        request.scope["raw_path"] = request.scope["path"].encode("utf-8")
     return await call_next(request)
 
 

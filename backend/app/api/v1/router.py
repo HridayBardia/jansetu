@@ -226,6 +226,7 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
             "username": user.username,
             "full_name": user.full_name,
             "mobile_number": user.mobile_number,
+            "role": user.role or "citizen",
             "created_at": (user.created_at or datetime.utcnow()).isoformat(),
             "last_login_at": (user.last_login_at or datetime.utcnow()).isoformat()
         }
