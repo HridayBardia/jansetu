@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { Navbar } from '@/components/Navbar';
 import { AdminAnalyticsView } from '@/components/AdminAnalyticsView';
 import { AdminCitizensView } from '@/components/AdminCitizensView';
@@ -13,6 +14,7 @@ import { AdminWorkflowView } from '@/components/AdminWorkflowView';
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') || 'official';
@@ -46,10 +48,10 @@ export default function AdminDashboardPage() {
         <div className="relative z-10">
           <header className="mb-8">
             <h1 className="text-3xl font-extrabold bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
-              Government Interoperability Control Center
+              {t('admin.systemOverview')}
             </h1>
             <p className="text-slate-400 mt-2 text-sm leading-relaxed max-w-2xl">
-              Monitor pan-India interoperability, connector health, citizen applications, and data sharing logs in real-time.
+              {t('admin.adminAnalytics')}
             </p>
           </header>
 

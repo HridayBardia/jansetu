@@ -12,7 +12,7 @@
 import React, { useState } from 'react';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
-import { LanguageProvider } from '@/context/LanguageContext';
+import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/LoginForm';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -21,6 +21,7 @@ import { Loader2 } from 'lucide-react';
 
 function AppContent({ children, sandboxMode, setSandboxMode }: { children: React.ReactNode; sandboxMode: boolean; setSandboxMode: (val: boolean) => void }) {
   const { isAuthModalOpen, closeAuthModal, isAuthenticated, isLoading, user, sessionConsentAccepted } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -76,12 +77,12 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
       <footer className="hidden md:block bg-slate-900/60 border-t border-slate-800 text-xs text-slate-400 py-6">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>
-            © 2026 AI Citizen Journey Engine • Official Government Services Navigator
+            {t('footer.copyright')}
           </p>
           <div className="flex items-center gap-4 text-slate-400 font-medium">
-            <span>Username + PIN Auth</span>
+            <span>{t('footer.usernamePinAuth')}</span>
             <span>•</span>
-            <span className="text-amber-400">Production Ready Architecture</span>
+            <span className="text-amber-400">{t('footer.productionReady')}</span>
           </div>
         </div>
       </footer>

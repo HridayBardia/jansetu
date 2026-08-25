@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { ShieldCheck, User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Building, Users, CheckCircle2, FileText } from 'lucide-react';
 import TermsConsentModal, { storeConsent } from '@/components/TermsConsentModal';
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, login, setSessionConsent, sessionConsentAccepted } = useAuth();
+  const { t } = useLanguage();
 
   const [loginType, setLoginType] = useState<'CITIZEN' | 'ADMIN' | null>(null);
   
@@ -213,7 +215,7 @@ export default function LoginPage() {
             PAN-INDIA AI NAVIGATOR
           </p>
           <p style={{ color: '#64748b', fontSize: '13px', margin: 0, fontStyle: 'italic' }}>
-            "One citizen. One journey. Connected government."
+            {t('dashboard.oneCitizen')}
           </p>
         </div>
 
@@ -221,7 +223,7 @@ export default function LoginPage() {
         {!loginType && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             <h2 style={{ color: '#e2e8f0', fontSize: '16px', fontWeight: 600, marginBottom: '20px', textAlign: 'center' }}>
-              Select Login Type
+              {t('auth.citizenLogin')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <button 
@@ -239,8 +241,8 @@ export default function LoginPage() {
                   <Users size={24} color="#60a5fa" />
                 </div>
                 <div>
-                  <h3 style={{ color: '#f8fafc', margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>Citizen Portal</h3>
-                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '13px' }}>Access your documents, journeys, and services.</p>
+                  <h3 style={{ color: '#f8fafc', margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>{t('auth.citizenLogin')}</h3>
+                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '13px' }}>{t('dashboard.jurisdictionAware')}</p>
                 </div>
               </button>
 
@@ -259,8 +261,8 @@ export default function LoginPage() {
                   <Building size={24} color="#a78bfa" />
                 </div>
                 <div>
-                  <h3 style={{ color: '#f8fafc', margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>Government Administration</h3>
-                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '13px' }}>System monitoring, audit logs, and analytics.</p>
+                  <h3 style={{ color: '#f8fafc', margin: '0 0 4px', fontSize: '16px', fontWeight: 600 }}>{t('admin.systemOverview')}</h3>
+                  <p style={{ color: '#94a3b8', margin: 0, fontSize: '13px' }}>{t('admin.adminAnalytics')}</p>
                 </div>
               </button>
             </div>
@@ -274,11 +276,11 @@ export default function LoginPage() {
               onClick={() => { setLoginType(null); setErrorMsg(null); setUsername(''); setPinDigits(['','','','','','']); setConsentAccepted(false); }}
               style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px', padding: 0 }}
             >
-              ← Back to role selection
+              ← {t('common.back')}
             </button>
 
             <h2 style={{ color: '#f8fafc', fontSize: '18px', fontWeight: 600, marginBottom: '20px', textAlign: 'center' }}>
-              {loginType === 'CITIZEN' ? 'Citizen Login' : 'Admin Login'}
+              {loginType === 'CITIZEN' ? t('auth.citizenLogin') : t('admin.systemOverview')}
             </h2>
 
 
@@ -296,7 +298,7 @@ export default function LoginPage() {
             {/* Username Field */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', fontWeight: 500, marginBottom: '8px', letterSpacing: '0.02em' }}>
-                Username
+                {t('auth.username')}
               </label>
               <div style={{ position: 'relative' }}>
                 <User size={16} color="#475569" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
@@ -306,7 +308,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
                   onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
-                  placeholder="Enter your username"
+                  placeholder={t('auth.username')}
                   autoComplete="off"
                   style={{
                     width: '100%', padding: '13px 14px 13px 40px', background: 'rgba(255,255,255,0.04)',
@@ -321,14 +323,14 @@ export default function LoginPage() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 500, letterSpacing: '0.02em' }}>
-                  6-Digit PIN
+                  {t('auth.sixDigitPin')}
                 </label>
                 <button
                   onClick={() => setShowPin(!showPin)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: '2px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
                 >
                   {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
-                  <span>{showPin ? 'Hide' : 'Show'}</span>
+                  <span>{showPin ? t('auth.hide') : t('auth.show')}</span>
                 </button>
               </div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
@@ -392,14 +394,9 @@ export default function LoginPage() {
                   lineHeight: 1.4,
                 }}>
                   {consentAccepted ? (
-                    '✓ Terms & Conditions accepted'
+                    t('auth.termsAccepted')
                   ) : (
-                    <>By continuing, you agree to the{' '}
-                      <span style={{ color: '#60a5fa', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
-                        Terms & Conditions
-                      </span>
-                      {' '}and Privacy & Data Consent.
-                    </>
+                    <>{t('auth.agreeToTerms')}</>
                   )}
                 </span>
               </button>
@@ -423,14 +420,14 @@ export default function LoginPage() {
                 opacity: isSubmitting ? 0.7 : 1,
               }}
             >
-              {isSubmitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : 'Login Securely'}
+              {isSubmitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : t('auth.signIn')}
               {!isSubmitting && <ArrowRight size={18} />}
             </button>
 
             {/* Consent required hint when not accepted */}
             {!consentAccepted && (
               <p style={{ color: '#64748b', fontSize: '12px', textAlign: 'center', marginTop: '10px', marginBottom: 0 }}>
-                Please accept the Terms & Conditions to enable login.
+                {t('auth.acceptTermsHint')}
               </p>
             )}
             
@@ -445,7 +442,7 @@ export default function LoginPage() {
                   onClick={() => {
                     // DigiLocker SSO button — also requires consent
                     if (!consentAccepted) {
-                      setErrorMsg('Please accept the Terms & Conditions before using DigiLocker SSO.');
+                      setErrorMsg(t('auth.acceptTermsFirst'));
                       return;
                     }
                     // Mock Federated SSO - autofill demo credentials
@@ -468,7 +465,7 @@ export default function LoginPage() {
                   onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                 >
                   <img src="https://upload.wikimedia.org/wikipedia/commons/f/fb/DigiLocker_Logo.png" alt="DigiLocker" style={{ height: '20px', objectFit: 'contain' }} onError={(e) => {e.currentTarget.style.display = 'none'}} />
-                  <span>Sign in via DigiLocker (Federated SSO)</span>
+                  <span>{t('auth.signIn')} DigiLocker</span>
                 </button>
               </div>
             )}

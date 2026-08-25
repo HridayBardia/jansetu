@@ -63,23 +63,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   if (isAuthenticated && user) {
     if (user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') {
       navItems = [
-        { label: t('systemOverview', 'System Overview'), href: '/admin/dashboard', icon: Compass },
-        { label: t('citizens', 'Citizens'), href: '/admin/dashboard?tab=citizens', icon: User },
-        { label: t('applications', 'Applications'), href: '/admin/dashboard?tab=applications', icon: Briefcase },
-        { label: t('interopHub', 'Interop Hub'), href: '/admin/dashboard?tab=interop', icon: Radio },
-        { label: t('workflowRules', 'Workflow Rules'), href: '/admin/dashboard?tab=workflow', icon: GitMerge },
-        { label: t('dataQuality', 'Data Quality'), href: '/admin/dashboard?tab=data_quality', icon: BarChart2 },
+        { label: t('navigation.systemOverview'), href: '/admin/dashboard', icon: Compass },
+        { label: t('navigation.citizens'), href: '/admin/dashboard?tab=citizens', icon: User },
+        { label: t('navigation.applications'), href: '/admin/dashboard?tab=applications', icon: Briefcase },
+        { label: t('navigation.interopHub'), href: '/admin/dashboard?tab=interop', icon: Radio },
+        { label: t('navigation.workflowRules'), href: '/admin/dashboard?tab=workflow', icon: GitMerge },
+        { label: t('navigation.dataQuality'), href: '/admin/dashboard?tab=data_quality', icon: BarChart2 },
       ];
     } else {
       navItems = [
-        { label: t('appName', 'Goal Planner'), href: '/citizen/dashboard?tab=planner', icon: Compass },
-        { label: t('myJourneys', 'Journeys'), href: '/citizen/dashboard?tab=journeys', icon: MapPin },
-        { label: t('myDocuments', 'Documents Vault'), href: '/citizen/dashboard?tab=documents', icon: FileText },
-        { label: t('myApplications', 'My Applications'), href: '/citizen/dashboard?tab=applications', icon: Briefcase },
-        { label: t('privacy', 'Privacy & Consent'), href: '/citizen/dashboard?tab=consent', icon: ShieldCheck },
-        { label: t('interopHub', 'Interop Hub'), href: '/citizen/dashboard?tab=interop', icon: Radio },
-        { label: t('dataQuality', 'Data Quality'), href: '/citizen/dashboard?tab=conflicts', icon: BarChart2 },
-        { label: t('alerts', 'Alerts'), href: '/citizen/dashboard?tab=alerts', icon: Bell }
+        { label: t('navigation.goalPlanner'), href: '/citizen/dashboard?tab=planner', icon: Compass },
+        { label: t('navigation.myJourneys'), href: '/citizen/dashboard?tab=journeys', icon: MapPin },
+        { label: t('navigation.documentsVault'), href: '/citizen/dashboard?tab=documents', icon: FileText },
+        { label: t('navigation.myApplications'), href: '/citizen/dashboard?tab=applications', icon: Briefcase },
+        { label: t('navigation.privacyConsent'), href: '/citizen/dashboard?tab=consent', icon: ShieldCheck },
+        { label: t('navigation.interopHub'), href: '/citizen/dashboard?tab=interop', icon: Radio },
+        { label: t('navigation.dataQuality'), href: '/citizen/dashboard?tab=conflicts', icon: BarChart2 },
+        { label: t('navigation.alerts'), href: '/citizen/dashboard?tab=alerts', icon: Bell }
       ];
     }
   }
@@ -106,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile Contextual Title */}
           <div className="md:hidden flex-1 px-4 text-center">
             <span className="text-xs font-bold text-slate-300 truncate block">
-              {navItems.find(item => isActive(item.href))?.label || 'JanSetu'}
+              {navItems.find(item => isActive(item.href))?.label || t('appName')}
             </span>
           </div>
 
@@ -137,12 +137,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* Role label instead of switcher */}
                 <div className="hidden md:block bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
-                  {(user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') ? 'ADMIN' : 'CITIZEN'}
+                  {(user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') ? t('navigation.systemOverview').split(' ')[0] : 'CITIZEN'}
                 </div>
 
                 <button
                   onClick={logout}
-                  title="Logout"
+                  title={t('navigation.signOut')}
                   className="hidden md:flex ml-1 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition shrink-0"
                 >
                   <LogOut className="w-4 h-4" />
@@ -154,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-xl text-xs shadow-md shadow-amber-500/20 transition"
               >
                 <LogIn className="w-4 h-4" />
-                <span>Citizen Login</span>
+                <span>{t('navigation.citizenLogin')}</span>
               </button>
             )}
           </div>
@@ -196,13 +196,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               
               // Simplistic naming for bottom nav limits string lengths
               let shortLabel = item.label;
-              if (item.label === 'Goal Planner') shortLabel = 'Home';
-              if (item.label === 'My Applications') shortLabel = 'Apps';
-              if (item.label === 'Privacy & Consent') shortLabel = 'Consent';
-              if (item.label === 'Documents Vault') shortLabel = 'Docs';
-              if (item.label === 'System Overview') shortLabel = 'Overview';
-              if (item.label === 'Interop Hub') shortLabel = 'Interop';
-              if (item.label === 'Data Quality') shortLabel = 'Quality';
+              if (item.label.includes('Goal') || item.label.includes('Planner')) shortLabel = t('navigation.goalPlanner').split(' ')[0] || 'Home';
+              if (item.label.includes('Application')) shortLabel = t('navigation.apps');
+              if (item.label.includes('Consent') || item.label.includes('Privacy')) shortLabel = t('navigation.consent');
+              if (item.label.includes('Document') || item.label.includes('Vault')) shortLabel = t('navigation.docs');
+              if (item.label.includes('System') || item.label.includes('Overview')) shortLabel = t('navigation.overview');
+              if (item.label.includes('Interop')) shortLabel = t('navigation.interop');
+              if (item.label.includes('Quality') || item.label.includes('Data')) shortLabel = t('navigation.quality');
 
               return (
                 <Link
@@ -223,4 +223,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </>
   );
 };
-

@@ -284,12 +284,12 @@ export default function DashboardPage() {
 
     const trimmedGoal = goalInput.trim();
     if (!trimmedGoal) {
-      setErrorMessage("Tell us what you want to accomplish.");
+      setErrorMessage(t('goalPlanner.tellGoalError'));
       return;
     }
 
     if (!domicileState) {
-      setErrorMessage("Select your domicile state.");
+      setErrorMessage(t('goalPlanner.selectDomicile'));
       return;
     }
 
@@ -357,7 +357,7 @@ export default function DashboardPage() {
       clearTimeout(timer2);
       clearTimeout(timer3);
       console.error(err);
-      setErrorMessage("JANSETU couldn't complete the journey analysis. Your goal description has been saved — please try again.");
+      setErrorMessage(t('goalPlanner.journeyFailed'));
       setIsAnalyzing(false);
     }
   };
@@ -411,7 +411,7 @@ export default function DashboardPage() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
             JS
           </div>
-          <span className="text-xs font-black text-slate-400 tracking-widest uppercase">National GovTech Interoperability Platform</span>
+          <span className="text-xs font-black text-slate-400 tracking-widest uppercase">{t('dashboard.oneCitizen')}</span>
         </div>
         <div className="flex items-center gap-4 text-xs font-medium text-slate-400 relative">
           {/* Notifications Bell */}
@@ -429,7 +429,7 @@ export default function DashboardPage() {
             {isNotificationsOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 z-50 space-y-3 text-xs">
                 <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                  <span className="font-bold text-white uppercase tracking-wider">Notifications Center</span>
+                  <span className="font-bold text-white uppercase tracking-wider">{t('dashboard.notificationsCenter')}</span>
                   <span className="text-[10px] text-slate-500">{realNotifications.length} alerts</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-2">
@@ -443,7 +443,7 @@ export default function DashboardPage() {
                     </div>
                   ))}
                   {realNotifications.length === 0 && (
-                    <p className="text-slate-500 text-center py-4">No recent notifications.</p>
+                    <p className="text-slate-500 text-center py-4">{t('dashboard.noNotifications')}</p>
                   )}
                 </div>
               </div>
@@ -467,26 +467,26 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-black text-white tracking-tight">
-            Good evening, {user?.full_name || 'Citizen'} 👋
+            {t('dashboard.welcome')}, {user?.full_name || t('dashboard.citizen')} 👋
           </h1>
           <p className="text-xs font-black text-amber-500 tracking-wider uppercase">
-            ONE CITIZEN. ONE JOURNEY. CONNECTED GOVERNMENT SERVICES.
+            {t('dashboard.oneCitizen')}
           </p>
           <p className="text-[11px] text-slate-500">
-            A jurisdiction-aware interoperability middleware layer orchestrating Central, State, and Municipal departments.
+            {t('dashboard.jurisdictionAware')}
           </p>
           <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2.5 bg-slate-950/40 border border-slate-850 px-2.5 py-1 rounded-lg w-fit">
             <span>JanSetu</span>
             <span>/</span>
             <span className="text-amber-400">
-              {activeTab === 'planner' ? 'Goal Planner' : 
-               activeTab === 'journeys' ? 'Active Journeys' : 
-               activeTab === 'documents' ? 'Documents Vault' :
-               activeTab === 'applications' ? 'My Applications' :
-               activeTab === 'consent' ? 'YOUR DATA & CONSENT' :
-               activeTab === 'interop' ? 'Govt Interop Hub' :
-               activeTab === 'conflicts' ? 'CHECK MY INFORMATION' :
-               activeTab === 'alerts' ? 'Alerts & Events' : 'Official View'}
+              {activeTab === 'planner' ? t('dashboard.goalPlanner') : 
+               activeTab === 'journeys' ? t('dashboard.activeJourneys') : 
+               activeTab === 'documents' ? t('dashboard.documentsVault') :
+               activeTab === 'applications' ? t('dashboard.myApplications') :
+               activeTab === 'consent' ? t('dashboard.yourDataConsent') :
+               activeTab === 'interop' ? t('dashboard.govtInteropHub') :
+               activeTab === 'conflicts' ? t('dashboard.checkMyInformation') :
+               activeTab === 'alerts' ? t('dashboard.alertsEvents') : t('dashboard.officialView')}
             </span>
           </div>
         </div>
@@ -501,8 +501,8 @@ export default function DashboardPage() {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document Vault</span>
-            <span className="text-sm font-black text-white">{realDocuments.length > 0 ? realDocuments.length : mockDocs.length} Verified Files</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('dashboard.documentVault')}</span>
+            <span className="text-sm font-black text-white">{realDocuments.length > 0 ? realDocuments.length : mockDocs.length} {t('dashboard.verifiedFiles')}</span>
           </div>
         </div>
 
@@ -511,8 +511,8 @@ export default function DashboardPage() {
             <Compass className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Journeys</span>
-            <span className="text-sm font-black text-white">{(realJourneys.length || mockJourneys.length)} Workflows</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('dashboard.activeJourneys')}</span>
+            <span className="text-sm font-black text-white">{(realJourneys.length || mockJourneys.length)} {t('dashboard.activeJourneysCount')}</span>
           </div>
         </div>
 
@@ -521,8 +521,8 @@ export default function DashboardPage() {
             <Landmark className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Government Support</span>
-            <span className="text-sm font-black text-white">{schemes.length} Schemes Available</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('dashboard.govtSupport')}</span>
+            <span className="text-sm font-black text-white">{schemes.length} {t('dashboard.schemesAvailable')}</span>
           </div>
         </div>
       </div>
@@ -538,7 +538,7 @@ export default function DashboardPage() {
           }`}
         >
           <Compass className="w-4 h-4" />
-          <span>Goal Planner</span>
+          <span>{t('dashboard.goalPlanner')}</span>
         </button>
 
         <button
@@ -550,7 +550,7 @@ export default function DashboardPage() {
           }`}
         >
           <MapPin className="w-4 h-4" />
-          <span>Active Journeys</span>
+          <span>{t('dashboard.activeJourneys')}</span>
           {(realJourneys.length || mockJourneys.length) > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {realJourneys.length || mockJourneys.length}
@@ -567,7 +567,7 @@ export default function DashboardPage() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>Documents Vault</span>
+          <span>{t('dashboard.documentsVault')}</span>
           {(realDocuments.length > 0 ? realDocuments.length : mockDocs.length) > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {realDocuments.length > 0 ? realDocuments.length : mockDocs.length}
@@ -584,7 +584,7 @@ export default function DashboardPage() {
           }`}
         >
           <Briefcase className="w-4 h-4" />
-          <span>My Applications</span>
+          <span>{t('dashboard.myApplications')}</span>
           {mockApplications.length > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {mockApplications.length}
@@ -601,7 +601,7 @@ export default function DashboardPage() {
           }`}
         >
           <Key className="w-4 h-4" />
-          <span>YOUR DATA & CONSENT</span>
+          <span>{t('dashboard.yourDataConsent')}</span>
           {mockConsents.filter(c => c.status === 'ACTIVE').length > 0 && (
             <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
               {mockConsents.filter(c => c.status === 'ACTIVE').length}
@@ -618,7 +618,7 @@ export default function DashboardPage() {
           }`}
         >
           <Activity className="w-4 h-4" />
-          <span>Govt Interop Hub</span>
+          <span>{t('dashboard.govtInteropHub')}</span>
         </button>
 
         <button
@@ -630,7 +630,7 @@ export default function DashboardPage() {
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
-          <span>CHECK MY INFORMATION</span>
+          <span>{t('dashboard.checkMyInformation')}</span>
           {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
             <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
               {conflicts.filter(c => c.status === 'DETECTED').length}
@@ -647,7 +647,7 @@ export default function DashboardPage() {
           }`}
         >
           <Bell className="w-4 h-4" />
-          <span>Alerts & Events</span>
+          <span>{t('dashboard.alertsEvents')}</span>
         </button>
 
         {(user?.role === 'SYSTEM_ADMIN' || user?.role === 'DEPARTMENT_ADMIN') && (
@@ -660,7 +660,7 @@ export default function DashboardPage() {
             }`}
           >
             <BarChart2 className="w-4 h-4" />
-            <span>Official View</span>
+            <span>{t('dashboard.officialView')}</span>
           </button>
         )}
       </div>
@@ -673,7 +673,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1 md:col-span-1 relative">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Domicile State
+                {t('goalPlanner.domicileState')}
               </label>
               
               <button
@@ -696,7 +696,7 @@ export default function DashboardPage() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search state/UT..."
+                      placeholder={t('goalPlanner.searchStates')}
                       autoFocus
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500/50"
                     />
@@ -706,7 +706,7 @@ export default function DashboardPage() {
                       {filteredStates.filter(s => s.type === 'STATE').length > 0 && (
                         <div className="space-y-1">
                           <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2 block">
-                            States
+                            {t('goalPlanner.states')}
                           </span>
                           {filteredStates.filter(s => s.type === 'STATE').map(st => (
                             <button
@@ -733,7 +733,7 @@ export default function DashboardPage() {
                       {filteredStates.filter(s => s.type === 'UNION_TERRITORY').length > 0 && (
                         <div className="space-y-1">
                           <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2 block">
-                            Union Territories
+                            {t('goalPlanner.unionTerritories')}
                           </span>
                           {filteredStates.filter(s => s.type === 'UNION_TERRITORY').map(st => (
                             <button
@@ -757,7 +757,7 @@ export default function DashboardPage() {
                       )}
 
                       {filteredStates.length === 0 && (
-                        <p className="text-slate-500 text-xs text-center py-2">No matching states or UTs found.</p>
+                        <p className="text-slate-500 text-xs text-center py-2">{t('goalPlanner.noMatchingStates')}</p>
                       )}
                     </div>
                   </div>
@@ -767,14 +767,14 @@ export default function DashboardPage() {
 
             <div className="space-y-1 md:col-span-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                What are you looking to accomplish?
+                {t('goalPlanner.whatToAccomplish')}
               </label>
               <div className="relative flex flex-col md:block">
                 <textarea
                   rows={2}
                   value={goalInput}
                   onChange={(e) => setGoalInput(e.target.value)}
-                  placeholder="Tell us what you're trying to do... e.g. 'I want to start a business'..."
+                  placeholder={t('goalPlanner.tellUs')}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 md:pr-40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-base md:text-sm resize-none min-h-[80px]"
                 />
                 <button
@@ -785,11 +785,11 @@ export default function DashboardPage() {
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-4 h-4 md:w-3.5 md:h-3.5 animate-spin" />
-                      <span>UNDERSTANDING...</span>
+                      <span>{t('goalPlanner.understanding')}</span>
                     </>
                   ) : (
                     <>
-                      <span>Understand Goal</span>
+                      <span>{t('goalPlanner.understandGoal')}</span>
                       <ArrowRight className="w-4 h-4 md:w-3.5 md:h-3.5" />
                     </>
                   )}
@@ -808,7 +808,7 @@ export default function DashboardPage() {
 
         {/* Quick Starts */}
         <div className="mt-4 pt-4 border-t border-slate-800/80">
-          <span className="text-xs text-slate-500 font-semibold block mb-2">Quick Starts:</span>
+          <span className="text-xs text-slate-500 font-semibold block mb-2">{t('goalPlanner.quickStarts')}</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             <button
               onClick={() => {
@@ -818,7 +818,7 @@ export default function DashboardPage() {
               className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
             >
               <Briefcase className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Start Business in Vadodara</span>
+              <span>{t('goalPlanner.startBusinessVadodara')}</span>
             </button>
 
             <button
@@ -829,7 +829,7 @@ export default function DashboardPage() {
               className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
             >
               <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Masters in Australia</span>
+              <span>{t('goalPlanner.mastersAustralia')}</span>
             </button>
 
             <button
@@ -840,7 +840,7 @@ export default function DashboardPage() {
               className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
             >
               <Landmark className="w-4 h-4 text-orange-400 shrink-0" />
-              <span>Scholarship in Rajasthan</span>
+              <span>{t('goalPlanner.scholarshipRajasthan')}</span>
             </button>
 
             <button
@@ -851,7 +851,7 @@ export default function DashboardPage() {
               className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
             >
               <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Farmer in Rajasthan</span>
+              <span>{t('goalPlanner.farmerRajasthan')}</span>
             </button>
           </div>
         </div>
@@ -868,8 +868,8 @@ export default function DashboardPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Analyzing Goal & Intent</h4>
-                <p className="text-xs text-slate-400">Verifying requirements and rules deterministically...</p>
+                <h4 className="text-sm font-bold text-white">{t('goalPlanner.analyzingGoal')}</h4>
+                <p className="text-xs text-slate-400">{t('goalPlanner.verifyingRequirements')}</p>
               </div>
             </div>
 
@@ -882,19 +882,19 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 2 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 2 ? '✓' : '●'} Identifying your location & jurisdiction
+                  {generationStage >= 2 ? '✓' : '●'} {t('goalPlanner.identifyingLocation')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">Done</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 3 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 3 ? '✓' : '●'} Finding relevant government support
+                  {generationStage >= 3 ? '✓' : '●'} {t('goalPlanner.findingServices')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">Done</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 4 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 4 ? '✓' : '●'} Checking current eligibility constraints
+                  {generationStage >= 4 ? '✓' : '●'} {t('goalPlanner.checkingEligibility')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">Ready</span>
               </div>
@@ -912,35 +912,35 @@ export default function DashboardPage() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Building Your Personalized Journey</h4>
-                <p className="text-xs text-slate-400">Real-time engine analysis in progress...</p>
+                <h4 className="text-sm font-bold text-white">{t('goalPlanner.buildingJourney')}</h4>
+                <p className="text-xs text-slate-400">{t('goalPlanner.realTimeAnalysis')}</p>
               </div>
             </div>
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 1 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 1 ? '✓' : '●'} Understanding your request
+                  {generationStage >= 1 ? '✓' : '●'} {t('goalPlanner.understandingRequest')}
                 </span>
-                <span className="text-slate-500">Done</span>
+                <span className="text-slate-500">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 2 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 2 ? '✓' : '●'} Identifying your location
+                  {generationStage >= 2 ? '✓' : '●'} {t('goalPlanner.identifyingLocation')}
                 </span>
-                <span className="text-slate-500">Done</span>
+                <span className="text-slate-500">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 3 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 3 ? '✓' : '●'} Finding relevant government services
+                  {generationStage >= 3 ? '✓' : '●'} {t('goalPlanner.findingServices')}
                 </span>
-                <span className="text-slate-500">Done</span>
+                <span className="text-slate-500">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 4 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 4 ? '✓' : '●'} Checking current eligibility
+                  {generationStage >= 4 ? '✓' : '●'} {t('goalPlanner.checkingEligibility')}
                 </span>
-                <span className="text-slate-500">Ready</span>
+                <span className="text-slate-500">{t('common.ready')}</span>
               </div>
             </div>
           </div>

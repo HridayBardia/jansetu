@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { Sparkles, MapPin, Briefcase, Calendar, DollarSign, ArrowRight, Loader2, X } from 'lucide-react';
 
 export const OnboardingModal: React.FC = () => {
   const { user, profile, updateProfile, isOnboardingModalOpen, closeOnboardingModal } = useAuth();
+  const { t } = useLanguage();
 
   const [state, setState] = useState(profile?.location_state || 'Gujarat');
   const [city, setCity] = useState(profile?.location_city || 'Vadodara');
@@ -49,11 +51,11 @@ export const OnboardingModal: React.FC = () => {
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Welcome, {user?.full_name || 'Citizen'}!</span>
+            <span>{t('onboarding.welcome')}, {user?.full_name || t('dashboard.citizen')}!</span>
           </div>
-          <h2 className="text-xl font-bold text-white">Let's Personalize Your Citizen Journey</h2>
+          <h2 className="text-xl font-bold text-white">{t('onboarding.personalize')}</h2>
           <p className="text-xs text-slate-400">
-            Tell us a bit about your profile so we can highlight relevant government schemes and verify document eligibility automatically.
+            {t('onboarding.tellAbout')}
           </p>
         </div>
 
@@ -61,7 +63,7 @@ export const OnboardingModal: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                Home State
+                {t('onboarding.homeState')}
               </label>
               <div className="relative">
                 <MapPin className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
@@ -86,13 +88,13 @@ export const OnboardingModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                City / District
+                {t('onboarding.cityDistrict')}
               </label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="e.g. Vadodara"
+                placeholder={t('onboarding.cityDistrict')}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-xs focus:outline-none focus:border-amber-500/60"
               />
             </div>
@@ -101,7 +103,7 @@ export const OnboardingModal: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                Occupation
+                {t('onboarding.occupation')}
               </label>
               <div className="relative">
                 <Briefcase className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
@@ -110,19 +112,19 @@ export const OnboardingModal: React.FC = () => {
                   onChange={(e) => setOccupation(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-slate-100 text-xs focus:outline-none focus:border-amber-500/60"
                 >
-                  <option value="Entrepreneur / Business">Entrepreneur / Business</option>
-                  <option value="Student">Student</option>
-                  <option value="Salaried Employee">Salaried Employee</option>
-                  <option value="Farmer / Agriculture">Farmer / Agriculture</option>
-                  <option value="Self-Employed">Self-Employed</option>
-                  <option value="Homemaker">Homemaker</option>
+                  <option value="Entrepreneur / Business">{t('onboarding.entrepreneur')}</option>
+                  <option value="Student">{t('onboarding.student')}</option>
+                  <option value="Salaried Employee">{t('onboarding.salaried')}</option>
+                  <option value="Farmer / Agriculture">{t('onboarding.farmer')}</option>
+                  <option value="Self-Employed">{t('onboarding.selfEmployed')}</option>
+                  <option value="Homemaker">{t('onboarding.homemaker')}</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                Annual Income (₹)
+                {t('onboarding.annualIncome')}
               </label>
               <div className="relative">
                 <DollarSign className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
@@ -139,7 +141,7 @@ export const OnboardingModal: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-              Date of Birth
+              {t('onboarding.dateOfBirth')}
             </label>
             <div className="relative">
               <Calendar className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
@@ -158,7 +160,7 @@ export const OnboardingModal: React.FC = () => {
               onClick={closeOnboardingModal}
               className="text-xs text-slate-400 hover:text-white"
             >
-              Skip for now
+              {t('onboarding.skipForNow')}
             </button>
 
             <button
@@ -166,7 +168,7 @@ export const OnboardingModal: React.FC = () => {
               disabled={isSubmitting}
               className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Save & Continue</span>}
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>{t('onboarding.saveContinue')}</span>}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

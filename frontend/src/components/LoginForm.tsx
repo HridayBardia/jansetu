@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { ShieldCheck, User, Lock, ArrowRight, Loader2, X, AlertCircle, Eye, EyeOff, FileText, CheckCircle2 } from 'lucide-react';
 import TermsConsentModal, { storeConsent } from '@/components/TermsConsentModal';
 
@@ -14,6 +15,7 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
   const router = useRouter();
   const { login, setSessionConsent } = useAuth();
+  const { t } = useLanguage();
 
   const [username, setUsername] = useState('');
   const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '', '', '']);
@@ -76,15 +78,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
     const trimmedUsername = username.trim().toLowerCase();
 
     if (!trimmedUsername || trimmedUsername.length < 4) {
-      setErrorMsg('Please enter a valid username (min 4 characters).');
+      setErrorMsg(t('auth.enterUsername'));
       return;
     }
     if (pin.length < 6) {
-      setErrorMsg('Please enter your complete 6-digit PIN.');
+      setErrorMsg(t('auth.enterPin'));
       return;
     }
     if (!consentAccepted) {
-      setErrorMsg('Please accept the Terms & Conditions before logging in.');
+      setErrorMsg(t('auth.acceptTermsFirst'));
       return;
     }
 
@@ -101,10 +103,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
           router.replace('/citizen/dashboard');
         }
       } else {
-        setErrorMsg('Invalid username or PIN. Please try again.');
+        setErrorMsg(t('auth.invalidCredentials'));
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Login failed. Please try again.');
+      setErrorMsg(err?.message || t('auth.loginFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -128,8 +130,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center mb-3 shadow-lg shadow-blue-500/20">
             <ShieldCheck size={24} color="white" />
           </div>
-          <h2 className="text-lg font-bold text-slate-100">Citizen Login</h2>
-          <p className="text-slate-400 text-xs mt-1">Enter your username and PIN</p>
+          <h2 className="text-lg font-bold text-slate-100">{t('auth.citizenLogin')}</h2>
+          <p className="text-slate-400 text-xs mt-1">{t('auth.enterUsernamePin')}</p>
         </div>
 
         {/* Error */}
@@ -142,7 +144,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
 
         {/* Username */}
         <div className="mb-4">
-          <label className="block text-slate-400 text-xs font-medium mb-2">Username</label>
+          <label className="block text-slate-400 text-xs font-medium mb-2">{t('auth.username')}</label>
           <div className="relative">
             <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
@@ -162,13 +164,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
         {/* PIN */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-slate-400 text-xs font-medium">6-Digit PIN</label>
+            <label className="text-slate-400 text-xs font-medium">{t('auth.sixDigitPin')}</label>
             <button
               onClick={() => setShowPin(!showPin)}
               className="text-slate-500 hover:text-slate-300 flex items-center gap-1 text-xs transition"
             >
               {showPin ? <EyeOff size={12} /> : <Eye size={12} />}
-              <span>{showPin ? 'Hide' : 'Show'}</span>
+              <span>{showPin ? t('auth.hide') : t('auth.show')}</span>
             </button>
           </div>
           <div className="flex gap-2 justify-center">
@@ -211,12 +213,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
               consentAccepted ? 'text-green-400' : 'text-slate-400'
             }`}>
               {consentAccepted ? (
-                '✓ Terms & Conditions accepted'
+                t('auth.termsAccepted')
               ) : (
-                <>By continuing, you agree to the{' '}
-                  <span className="text-blue-400 underline underline-offset-2">Terms & Conditions</span>
-                  {' '}and Privacy & Data Consent.
-                </>
+                <>{t('auth.agreeToTerms')}</>
               )}
             </span>
           </button>
@@ -236,12 +235,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
           {isSubmitting ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              <span>Verifying...</span>
+              <span>{t('auth.verifying')}</span>
             </>
           ) : (
             <>
               <Lock size={15} />
-              <span>Sign In</span>
+              <span>{t('auth.signIn')}</span>
               <ArrowRight size={15} />
             </>
           )}
@@ -250,7 +249,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
         {/* Consent hint */}
         {!consentAccepted && (
           <p className="text-slate-500 text-xs text-center mt-2.5">
-            Please accept the Terms & Conditions to enable login.
+            {t('auth.acceptTermsHint')}
           </p>
         )}
       </div>
