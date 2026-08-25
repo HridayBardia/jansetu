@@ -201,6 +201,7 @@ export default function DashboardPage() {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [realNotifications, setRealNotifications] = useState<any[]>([]);
   const [realDocuments, setRealDocuments] = useState<any[]>([]);
+  const [realJourneys, setRealJourneys] = useState<any[]>([]);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
@@ -240,6 +241,9 @@ export default function DashboardPage() {
       });
       fetchUserDocumentsAPI().then((data) => {
         if (data) setRealDocuments(data);
+      });
+      fetchJourneysAPI().then((data) => {
+        if (data) setRealJourneys(data);
       });
     }
   }, [isAuthenticated]);
@@ -508,7 +512,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-0.5">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Journeys</span>
-            <span className="text-sm font-black text-white">{mockJourneys.length} Workflows</span>
+            <span className="text-sm font-black text-white">{(realJourneys.length || mockJourneys.length)} Workflows</span>
           </div>
         </div>
 
@@ -547,9 +551,9 @@ export default function DashboardPage() {
         >
           <MapPin className="w-4 h-4" />
           <span>Active Journeys</span>
-          {mockJourneys.length > 0 && (
+          {(realJourneys.length || mockJourneys.length) > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {mockJourneys.length}
+              {realJourneys.length || mockJourneys.length}
             </span>
           )}
         </button>
@@ -1716,7 +1720,7 @@ export default function DashboardPage() {
               </p>
             </div>
             
-            {mockJourneys.length === 0 ? (
+            {realJourneys.length === 0 && mockJourneys.length === 0 ? (
               <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center space-y-4 max-w-md mx-auto">
                 <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
                   <MapPin className="w-6 h-6 text-amber-500" />
@@ -1734,7 +1738,30 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {mockJourneys.map((j) => (
+                {/* Real backend journeys */}
+                {realJourneys.map((j: any) => (
+                  <div key={j.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                          {j.goal_category || 'general'}
+                        </span>
+                        <span className="text-xs text-slate-500">Progress: {j.progress_percentage || 0}%</span>
+                      </div>
+                      <h3 className="text-sm font-black text-white">{j.title}</h3>
+                      <p className="text-xs text-slate-400">{j.location_state || 'India'} {j.location_city ? `(${j.location_city})` : ''}</p>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/journeys/${j.id}`)}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition shadow self-start sm:self-center"
+                    >
+                      <span>Track Workflow</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {/* Mock journeys (fallback) */}
+                {realJourneys.length === 0 && mockJourneys.map((j) => (
                   <div key={j.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">

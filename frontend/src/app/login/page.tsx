@@ -112,7 +112,28 @@ export default function LoginPage() {
     try {
       const res = await login(trimmedUsername, pin);
       if (res && res.user) {
-        if (res.user.role === 'ADMIN' || res.user.role === 'admin' || res.user.role === 'SYSTEM_ADMIN') {
+        const userRole = (res.user.role || '').toUpperCase();
+        const isAdmin = userRole === 'ADMIN' || userRole === 'SYSTEM_ADMIN' || userRole === 'DEPARTMENT_ADMIN';
+
+        // SECURITY: Enforce role-based portal access
+        if (loginType === 'ADMIN' && !isAdmin) {
+          setErrorMsg('This account is registered as a Citizen. You cannot access the Admin Portal. Please use the Citizen Portal instead.');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('citizen_token');
+            localStorage.removeItem('demo_citizen');
+          }
+          return;
+        }
+        if (loginType === 'CITIZEN' && isAdmin) {
+          setErrorMsg('This account is registered as an Administrator. Please use the Admin Portal instead.');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('citizen_token');
+            localStorage.removeItem('demo_citizen');
+          }
+          return;
+        }
+
+        if (isAdmin) {
           router.replace('/admin/dashboard');
         } else {
           router.replace('/citizen/dashboard');
