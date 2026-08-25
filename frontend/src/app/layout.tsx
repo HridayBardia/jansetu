@@ -34,7 +34,7 @@ function AppContent({ children, sandboxMode, setSandboxMode }: { children: React
       }
       // Redirect to appropriate dashboard if already authenticated and consented on login page
       if (pathname && pathname === '/login' && isAuthenticated && sessionConsentAccepted && user) {
-        if (user.role === 'ADMIN' || user.role === 'admin') {
+        if (user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') {
           router.replace('/admin/dashboard');
         } else {
           router.replace('/citizen/dashboard');

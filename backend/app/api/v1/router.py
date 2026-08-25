@@ -141,7 +141,8 @@ def get_current_citizen(request: Request, current_user: UserDB = Depends(get_cur
     return current_user
 
 def get_current_admin(request: Request, current_user: UserDB = Depends(get_current_user)) -> UserDB:
-    if current_user.role != 'ADMIN' and current_user.role != 'admin':
+    admin_roles = {'ADMIN', 'admin', 'SYSTEM_ADMIN', 'system_admin', 'DEPARTMENT_ADMIN', 'department_admin'}
+    if current_user.role not in admin_roles:
         raise HTTPException(status_code=403, detail='Access restricted to administrators.')
     return current_user
 
@@ -549,7 +550,7 @@ async def generate_journey(
 
 @api_v1_router.get("/journeys")
 def list_journeys(request: Request, current_user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role in ['ADMIN', 'admin']:
+    if current_user.role in ['ADMIN', 'admin', 'SYSTEM_ADMIN', 'system_admin']:
         journeys = db.query(JourneyDB).order_by(JourneyDB.created_at.desc()).all()
     else:
         journeys = db.query(JourneyDB).filter(JourneyDB.user_id == current_user.id).all()
@@ -1455,7 +1456,7 @@ def list_applications(
     current_user: UserDB = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if current_user.role in ['ADMIN', 'admin']:
+    if current_user.role in ['ADMIN', 'admin', 'SYSTEM_ADMIN', 'system_admin']:
         # Admin gets all applications
         apps = db.query(ApplicationDB).order_by(ApplicationDB.submitted_at.desc()).all()
         return success_response([

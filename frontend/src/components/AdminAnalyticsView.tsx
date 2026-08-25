@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BarChart2, ShieldCheck, Clock, CheckCircle2, TrendingUp, BookOpen, Layers, RefreshCw } from 'lucide-react';
+import { BarChart2, ShieldCheck, Clock, CheckCircle2, TrendingUp, BookOpen, Layers, RefreshCw, AlertCircle } from 'lucide-react';
 import { AnalyticsSummary } from '@/types';
 import { ImpactDashboard } from './ImpactDashboard';
 import { apiFetch } from '@/lib/api';
@@ -19,6 +19,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
     avg_completion_rate: 0
   });
   const [loading, setLoading] = useState(!propAnalytics);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRealMetrics();
@@ -26,6 +27,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
 
   const fetchRealMetrics = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await apiFetch<any>('/admin/real-metrics');
       if (data) {
@@ -36,9 +38,12 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
           time_saved_hours_per_citizen: data.time_saved_hours_per_citizen || 0,
           avg_completion_rate: data.total_journeys_started > 0 ? Math.round((data.completed_journeys / data.total_journeys_started) * 100) : 0
         });
+      } else {
+        setError('Unable to load analytics data. The backend may be unavailable.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[Admin] Failed to fetch real metrics:', e);
+      setError(e?.message || 'Unable to load analytics data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -67,6 +72,14 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
           {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+          <button onClick={fetchRealMetrics} className="ml-auto text-red-300 hover:text-white font-bold text-[10px] uppercase">Retry</button>
+        </div>
+      )}
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

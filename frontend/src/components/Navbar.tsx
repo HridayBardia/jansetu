@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   let navItems: { label: string, href: string, icon: any }[] = [];
 
   if (isAuthenticated && user) {
-    if (user.role === 'ADMIN' || user.role === 'admin') {
+    if (user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') {
       navItems = [
         { label: t('systemOverview', 'System Overview'), href: '/admin/dashboard', icon: Compass },
         { label: t('citizens', 'Citizens'), href: '/admin/dashboard?tab=citizens', icon: User },
@@ -137,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* Role label instead of switcher */}
                 <div className="hidden md:block bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
-                  {user.role === 'ADMIN' || user.role === 'admin' ? 'ADMIN' : 'CITIZEN'}
+                  {(user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') ? 'ADMIN' : 'CITIZEN'}
                 </div>
 
                 <button

@@ -32,6 +32,7 @@ interface Props {
 export const AdminCitizensView = ({ adminUsername }: Props) => {
   const [citizens, setCitizens] = useState<AdminCitizenData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCitizens();
@@ -39,11 +40,17 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
 
   const fetchCitizens = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await apiFetch<AdminCitizenData[]>('/admin/real-citizens');
-      if (data) setCitizens(data);
-    } catch (e) {
+      if (data) {
+        setCitizens(data);
+      } else {
+        setError('Unable to load citizen data. The backend may be unavailable.');
+      }
+    } catch (e: any) {
       console.warn('[Admin] Failed to fetch real citizens:', e);
+      setError(e?.message || 'Unable to load citizen data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -89,6 +96,14 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
         <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         {loading ? 'Loading...' : 'Refresh'}
       </button>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+          <button onClick={fetchCitizens} className="ml-auto text-red-300 hover:text-white font-bold text-[10px] uppercase">Retry</button>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -95,7 +95,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
       if (res && res.user) {
         onSuccess?.();
         onClose?.();
-        if (res.user.role === 'ADMIN' || res.user.role === 'admin') {
+        if (res.user.role === 'ADMIN' || res.user.role === 'admin' || res.user.role === 'SYSTEM_ADMIN') {
           router.replace('/admin/dashboard');
         } else {
           router.replace('/citizen/dashboard');

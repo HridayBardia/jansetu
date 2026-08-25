@@ -112,7 +112,7 @@ export default function LoginPage() {
     try {
       const res = await login(trimmedUsername, pin);
       if (res && res.user) {
-        if (res.user.role === 'ADMIN' || res.user.role === 'admin') {
+        if (res.user.role === 'ADMIN' || res.user.role === 'admin' || res.user.role === 'SYSTEM_ADMIN') {
           router.replace('/admin/dashboard');
         } else {
           router.replace('/citizen/dashboard');

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X, FileText, ChevronDown, RefreshCw } from 'lucide-react';
+import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X, FileText, ChevronDown, RefreshCw, AlertCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface AdminApplicationData {
@@ -40,6 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
 export const AdminApplicationsView = ({ adminUsername }: Props) => {
   const [applications, setApplications] = useState<AdminApplicationData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchApplications();
@@ -47,11 +48,17 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
 
   const fetchApplications = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await apiFetch<AdminApplicationData[]>('/admin/real-applications');
-      if (data) setApplications(data);
-    } catch (e) {
+      if (data) {
+        setApplications(data);
+      } else {
+        setError('Unable to load applications. The backend may be unavailable.');
+      }
+    } catch (e: any) {
       console.warn('[Admin] Failed to fetch real applications:', e);
+      setError(e?.message || 'Unable to load applications. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -102,6 +109,14 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
           {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+          <button onClick={fetchApplications} className="ml-auto text-red-300 hover:text-white font-bold text-[10px] uppercase">Retry</button>
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

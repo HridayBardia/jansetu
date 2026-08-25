@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (user?.role !== 'ADMIN' && user?.role !== 'admin'))) {
+    if (!isLoading && (!isAuthenticated || (user?.role !== 'ADMIN' && user?.role !== 'admin' && user?.role !== 'SYSTEM_ADMIN' && user?.role !== 'system_admin'))) {
       router.replace('/login');
     }
   }, [isLoading, isAuthenticated, user, router]);

@@ -12,7 +12,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated && user) {
-        if (user.role === 'ADMIN' || user.role === 'admin') {
+        if (user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') {
           router.replace('/admin/dashboard');
         } else {
           router.replace('/citizen/dashboard');
