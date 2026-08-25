@@ -1,33 +1,73 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Users, Search, Activity, Briefcase, AlertCircle, FileText, CheckCircle2, ChevronRight, UserCircle, X, Shield, MapPin, Clock } from 'lucide-react';
-import { getCitizensForAdmin, AdminCitizen } from '@/lib/adminData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Users, Search, Activity, Briefcase, AlertCircle, FileText, CheckCircle2, ChevronRight, UserCircle, X, Shield, MapPin, Clock, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
+
+interface AdminCitizenData {
+  id: string;
+  name: string;
+  username: string;
+  domicile: string;
+  location: string;
+  status: 'Active' | 'Action Required' | 'Pending KYC';
+  lastActive: string;
+  lastActivity?: string;
+  documentsTotal: number;
+  documentsVerified: number;
+  documentsPending: number;
+  activeApplications: number;
+  activeWorkflows: number;
+  lastGoal: string;
+  profileCompletion: number;
+  documents?: { name: string; status: string }[];
+  applications?: { id: string; service: string; status: string }[];
+  recentActivity?: string[];
+}
 
 interface Props {
   adminUsername: string;
 }
 
 export const AdminCitizensView = ({ adminUsername }: Props) => {
-  const citizens = useMemo(() => getCitizensForAdmin(adminUsername), [adminUsername]);
+  const [citizens, setCitizens] = useState<AdminCitizenData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCitizens();
+  }, []);
+
+  const fetchCitizens = async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch<AdminCitizenData[]>('/admin/real-citizens');
+      if (data) setCitizens(data);
+    } catch (e) {
+      console.warn('[Admin] Failed to fetch real citizens:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const citizensList = citizens;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [selectedCitizen, setSelectedCitizen] = useState<AdminCitizen | null>(null);
+  const [selectedCitizen, setSelectedCitizen] = useState<AdminCitizenData | null>(null);
 
   const filteredCitizens = useMemo(() => {
-    return citizens.filter(c => {
+    return citizensList.filter(c => {
       const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.username.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [citizens, searchQuery, statusFilter]);
+  }, [citizensList, searchQuery, statusFilter]);
 
-  const totalDocs = citizens.reduce((a, c) => a + c.documentsTotal, 0);
-  const totalVerified = citizens.reduce((a, c) => a + c.documentsVerified, 0);
-  const totalPending = citizens.reduce((a, c) => a + c.documentsPending, 0);
-  const totalApps = citizens.reduce((a, c) => a + c.activeApplications, 0);
+  const totalDocs = citizensList.reduce((a, c) => a + c.documentsTotal, 0);
+  const totalVerified = citizensList.reduce((a, c) => a + c.documentsVerified, 0);
+  const totalPending = citizensList.reduce((a, c) => a + c.documentsPending, 0);
+  const totalApps = citizensList.reduce((a, c) => a + c.activeApplications, 0);
 
   return (
     <div className="space-y-6">
@@ -41,12 +81,20 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
           View citizens assigned to you and monitor their government journeys.
         </p>
       </div>
+      <button
+        onClick={fetchCitizens}
+        disabled={loading}
+        className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition disabled:opacity-50"
+      >
+        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+        {loading ? 'Loading...' : 'Refresh'}
+      </button>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
           <p className="text-xs text-slate-400 font-medium">Total Citizens</p>
-          <p className="text-2xl font-bold text-white mt-1">{citizens.length}</p>
+          <p className="text-2xl font-bold text-white mt-1">{citizensList.length}</p>
         </div>
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
           <p className="text-xs text-slate-400 font-medium">Documents Verified</p>
@@ -253,7 +301,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Documents</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {selectedCitizen.documents.map((doc, i) => (
+                  {(selectedCitizen.documents || []).map((doc: { name: string; status: string }, i: number) => (
                     <div key={i} className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg p-3">
                       <span className="text-xs text-slate-300 flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-slate-500" />
@@ -275,7 +323,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Applications</h3>
                 <div className="space-y-2">
-                  {selectedCitizen.applications.map((app, i) => (
+                  {(selectedCitizen.applications || []).map((app: { id: string; service: string; status: string }, i: number) => (
                     <div key={i} className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg p-3">
                       <div>
                         <span className="text-xs text-slate-300 font-medium">{app.service}</span>
@@ -297,7 +345,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
               <div className="bg-slate-950 rounded-xl p-4 border border-slate-800">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Recent Activity</h3>
                 <ul className="space-y-3 text-sm">
-                  {selectedCitizen.recentActivity.map((activity, i) => (
+                  {(selectedCitizen.recentActivity || []).map((activity: string, i: number) => (
                     <li key={i} className="flex gap-3 text-slate-300">
                       {i === 0 ? <Activity className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> :
                        i === 1 ? <FileText className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" /> :

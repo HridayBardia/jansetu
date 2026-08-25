@@ -199,6 +199,8 @@ export default function DashboardPage() {
   const [masterRecord, setMasterRecord] = useState<any>(null);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [realNotifications, setRealNotifications] = useState<any[]>([]);
+  const [realDocuments, setRealDocuments] = useState<any[]>([]);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
@@ -232,6 +234,13 @@ export default function DashboardPage() {
         }
       });
       loadInteropData();
+      // Fetch real notifications and documents
+      fetchNotificationsAPI().then((data) => {
+        if (data) setRealNotifications(data);
+      });
+      fetchUserDocumentsAPI().then((data) => {
+        if (data) setRealDocuments(data);
+      });
     }
   }, [isAuthenticated]);
 
@@ -408,7 +417,7 @@ export default function DashboardPage() {
               className="p-1.5 bg-slate-900 border border-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition relative"
             >
               <Bell className="w-4.5 h-4.5" />
-              {mockAlerts.length > 0 && (
+              {realNotifications.filter((n: any) => !n.is_read).length > 0 && (
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border border-slate-950 animate-pulse" />
               )}
             </button>
@@ -417,19 +426,19 @@ export default function DashboardPage() {
               <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 z-50 space-y-3 text-xs">
                 <div className="flex items-center justify-between border-b border-slate-850 pb-2">
                   <span className="font-bold text-white uppercase tracking-wider">Notifications Center</span>
-                  <span className="text-[10px] text-slate-500">{mockAlerts.length} alerts</span>
+                  <span className="text-[10px] text-slate-500">{realNotifications.length} alerts</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-2">
-                  {mockAlerts.map((n) => (
+                  {realNotifications.slice(0, 10).map((n: any) => (
                     <div key={n.id} className="p-2 bg-slate-950 border border-slate-850 rounded-lg space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-300">{n.category}</span>
-                        <span className="text-[9px] text-slate-500">{n.timestamp}</span>
+                        <span className="font-bold text-slate-300">{n.category || 'Update'}</span>
+                        <span className="text-[9px] text-slate-500">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
                       </div>
-                      <p className="text-slate-400 text-[11px] leading-relaxed">{n.message}</p>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">{n.title}: {n.message}</p>
                     </div>
                   ))}
-                  {mockAlerts.length === 0 && (
+                  {realNotifications.length === 0 && (
                     <p className="text-slate-500 text-center py-4">No recent notifications.</p>
                   )}
                 </div>
@@ -489,7 +498,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-0.5">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Document Vault</span>
-            <span className="text-sm font-black text-white">{mockDocs.length} Verified Files</span>
+            <span className="text-sm font-black text-white">{realDocuments.length > 0 ? realDocuments.length : mockDocs.length} Verified Files</span>
           </div>
         </div>
 
@@ -555,9 +564,9 @@ export default function DashboardPage() {
         >
           <FileText className="w-4 h-4" />
           <span>Documents Vault</span>
-          {mockDocs.length > 0 && (
+          {(realDocuments.length > 0 ? realDocuments.length : mockDocs.length) > 0 && (
             <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {mockDocs.length}
+              {realDocuments.length > 0 ? realDocuments.length : mockDocs.length}
             </span>
           )}
         </button>

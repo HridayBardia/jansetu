@@ -90,7 +90,7 @@ export interface SystemAlert {
 }
 
 // API Helper wrapper
-async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T | null> {
+export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T | null> {
   try {
     const token = typeof window !== 'undefined' ? localStorage.getItem('citizen_token') : null;
     const headers: Record<string, string> = {

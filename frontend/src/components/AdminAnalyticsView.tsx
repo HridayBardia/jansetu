@@ -1,15 +1,48 @@
 'use client';
 
-import React from 'react';
-import { BarChart2, ShieldCheck, Clock, CheckCircle2, TrendingUp, BookOpen, Layers } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BarChart2, ShieldCheck, Clock, CheckCircle2, TrendingUp, BookOpen, Layers, RefreshCw } from 'lucide-react';
 import { AnalyticsSummary } from '@/types';
 import { ImpactDashboard } from './ImpactDashboard';
+import { apiFetch } from '@/lib/api';
 
 interface AdminAnalyticsViewProps {
-  analytics: AnalyticsSummary;
+  analytics?: AnalyticsSummary;
 }
 
-export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytics }) => {
+export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytics: propAnalytics }) => {
+  const [analytics, setAnalytics] = useState<AnalyticsSummary>(propAnalytics || {
+    total_journeys_started: 0,
+    prerequisites_auto_resolved: 0,
+    sources_indexed: 0,
+    time_saved_hours_per_citizen: 0,
+    avg_completion_rate: 0
+  });
+  const [loading, setLoading] = useState(!propAnalytics);
+
+  useEffect(() => {
+    fetchRealMetrics();
+  }, []);
+
+  const fetchRealMetrics = async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch<any>('/admin/real-metrics');
+      if (data) {
+        setAnalytics({
+          total_journeys_started: data.total_journeys_started || 0,
+          prerequisites_auto_resolved: data.prerequisites_auto_resolved || 0,
+          sources_indexed: data.sources_indexed || 0,
+          time_saved_hours_per_citizen: data.time_saved_hours_per_citizen || 0,
+          avg_completion_rate: data.total_journeys_started > 0 ? Math.round((data.completed_journeys / data.total_journeys_started) * 100) : 0
+        });
+      }
+    } catch (e) {
+      console.warn('[Admin] Failed to fetch real metrics:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -25,6 +58,14 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
             Quantifiable improvement over traditional government portal navigation
           </p>
         </div>
+        <button
+          onClick={fetchRealMetrics}
+          disabled={loading}
+          className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
       </div>
 
       {/* KPI Cards Grid */}

@@ -54,27 +54,7 @@ export default function AdminDashboardPage() {
           </header>
 
           {tab === 'official' || tab === 'overview' ? (
-            <AdminAnalyticsView 
-              analytics={user?.username === 'dishita' ? {
-                total_journeys_started: 4200,
-                prerequisites_auto_resolved: 15200,
-                sources_indexed: 54,
-                time_saved_hours_per_citizen: 9.5,
-                avg_completion_rate: 92
-              } : user?.username === 'jyoti' ? {
-                total_journeys_started: 10320,
-                prerequisites_auto_resolved: 26900,
-                sources_indexed: 100,
-                time_saved_hours_per_citizen: 14.2,
-                avg_completion_rate: 81
-              } : {
-                total_journeys_started: 14520,
-                prerequisites_auto_resolved: 42100,
-                sources_indexed: 154,
-                time_saved_hours_per_citizen: 12.5,
-                avg_completion_rate: 85
-              }} 
-            />
+            <AdminAnalyticsView />
           ) : null}
           {tab === 'citizens' && <AdminCitizensView adminUsername={user?.username || ''} />}
           {tab === 'applications' && <AdminApplicationsView adminUsername={user?.username || ''} />}

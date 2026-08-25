@@ -1,8 +1,26 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X, FileText, ChevronDown } from 'lucide-react';
-import { getApplicationsForAdmin, AdminApplication } from '@/lib/adminData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X, FileText, ChevronDown, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
+
+interface AdminApplicationData {
+  id: string;
+  citizenName: string;
+  citizenId: string;
+  service: string;
+  department: string;
+  status: string;
+  submittedDate: string;
+  lastUpdated: string;
+  nextAction: string;
+  location?: string;
+  sla?: string;
+  timeline: { title: string; description: string; timestamp: string; status: string }[];
+  required_actions: string[];
+  documents: { name: string; status: string }[];
+  workflow?: { step: string; status: string }[];
+}
 
 interface Props {
   adminUsername: string;
@@ -20,9 +38,26 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export const AdminApplicationsView = ({ adminUsername }: Props) => {
-  const applications = useMemo(() => getApplicationsForAdmin(adminUsername), [adminUsername]);
+  const [applications, setApplications] = useState<AdminApplicationData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const fetchApplications = async () => {
+    setLoading(true);
+    try {
+      const data = await apiFetch<AdminApplicationData[]>('/admin/real-applications');
+      if (data) setApplications(data);
+    } catch (e) {
+      console.warn('[Admin] Failed to fetch real applications:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
   const [filter, setFilter] = useState('All');
-  const [selectedApp, setSelectedApp] = useState<AdminApplication | null>(null);
+  const [selectedApp, setSelectedApp] = useState<AdminApplicationData | null>(null);
 
   const filteredApps = useMemo(() => {
     if (filter === 'All') return applications;
@@ -58,6 +93,14 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
             Track and manage citizen applications across departments.
           </p>
         </div>
+        <button
+          onClick={fetchApplications}
+          disabled={loading}
+          className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
       </div>
 
       {/* Stats Row */}
@@ -217,7 +260,7 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Workflow</h3>
                 <div className="relative border-l border-slate-800 ml-3 pl-6 space-y-4">
-                  {selectedApp.workflow.map((step, i) => (
+                  {(selectedApp.workflow || []).map((step: { step: string; status: string }, i: number) => (
                     <div key={i} className="relative">
                       <div className={`absolute -left-[31px] top-1 w-3 h-3 rounded-full border border-slate-900 ${
                         step.status === 'completed' ? 'bg-emerald-500' :

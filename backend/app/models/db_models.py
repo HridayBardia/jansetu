@@ -477,3 +477,38 @@ class ImpactMetricsDB(Base):
     processing_time_saved_hours = Column(Float, default=0.0)
     is_demo_data = Column(Boolean, default=True)
 
+class NotificationEventDB(Base):
+    __tablename__ = "notification_events"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    event_type = Column(String, nullable=False, index=True)
+    actor = Column(String, nullable=False)
+    entity_type = Column(String, nullable=False)
+    entity_id = Column(String, nullable=False)
+    payload = Column(JSON, default=dict)
+    target_user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    source = Column(String, default="system")
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class APIRegistryDB(Base):
+    __tablename__ = "api_registry"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, nullable=False)
+    category = Column(String, default="government")
+    official_url = Column(String, nullable=True)
+    status = Column(String, default="UNKNOWN")
+    country = Column(String, default="India")
+    requires_key = Column(Boolean, default=False)
+    last_checked = Column(DateTime, nullable=True)
+
+
+class APIHealthLogDB(Base):
+    __tablename__ = "api_health_logs"
+    id = Column(String, primary_key=True, default=generate_uuid)
+    api_id = Column(String, ForeignKey("api_registry.id"), nullable=False, index=True)
+    status = Column(String, nullable=False)
+    http_status = Column(Integer, default=0)
+    response_time_ms = Column(Integer, default=0)
+    error_message = Column(String, nullable=True)
+    checked_at = Column(DateTime, default=datetime.utcnow, index=True)
+
