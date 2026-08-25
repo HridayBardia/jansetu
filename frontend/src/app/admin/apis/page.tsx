@@ -12,6 +12,7 @@ import {
   Activity,
   Play
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 interface APIRecord {
   id: string;
@@ -34,15 +35,12 @@ export default function AdminAPIRegistry() {
   const fetchApis = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/admin/apis", {
-        headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setApis(data.data);
+      const data = await apiFetch<APIRecord[]>('/admin/apis');
+      if (data) {
+        setApis(data);
       }
     } catch (e) {
-      console.error(e);
+      console.error('[AdminAPIs] Failed to fetch APIs:', e);
     }
     setLoading(false);
   };
@@ -54,27 +52,20 @@ export default function AdminAPIRegistry() {
   const triggerDiscovery = async () => {
     setDiscovering(true);
     try {
-      await fetch("http://localhost:8000/api/v1/admin/apis/discover", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
-      });
-      alert("API Discovery started in the background. It will scrape github and test endpoints.");
+      await apiFetch('/admin/apis/discover', { method: 'POST' });
       setTimeout(fetchApis, 5000);
     } catch (e) {
-      console.error(e);
+      console.error('[AdminAPIs] Discovery failed:', e);
     }
     setDiscovering(false);
   };
 
   const testApi = async (id: string) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/admin/apis/${id}/test`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${localStorage.getItem('token')}` }
-      });
+      await apiFetch(`/admin/apis/${id}/test`, { method: 'POST' });
       fetchApis();
     } catch (e) {
-      console.error(e);
+      console.error('[AdminAPIs] Test failed:', e);
     }
   };
 

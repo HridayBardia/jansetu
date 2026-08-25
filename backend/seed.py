@@ -9,7 +9,9 @@ from app.core.database import engine, Base, SessionLocal
 from app.models.db_models import (
     UserDB, JourneyDB, JourneyStepDB, StepDependencyDB,
     GovernmentSourceDB, UserDocumentDB, UserConsentDB, SystemAlertDB, SchemeDB,
-    WorkflowTemplateDB, WorkflowTemplateStepDB
+    WorkflowTemplateDB, WorkflowTemplateStepDB,
+    ApplicationDB, NotificationDB, AuditLogDB, ConnectorHealthDB,
+    ConsentRecordDB, DataConflictDB, CitizenProfileDB
 )
 from app.services.dependency_engine import DependencyEngine
 from seed_interop import seed_interop_data
@@ -17,7 +19,7 @@ from seed_interop import seed_interop_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
 
-def seed_database(drop_tables: bool = True):
+def seed_database(drop_tables: bool = False):
     logger.info("Initializing database schema...")
     if drop_tables:
         Base.metadata.drop_all(bind=engine)
@@ -32,12 +34,21 @@ def seed_database(drop_tables: bool = True):
         from app.core.security import hash_pin
 
         for key, info in DEMO_CITIZENS.items():
+            existing = db.query(UserDB).filter(UserDB.id == info["user_id"]).first()
+            if existing:
+                existing.pin_hash = hash_pin("123456")
+                existing.role = info.get("role", "citizen")
+                db.commit()
+                # Seed vault if empty
+                DemoVaultService.seed_user_vault(db, existing)
+                continue
+
             user = UserDB(
                 id=info["user_id"],
                 username=key,
                 pin_hash=hash_pin("123456"),
                 full_name=info["full_name"],
-                mobile_number=info["mobile_number"],
+                mobile_number=info.get("mobile_number"),
                 email=info.get("email"),
                 role=info.get("role", "citizen")
             )
@@ -1117,6 +1128,246 @@ def seed_database(drop_tables: bool = True):
         logger.info("Starting Interoperability Seeding...")
         seed_interop_data(db)
 
+        # =====================================================================
+        # SEED APPLICATIONS
+        # =====================================================================
+        logger.info("Seeding Application Records...")
+        from datetime import timedelta
+        now = datetime.utcnow()
+
+        # Skip if already seeded
+        existing_app_count = db.query(ApplicationDB).count()
+        if existing_app_count > 0:
+            logger.info(f"{existing_app_count} applications already seeded. Skipping.")
+        else:
+          applications_data = [
+            ApplicationDB(
+                application_id="APP-2026-001",
+                user_id="user_hriday_bardia",
+                service_id="svc_revenue_cert",
+                department_id="dept_revenue",
+                department_name="Industries Commissionerate, Gujarat",
+                service_name="Business Registration",
+                status="UNDER_VERIFICATION",
+                universal_status="VERIFICATION",
+                sla_target_hours=48,
+                submitted_at=now - timedelta(days=2),
+                documents=[{"name": "PAN Card", "status": "verified"}, {"name": "Aadhaar Card", "status": "verified"}, {"name": "Address Proof", "status": "verified"}, {"name": "Business Proof", "status": "pending"}],
+                timeline=[
+                    {"title": "Application Created", "description": "Business registration form submitted.", "timestamp": (now - timedelta(days=2)).isoformat(), "status": "SUBMITTED"},
+                    {"title": "Documents Received", "description": "PAN, Aadhaar, and address proof received.", "timestamp": (now - timedelta(days=1)).isoformat(), "status": "DOCUMENTS_RECEIVED"},
+                    {"title": "Verification Initiated", "description": "Identity and address checks via Interop Gateway.", "timestamp": (now - timedelta(hours=3)).isoformat(), "status": "UNDER_VERIFICATION"}
+                ],
+                required_actions=["Verify business documents"]
+            ),
+            ApplicationDB(
+                application_id="APP-2026-002",
+                user_id="user_hriday_bardia",
+                service_id="svc_msme_support",
+                department_id="dept_msme",
+                department_name="Ministry of MSME",
+                service_name="Government Business Support",
+                status="DOCUMENTS_REQUIRED",
+                universal_status="ACTION_REQUIRED",
+                sla_target_hours=72,
+                submitted_at=now - timedelta(days=3),
+                documents=[{"name": "PAN Card", "status": "verified"}, {"name": "Aadhaar Card", "status": "verified"}, {"name": "Income Certificate", "status": "required"}, {"name": "Business Plan", "status": "required"}],
+                timeline=[
+                    {"title": "Application Created", "description": "Government business support scheme application submitted.", "timestamp": (now - timedelta(days=3)).isoformat(), "status": "SUBMITTED"},
+                    {"title": "Documents Required", "description": "Income certificate and business plan needed.", "timestamp": (now - timedelta(hours=8)).isoformat(), "status": "DOCUMENTS_REQUIRED"}
+                ],
+                required_actions=["Upload income / business documents"]
+            ),
+            ApplicationDB(
+                application_id="APP-2026-003",
+                user_id="user_varad_kanade",
+                service_id="svc_edu_scholarship",
+                department_id="dept_education",
+                department_name="Ministry of Education",
+                service_name="Higher Education Assistance",
+                status="UNDER_REVIEW",
+                universal_status="VERIFICATION",
+                sla_target_hours=96,
+                submitted_at=now - timedelta(days=5),
+                documents=[{"name": "Aadhaar Card", "status": "verified"}, {"name": "10th Marksheet", "status": "verified"}, {"name": "12th Marksheet", "status": "verified"}, {"name": "Degree Certificate", "status": "verified"}, {"name": "English Proficiency Test", "status": "pending"}],
+                timeline=[
+                    {"title": "Application Created", "description": "Higher education assistance application submitted.", "timestamp": (now - timedelta(days=5)).isoformat(), "status": "SUBMITTED"},
+                    {"title": "Documents Verified", "description": "Academic records verified via DigiLocker.", "timestamp": (now - timedelta(days=3)).isoformat(), "status": "DOCUMENTS_VERIFIED"},
+                    {"title": "Under Review", "description": "Eligibility review in progress.", "timestamp": (now - timedelta(hours=6)).isoformat(), "status": "UNDER_REVIEW"}
+                ],
+                required_actions=["Verify education documents"]
+            ),
+            ApplicationDB(
+                application_id="APP-2026-004",
+                user_id="user_satwik_guru",
+                service_id="svc_revenue_cert",
+                department_id="dept_revenue_ka",
+                department_name="Kaveri Online Services, Karnataka",
+                service_name="Property Registration",
+                status="SUBMITTED",
+                universal_status="SUBMITTED",
+                sla_target_hours=72,
+                submitted_at=now - timedelta(days=1),
+                documents=[{"name": "Aadhaar Card", "status": "verified"}, {"name": "PAN Card", "status": "verified"}, {"name": "Sale Agreement", "status": "pending"}, {"name": "Title Deed", "status": "pending"}],
+                timeline=[
+                    {"title": "Application Created", "description": "Property registration application submitted.", "timestamp": (now - timedelta(days=1)).isoformat(), "status": "SUBMITTED"}
+                ],
+                required_actions=["Document verification"]
+            ),
+            ApplicationDB(
+                application_id="APP-2026-005",
+                user_id="user_satwik_guru",
+                service_id="svc_residence",
+                department_id="dept_revenue_ka",
+                department_name="Revenue Department, Karnataka",
+                service_name="Property-related Government Service",
+                status="ACTION_REQUIRED",
+                universal_status="ACTION_REQUIRED",
+                sla_target_hours=72,
+                submitted_at=now - timedelta(days=4),
+                documents=[{"name": "Aadhaar Card", "status": "verified"}, {"name": "Property Tax Receipt", "status": "required"}],
+                timeline=[
+                    {"title": "Application Created", "description": "Property-related government service application.", "timestamp": (now - timedelta(days=4)).isoformat(), "status": "SUBMITTED"},
+                    {"title": "Action Required", "description": "Property tax receipt needed.", "timestamp": (now - timedelta(hours=12)).isoformat(), "status": "ACTION_REQUIRED"}
+                ],
+                required_actions=["Upload property document"]
+            ),
+            ApplicationDB(
+                application_id="APP-2026-006",
+                user_id="user_ayuh_chauhan",
+                service_id="svc_edu_scholarship",
+                department_id="dept_education_rj",
+                department_name="Industries Department, Rajasthan",
+                service_name="Business Support Scheme",
+                status="DOCUMENTS_REQUIRED",
+                universal_status="ACTION_REQUIRED",
+                sla_target_hours=72,
+                submitted_at=now - timedelta(days=7),
+                documents=[{"name": "Aadhaar Card", "status": "verified"}, {"name": "PAN Card", "status": "verified"}, {"name": "Income Certificate", "status": "required"}, {"name": "Caste Certificate", "status": "required"}],
+                timeline=[
+                    {"title": "Application Created", "description": "Business support scheme application submitted.", "timestamp": (now - timedelta(days=7)).isoformat(), "status": "SUBMITTED"},
+                    {"title": "Documents Required", "description": "Income certificate and caste certificate needed.", "timestamp": (now - timedelta(hours=18)).isoformat(), "status": "DOCUMENTS_REQUIRED"}
+                ],
+                required_actions=["Upload required documents"]
+            ),
+        ]
+          for app_record in applications_data:
+              db.add(app_record)
+          db.commit()
+          logger.info(f"Seeded {len(applications_data)} application records!")
+
+        # =====================================================================
+        # SEED NOTIFICATIONS
+        # =====================================================================
+        logger.info("Seeding Notifications...")
+        existing_notif_count = db.query(NotificationDB).count()
+        if existing_notif_count > 0:
+            logger.info(f"{existing_notif_count} notifications already seeded. Skipping.")
+        else:
+          notifications_data = [
+            NotificationDB(user_id="user_hriday_bardia", title="Application Under Verification", message="Your application APP-2026-001 for Business Registration is now under verification.", category="application_update"),
+            NotificationDB(user_id="user_hriday_bardia", title="Documents Required", message="Your application APP-2026-002 requires Income Certificate and Business Plan.", category="application_update"),
+            NotificationDB(user_id="user_varad_kanade", title="Application Under Review", message="Your Higher Education Assistance application is being reviewed by the department.", category="application_update"),
+            NotificationDB(user_id="user_satwik_guru", title="Application Submitted", message="Your Property Registration application has been submitted successfully.", category="application_update"),
+            NotificationDB(user_id="user_satwik_guru", title="Action Required", message="Please upload your Property Tax Receipt for application APP-2026-005.", category="application_update"),
+            NotificationDB(user_id="user_ayuh_chauhan", title="Documents Needed", message="Please upload Income Certificate and Caste Certificate for your Business Support Scheme application.", category="application_update"),
+            NotificationDB(user_id="user_hriday_bardia", title="New Scheme Alert", message="PM SVANidhi street vendor loan scheme is now available. Check your eligibility.", category="scheme_alert", is_read=True),
+            NotificationDB(user_id="user_varad_kanade", title="Scholarship Update", message="NSP scholarship application window opens next month. Prepare your documents.", category="scheme_alert", is_read=True),
+        ]
+          for n in notifications_data:
+              db.add(n)
+          db.commit()
+          logger.info(f"Seeded {len(notifications_data)} notifications!")
+
+        # =====================================================================
+        # SEED AUDIT LOGS
+        # =====================================================================
+        logger.info("Seeding Audit Logs...")
+        existing_audit_count = db.query(AuditLogDB).count()
+        if existing_audit_count > 0:
+            logger.info(f"{existing_audit_count} audit logs already seeded. Skipping.")
+        else:
+          audit_logs_data = [
+            AuditLogDB(actor="user_hriday_bardia", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_hriday_bardia", action="API_REQUEST", resource="Identity Service (UIDAI) -> VerifyIdentity", status="SUCCESS"),
+            AuditLogDB(actor="user_hriday_bardia", action="API_REQUEST", resource="State Property Registry -> VerifyAddress", status="SUCCESS"),
+            AuditLogDB(actor="user_hriday_bardia", action="DOCUMENT_UPLOAD", resource="Aadhaar Card uploaded", status="SUCCESS"),
+            AuditLogDB(actor="user_hriday_bardia", action="JOURNEY_CREATED", resource="Business Journey in Gujarat", status="SUCCESS"),
+            AuditLogDB(actor="user_varad_kanade", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_varad_kanade", action="API_REQUEST", resource="Pune Municipal Corporation -> CreateApplication", status="SUCCESS"),
+            AuditLogDB(actor="user_varad_kanade", action="DOCUMENT_UPLOAD", resource="Marksheets uploaded via DigiLocker", status="SUCCESS"),
+            AuditLogDB(actor="user_satwik_guru", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_satwik_guru", action="APPLICATION_SUBMITTED", resource="Property Registration", status="SUCCESS"),
+            AuditLogDB(actor="user_ayuh_chauhan", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_system_admin", action="ADMIN_LOGIN", resource="Admin Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_system_admin", action="ADMIN_ACCESS", resource="System Diagnostics", status="SUCCESS"),
+            AuditLogDB(actor="user_jyoti_admin", action="ADMIN_LOGIN", resource="Admin Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_jyoti_admin", action="ADMIN_APPLICATION_STATUS_CHANGE", resource="Application: APP-2026-001, Status: UNDER_VERIFICATION", status="SUCCESS"),
+            AuditLogDB(actor="system_gateway", action="API_REQUEST", resource="ServiceRegistry seeded", status="SUCCESS"),
+        ]
+          for log in audit_logs_data:
+              db.add(log)
+          db.commit()
+          logger.info(f"Seeded {len(audit_logs_data)} audit logs!")
+
+        # =====================================================================
+        # SEED CONNECTOR HEALTH
+        # =====================================================================
+        logger.info("Seeding Connector Health Records...")
+        existing_ch_count = db.query(ConnectorHealthDB).count()
+        if existing_ch_count > 0:
+            logger.info(f"{existing_ch_count} connector health records already seeded. Skipping.")
+        else:
+          connector_health_data = [
+            ConnectorHealthDB(service_name="Identity Service (UIDAI)", connector_type="REST", health_status="Healthy", request_count=1250, failure_count=3, latency_ms=45),
+            ConnectorHealthDB(service_name="DigiLocker Document Gateway", connector_type="REST", health_status="Healthy", request_count=890, failure_count=1, latency_ms=120),
+            ConnectorHealthDB(service_name="State Scholarship Portal", connector_type="SOAP", health_status="Degraded", request_count=340, failure_count=28, latency_ms=450),
+            ConnectorHealthDB(service_name="Pune Municipal Corporation", connector_type="REST", health_status="Healthy", request_count=560, failure_count=5, latency_ms=200),
+            ConnectorHealthDB(service_name="Karnataka Revenue Department", connector_type="REST", health_status="Healthy", request_count=720, failure_count=2, latency_ms=180),
+            ConnectorHealthDB(service_name="GSTN Portal", connector_type="REST", health_status="Healthy", request_count=1100, failure_count=4, latency_ms=112),
+        ]
+          for ch in connector_health_data:
+              db.add(ch)
+          db.commit()
+          logger.info(f"Seeded {len(connector_health_data)} connector health records!")
+
+        # =====================================================================
+        # SEED CONSENT RECORDS
+        # =====================================================================
+        logger.info("Seeding Consent Records...")
+        existing_consent_count = db.query(ConsentRecordDB).count()
+        if existing_consent_count > 0:
+            logger.info(f"{existing_consent_count} consent records already seeded. Skipping.")
+        else:
+          consent_data = [
+            ConsentRecordDB(consent_id="consent_hriday_uidai", user_id="user_hriday_bardia", department_id="uidai", department_name="UIDAI (Aadhaar)", purpose="Identity Verification", requested_fields=["full_name", "date_of_birth", "gender", "address"], granted=True, granted_at=now, access_type="ALWAYS"),
+            ConsentRecordDB(consent_id="consent_hriday_muncipal", user_id="user_hriday_bardia", department_id="pmc", department_name="Pune Municipal Corporation", purpose="Trade Licensing Verification", requested_fields=["address", "pincode"], granted=True, granted_at=now, access_type="ONCE"),
+            ConsentRecordDB(consent_id="consent_varad_edu", user_id="user_varad_kanade", department_id="edu", department_name="Ministry of Education", purpose="Scholarship Verification", requested_fields=["full_name", "date_of_birth", "education_records"], granted=True, granted_at=now, access_type="ALWAYS"),
+            ConsentRecordDB(consent_id="consent_satwik_rev", user_id="user_satwik_guru", department_id="rev_ka", department_name="Karnataka Revenue Department", purpose="Property Registration", requested_fields=["full_name", "address", "property_details"], granted=True, granted_at=now, access_type="ONCE"),
+        ]
+          for c in consent_data:
+              db.add(c)
+          db.commit()
+          logger.info(f"Seeded {len(consent_data)} consent records!")
+
+        # =====================================================================
+        # SEED DATA CONFLICTS
+        # =====================================================================
+        logger.info("Seeding Data Conflicts...")
+        existing_dc_count = db.query(DataConflictDB).count()
+        if existing_dc_count > 0:
+            logger.info(f"{existing_dc_count} data conflicts already seeded. Skipping.")
+        else:
+          conflict_data = [
+            DataConflictDB(user_id="user_hriday_bardia", field_name="date_of_birth", source_a="Aadhaar ID Registry", value_a="2001-08-15", source_b="PAN Database", value_b="2001-08-16", status="RESOLVED", resolved_value="2001-08-15"),
+            DataConflictDB(user_id="user_varad_kanade", field_name="address", source_a="Aadhaar ID Registry", value_a="12, Kothrud, Pune", source_b="Income Tax Portal", value_b="12, Kothrud Main Road, Pune", status="DETECTED"),
+            DataConflictDB(user_id="user_satwik_guru", field_name="annual_income", source_a="Income Certificate", value_a="280000", source_b="Bank Statement", value_b="310000", status="DETECTED"),
+        ]
+          for dc in conflict_data:
+              db.add(dc)
+          db.commit()
+          logger.info(f"Seeded {len(conflict_data)} data conflicts!")
+
         logger.info("Database seeding completed successfully!")
     finally:
         db.close()
@@ -1124,10 +1375,13 @@ def seed_database(drop_tables: bool = True):
 def seed_baseline_if_empty():
     db = SessionLocal()
     try:
-        if db.query(SchemeDB).count() > 0:
-            logger.info("Database already seeded with schemes. Skipping auto-seed.")
+        user_count = db.query(UserDB).count()
+        scheme_count = db.query(SchemeDB).count()
+        app_count = db.query(ApplicationDB).count()
+        if user_count > 0 and scheme_count > 0 and app_count > 0:
+            logger.info(f"Database already seeded ({user_count} users, {scheme_count} schemes, {app_count} apps). Skipping auto-seed.")
             return
-        logger.info("Database schemes table is empty. Running baseline seed...")
+        logger.info(f"Database partially seeded (users={user_count}, schemes={scheme_count}, apps={app_count}). Running baseline seed...")
         seed_database(drop_tables=False)
     except Exception as e:
         logger.error(f"Error during baseline check/seed: {e}")
