@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.database import engine, Base, get_db
 from app.core.websocket import ws_manager
 from app.api.v1.router import api_v1_router
+from app.translation.routes import translation_router
 
 # Schema migrations
 def upgrade_service_registry_table():
@@ -116,6 +117,34 @@ app = FastAPI(
     version=settings.VERSION
 )
 
+# --- Translation Engine Startup ---
+@app.on_event("startup")
+def startup_translation_engine():
+    """
+    Load the IndicTrans2 translation model on server startup.
+    The model is loaded once and kept in memory for all requests.
+    If loading fails, the system operates in DEGRADED mode.
+    """
+    import os
+    skip_model = os.getenv("TRANSLATION_SKIP_MODEL", "").lower() in ("1", "true", "yes")
+    if skip_model:
+        print("[TRANSLATION] Model loading skipped (TRANSLATION_SKIP_MODEL=true)")
+        return
+
+    try:
+        from app.translation.model_manager import model_manager
+        print("[TRANSLATION] Loading IndicTrans2 model...")
+        success = model_manager.load_model()
+        if success:
+            print(f"[TRANSLATION] Engine: READY | Model: {model_manager.model_id} | Device: {model_manager.device}")
+        else:
+            print(f"[TRANSLATION] Engine: DEGRADED | Model unavailable | Reason: {model_manager._load_error}")
+            print("[TRANSLATION] System will use pretranslated dictionaries and cache fallback.")
+    except Exception as e:
+        print(f"[TRANSLATION] Engine startup error: {e}")
+        print("[TRANSLATION] Operating in DEGRADED mode.")
+
+
 # Enable CORS for local Next.js frontend and production domains
 app.add_middleware(
     CORSMiddleware,
@@ -166,6 +195,14 @@ def root():
 @app.get("/health")
 @app.get("/api/v1/health")
 def health(db: Session = Depends(get_db)):
+    # Include translation engine status in health check
+    translation_status = "unknown"
+    try:
+        from app.translation.model_manager import model_manager
+        translation_status = model_manager.status.value
+    except Exception:
+        translation_status = "unavailable"
+
     return {
         "status": "healthy",
         "service": settings.PROJECT_NAME,
@@ -173,6 +210,7 @@ def health(db: Session = Depends(get_db)):
         "database": "connected",
         "auth": "username_pin",
         "ai_provider": settings.AI_PROVIDER,
+        "translation_engine": translation_status,
         "websocket_active_rooms": len(ws_manager.active_connections)
     }
 
@@ -197,6 +235,9 @@ def readiness(db: Session = Depends(get_db)):
 
 # Mount versioned API router
 app.include_router(api_v1_router)
+
+# Mount translation router
+app.include_router(translation_router)
 
 # Real-time WebSocket Endpoints
 @app.websocket("/ws/journeys/{journey_id}")

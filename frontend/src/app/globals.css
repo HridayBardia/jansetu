@@ -1,8 +1,58 @@
+/* Noto Sans multi-script fonts for all 23 Indic languages */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Noto+Sans+Oriya:wght@400;500;600;700&family=Noto+Sans+Ol&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Noto+Sans+Meetei+Mayek:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @layer base {
   body {
     @apply bg-slate-950 text-slate-100 font-sans antialiased min-h-screen selection:bg-amber-500 selection:text-slate-950;
+    font-family: 'Noto Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Multi-script font support */
+  :lang(hi), :lang(mr), :lang(ne), :lang(sa), :lang(gom), :lang(brx), :lang(doi), :lang(mai), :lang(ks) {
+    font-family: 'Noto Sans Devanagari', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(bn), :lang(as), :lang(mni) {
+    font-family: 'Noto Sans Bengali', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(ta) {
+    font-family: 'Noto Sans Tamil', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(te) {
+    font-family: 'Noto Sans Telugu', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(kn) {
+    font-family: 'Noto Sans Kannada', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(ml) {
+    font-family: 'Noto Sans Malayalam', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(gu) {
+    font-family: 'Noto Sans Gujarati', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(pa) {
+    font-family: 'Noto Sans Gurmukhi', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(or) {
+    font-family: 'Noto Sans Oriya', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(sat) {
+    font-family: 'Noto Sans Ol', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  :lang(ur), :lang(sd) {
+    font-family: 'Noto Sans Arabic', 'Noto Sans', system-ui, sans-serif;
+    direction: rtl;
+    text-align: right;
   }
 }
 

@@ -731,3 +731,80 @@ export async function fetchMasterDataRecordAPI(): Promise<any | null> {
 export async function fetchCitizensAPI(): Promise<any[] | null> {
   return await apiFetch<any[]>(`/admin/citizens`);
 }
+
+// ─── Translation API Helpers ─────────────────────────────────────────
+
+export async function translateTextAPI(
+  text: string,
+  targetLanguage: string,
+  sourceLanguage: string = 'auto',
+  category: string = 'dynamic'
+): Promise<any> {
+  return await apiFetch<any>('/translation/translate', {
+    method: 'POST',
+    body: JSON.stringify({
+      text,
+      source_language: sourceLanguage,
+      target_language: targetLanguage,
+      category,
+    }),
+  });
+}
+
+export async function translateBatchAPI(
+  items: { text: string; source_language?: string; target_language: string }[],
+  globalTarget?: string
+): Promise<any> {
+  return await apiFetch<any>('/translation/translate/batch', {
+    method: 'POST',
+    body: JSON.stringify({
+      items: items.map(i => ({
+        text: i.text,
+        source_language: i.source_language || 'auto',
+        target_language: i.target_language,
+      })),
+      target_language: globalTarget,
+    }),
+  });
+}
+
+export async function detectLanguageAPI(
+  text: string,
+  fallbackLanguage: string = 'en'
+): Promise<any> {
+  return await apiFetch<any>('/translation/detect', {
+    method: 'POST',
+    body: JSON.stringify({ text, fallback_language: fallbackLanguage }),
+  });
+}
+
+export async function translateStructuredAPI(
+  data: Record<string, any>,
+  targetLanguage: string,
+  sourceLanguage: string = 'auto'
+): Promise<any> {
+  return await apiFetch<any>('/translation/translate/structured', {
+    method: 'POST',
+    body: JSON.stringify({
+      data,
+      target_language: targetLanguage,
+      source_language: sourceLanguage,
+    }),
+  });
+}
+
+export async function fetchTranslationHealthAPI(): Promise<any> {
+  return await apiFetch<any>('/translation/health');
+}
+
+export async function fetchTranslationLanguagesAPI(): Promise<any> {
+  return await apiFetch<any>('/translation/languages');
+}
+
+export async function fetchTranslationCacheStatsAPI(): Promise<any> {
+  return await apiFetch<any>('/translation/cache/stats');
+}
+
+export async function clearTranslationCacheAPI(): Promise<any> {
+  return await apiFetch<any>('/translation/cache/clear', { method: 'POST' });
+}

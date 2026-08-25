@@ -110,6 +110,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <title>AI Citizen Journey Engine | Government Made Simpler</title>
           <meta name="description" content="AI-powered Citizen Journey Engine — navigate Indian government services with personalized workflows and secure access." />
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         </head>
         <body className="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
           <CinematicIntro onComplete={() => {
@@ -119,27 +121,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </body>
       </html>
     );
-  }
-
-  return (
-    <html lang="en" className="dark">
-      <head>
-        <title>AI Citizen Journey Engine | Government Made Simpler</title>
-        <meta name="description" content="AI-powered Citizen Journey Engine — navigate Indian government services with personalized workflows and secure access." />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-      </head>
-      <body className="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
-        <LanguageProvider>
-          <AuthProvider>
-            <MockDataProvider>
-              <AppContent sandboxMode={sandboxMode} setSandboxMode={setSandboxMode}>
-                {children}
-              </AppContent>
-            </MockDataProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </body>
-    </html>
+  }      return (
+      <html lang="en" className="dark">
+        <head>
+          <title>AI Citizen Journey Engine | Government Made Simpler</title>
+          <meta name="description" content="AI-powered Citizen Journey Engine — navigate Indian government services with personalized workflows and secure access." />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        </head>
+        <body className="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
+          <LanguageProvider>
+            <AuthProvider>
+              <MockDataProvider>
+                <AppContent sandboxMode={sandboxMode} setSandboxMode={setSandboxMode}>
+                  {children}
+                </AppContent>
+              </MockDataProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </body>
+      </html>
   );
 }
 

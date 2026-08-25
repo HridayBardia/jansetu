@@ -43,4 +43,11 @@ class Settings(BaseModel):
     LOGIN_MAX_ATTEMPTS: int = 5               # Max failed login attempts per window
     LOGIN_WINDOW_SECONDS: int = 300           # 5-minute rolling window
 
+    # Translation Engine
+    INDICTRANS_MODEL_ID: str = os.getenv("INDICTRANS_MODEL_ID", "ai4bharat/indictrans2-indic-indic-dist-320M")
+    TRANSLATION_DEVICE: str = os.getenv("TRANSLATION_DEVICE", "auto")
+    TRANSLATION_CACHE_TTL: int = int(os.getenv("TRANSLATION_CACHE_TTL", "86400"))
+    TRANSLATION_MAX_INPUT_LENGTH: int = int(os.getenv("TRANSLATION_MAX_INPUT_LENGTH", "10000"))
+    TRANSLATION_SKIP_MODEL: bool = os.getenv("TRANSLATION_SKIP_MODEL", "").lower() in ("1", "true", "yes")
+
 settings = Settings()
