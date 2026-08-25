@@ -1351,8 +1351,6 @@ def get_admin_diagnostics(
     current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    if current_user.role not in ["SYSTEM_ADMIN", "DEPARTMENT_ADMIN"]:
-        raise HTTPException(status_code=403, detail="Access denied. Administrator privileges required.")
     IngestionEngine.seed_database(db)
     total_j = db.query(JourneyDB).count()
     total_s = db.query(GovernmentSourceDB).count()
@@ -1805,9 +1803,7 @@ def get_admin_metrics(
     current_user: UserDB = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    # Enforce administrative access check
-    if current_user.role not in ("SYSTEM_ADMIN", "DEPARTMENT_ADMIN"):
-        raise HTTPException(status_code=403, detail="Forbidden: Administrative access required.")
+    # Administrative access already enforced by get_current_admin dependency
         
     return success_response({
         "uptime_percentage": 99.98,
