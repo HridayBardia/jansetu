@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { fetchAdminDiagnosticsAPI, fetchSourcesAPI, triggerIngestionAPI, fetchSourceHealthAPI } from '@/lib/api';
 import { BarChart2, Database, Cpu, Radio, BookOpen, RefreshCw, ShieldCheck, MapPin } from 'lucide-react';
 
 export default function AdminPage() {
+  const { t } = useLanguage();
   const [diag, setDiag] = useState<any>(null);
   const [sources, setSources] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
@@ -34,10 +36,10 @@ export default function AdminPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <BarChart2 className="w-5 h-5 text-amber-400" />
-            <h1 className="text-2xl font-black text-white">System Admin & Data Health Dashboard</h1>
+            <h1 className="text-2xl font-black text-white">{t("admin.title")}</h1>
           </div>
           <p className="text-xs text-slate-400">
-            Real-time telemetry, automated ingestion status, scheme expiration controls, and source health.
+            {t("admin.titleDescription")}
           </p>
         </div>
 
@@ -47,7 +49,7 @@ export default function AdminPage() {
           className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs shadow-lg shadow-amber-500/20 disabled:opacity-50 transition shrink-0"
         >
           <RefreshCw className={`w-4 h-4 ${isIngesting ? 'animate-spin' : ''}`} />
-          <span>{isIngesting ? 'Ingesting Sources...' : 'Trigger Ingestion Worker'}</span>
+          <span>{isIngesting ? t('admin.ingestingSources') : t('admin.triggerIngestion')}</span>
         </button>
       </div>
 
@@ -86,7 +88,7 @@ export default function AdminPage() {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-amber-400" />
-          <span>Indexed Government Knowledge Sources</span>
+          <span>{t("admin.indexedGovSources")}</span>
         </h3>
 
         <div className="space-y-3">

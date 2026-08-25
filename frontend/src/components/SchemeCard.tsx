@@ -70,7 +70,7 @@ export const SchemeCard: React.FC<{ scheme: SchemeProps }> = ({ scheme }) => {
         {/* Benefits Highlights */}
         {scheme.benefits && Object.keys(scheme.benefits).length > 0 && (
           <div className="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800/80 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Benefits:</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{t('schemes.benefits')}</span>
             <div className="text-xs font-medium text-amber-300 flex items-center gap-1.5 flex-wrap">
               {Object.entries(scheme.benefits).map(([key, val]) => (
                 <span key={key} className="inline-flex items-center gap-1 bg-slate-900 px-2 py-0.5 rounded text-[11px] border border-slate-800">

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { ShieldCheck, CheckCircle2, AlertCircle, HelpCircle, Info } from 'lucide-react';
 import { Journey } from '@/types';
 
@@ -9,6 +10,7 @@ interface EligibilityBreakdownProps {
 }
 
 export const EligibilityBreakdown: React.FC<EligibilityBreakdownProps> = ({ journey }) => {
+  const { t } = useLanguage();
   const isBusiness = journey.life_event === 'business_formation';
 
   return (
@@ -37,7 +39,7 @@ export const EligibilityBreakdown: React.FC<EligibilityBreakdownProps> = ({ jour
         <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
           <h4 className="font-bold text-slate-100 text-sm flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Criteria Evaluated</span>
+            <span>{t("workflow.criteriaEvaluated")}</span>
           </h4>
           <ul className="space-y-1.5 pl-6 list-disc text-slate-300">
             <li><strong>State Jurisdiction:</strong> {journey.location || "India"} Resident Status</li>
@@ -59,7 +61,7 @@ export const EligibilityBreakdown: React.FC<EligibilityBreakdownProps> = ({ jour
         <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
           <h4 className="font-bold text-amber-300 text-sm flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-400" />
-            <span>Matching Government Schemes</span>
+            <span>{t("workflow.matchingSchemes")}</span>
           </h4>
           {isBusiness ? (
             <div className="space-y-2">
@@ -90,7 +92,7 @@ export const EligibilityBreakdown: React.FC<EligibilityBreakdownProps> = ({ jour
         <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <span>
-            <strong>Legal Note:</strong> You appear eligible based on the information provided. Final eligibility and disbursement decisions are determined solely by the relevant government authority through official procedures.
+            <strong>{t("workflow.legalNote")}</strong> You appear eligible based on the information provided. Final eligibility and disbursement decisions are determined solely by the relevant government authority through official procedures.
           </span>
         </div>
       </div>

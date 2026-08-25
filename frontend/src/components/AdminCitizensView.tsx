@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Users, Search, Activity, Briefcase, AlertCircle, FileText, CheckCircle2, ChevronRight, UserCircle, X, Shield, MapPin, Clock, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface AdminCitizenData {
   id: string;
@@ -31,6 +32,7 @@ interface Props {
 
 export const AdminCitizensView = ({ adminUsername }: Props) => {
   const [citizens, setCitizens] = useState<AdminCitizenData[]>([]);
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { ShieldCheck, Lock, Trash2, Key, History, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ConsentRecord, AuditLogEntry } from '@/types';
 
@@ -15,6 +16,7 @@ export const PrivacyCenter: React.FC<PrivacyCenterProps> = ({
   auditLogs,
   onRevokeConsent
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'consents' | 'audit'>('consents');
 
   return (
@@ -23,7 +25,7 @@ export const PrivacyCenter: React.FC<PrivacyCenterProps> = ({
         <div>
           <h1 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-emerald-400" />
-            <span>Citizen Privacy & Consent Center</span>
+            <span>{t("consent.dashboard")}</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             &ldquo;Don&apos;t own the data; orchestrate authorized access to it.&rdquo; You maintain full control over all data permissions and access trails.
@@ -72,7 +74,7 @@ export const PrivacyCenter: React.FC<PrivacyCenterProps> = ({
                       <CheckCircle2 className="w-3.5 h-3.5" /> Active Permission
                     </span>
                   ) : (
-                    <span className="text-xs font-bold text-rose-400">Revoked</span>
+                    <span className="text-xs font-bold text-rose-400">{t("consent.accessRevoked")}</span>
                   )}
                 </div>
 
@@ -87,7 +89,7 @@ export const PrivacyCenter: React.FC<PrivacyCenterProps> = ({
                     className="w-full py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Revoke Access Instantly</span>
+                    <span>{t("consent.revokeInstantly")}</span>
                   </button>
                 </div>
               )}
@@ -102,9 +104,9 @@ export const PrivacyCenter: React.FC<PrivacyCenterProps> = ({
           <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
               <History className="w-4 h-4 text-amber-400" />
-              <span>Immutable Data Access Audit Trail</span>
+              <span>{t("dataQuality.auditTrail")}</span>
             </h3>
-            <span className="text-xs text-slate-400 font-mono">256-bit Encrypted Logs</span>
+            <span className="text-xs text-slate-400 font-mono">{t("dataQuality.encryptedLogs")}</span>
           </div>
 
           <div className="divide-y divide-slate-800/80 text-xs">

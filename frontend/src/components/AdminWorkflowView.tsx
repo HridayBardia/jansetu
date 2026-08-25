@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { GitMerge, Settings, Play, Database, Shield, FileCheck, Plus, Trash2, ArrowUp, ArrowDown, Save, X, CheckCircle2, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
 import { getWorkflowsForAdmin, AdminWorkflow } from '@/lib/adminData';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   adminUsername: string;
@@ -17,6 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 export const AdminWorkflowView = ({ adminUsername }: Props) => {
   const workflows = useMemo(() => getWorkflowsForAdmin(adminUsername), [adminUsername]);
   const [selectedWf, setSelectedWf] = useState<AdminWorkflow | null>(workflows[0] || null);
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [editSteps, setEditSteps] = useState<any[]>([]);
 

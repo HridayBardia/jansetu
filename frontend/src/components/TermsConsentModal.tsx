@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { X, FileText, CheckCircle2, Shield, AlertTriangle } from 'lucide-react';
 
 // ============================================================
@@ -163,7 +164,7 @@ You should always verify critical information directly with the relevant governm
 
 ### 12. Consent
 
-By clicking "I Agree & Continue," you confirm that you have read, understood, and agree to these Terms & Conditions and Privacy & Data Consent. You acknowledge that JANSETU is an assistance platform and not an official government system. You consent to the processing of the information you provide for the purposes described above.
+By clicking "{t('auth.agreeAndContinue')}," you confirm that you have read, understood, and agree to these Terms & Conditions and Privacy & Data Consent. You acknowledge that JANSETU is an assistance platform and not an official government system. You consent to the processing of the information you provide for the purposes described above.
 
 You may withdraw your consent at any time by logging out or contacting the platform administrators. Withdrawal of consent may limit your ability to use certain platform features.
 `;
@@ -328,6 +329,7 @@ interface TermsConsentModalProps {
 // TERMS CONSENT MODAL COMPONENT
 // ============================================================
 const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, onAccept, role }) => {
+  const { t } = useLanguage();
   const [hasReachedBottom, setHasReachedBottom] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [showReachedEnd, setShowReachedEnd] = useState(false);
@@ -557,7 +559,7 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
             >
               <span style={{ fontSize: '14px' }}>↓</span>
               <span style={{ color: '#60a5fa', fontSize: '13px', fontWeight: 500 }}>
-                Please scroll to the bottom to continue
+                {t('auth.scrollToContinue')}
               </span>
             </div>
           ) : (
@@ -575,7 +577,7 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
             >
               <CheckCircle2 size={14} color="#22c55e" />
               <span style={{ color: '#22c55e', fontSize: '13px', fontWeight: 500 }}>
-                You have reached the end of the Terms & Conditions.
+                {t('auth.reachedEnd')}
               </span>
             </div>
           )}
@@ -587,7 +589,7 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
             disabled={!hasReachedBottom}
             aria-checked={consentChecked}
             role="checkbox"
-            aria-label="I have read and agree to the Terms & Conditions"
+            aria-label="{t('auth.readAndAgree')}"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -643,7 +645,7 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
                 userSelect: 'none',
               }}
             >
-              I have read and agree to the Terms & Conditions
+              {t('auth.readAndAgree')}
             </span>
           </button>
 

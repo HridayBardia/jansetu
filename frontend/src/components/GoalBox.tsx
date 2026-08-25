@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Sparkles, Mic, ArrowRight, Loader2, Volume2, ShieldAlert } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface GoalBoxProps {
   onAnalyzeGoal: (input: string) => void;
@@ -10,6 +11,7 @@ interface GoalBoxProps {
 
 export const GoalBox: React.FC<GoalBoxProps> = ({ onAnalyzeGoal, isLoading }) => {
   const [input, setInput] = useState('');
+  const { t } = useLanguage();
   const [isRecording, setIsRecording] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {

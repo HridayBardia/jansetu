@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { HelpCircle, CheckCircle2, X } from 'lucide-react';
 import { GoalAnalysisResponse } from '@/types';
 
@@ -15,6 +16,7 @@ export const ClarificationModal: React.FC<ClarificationModalProps> = ({
   onSelectOption,
   onClose
 }) => {
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
@@ -59,7 +61,7 @@ export const ClarificationModal: React.FC<ClarificationModalProps> = ({
         </div>
 
         <p className="text-[11px] text-slate-500 mt-4 text-center">
-          Privacy Note: We collect only information required for government eligibility reasoning.
+          {t("clarification.privacyNote")}
         </p>
       </div>
     </div>

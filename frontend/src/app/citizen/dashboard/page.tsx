@@ -458,7 +458,7 @@ export default function DashboardPage() {
             onClick={() => logoutAPI().then(() => router.push('/login'))} 
             className="hover:text-amber-500 transition font-bold"
           >
-            Sign Out
+            {t("navigation.signOut")}
           </button>
         </div>
       </div>
@@ -876,27 +876,27 @@ export default function DashboardPage() {
             <div className="space-y-4 pt-2 border-t border-slate-800">
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 1 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 1 ? '✓' : '●'} Understanding your request
+                  {generationStage >= 1 ? '✓' : '●'} {t("goalPlanner.understandingRequest")}
                 </span>
-                <span className="text-[10px] text-slate-500 font-medium">Done</span>
+                <span className="text-[10px] text-slate-500 font-medium">{t("common.done")}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 2 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
                   {generationStage >= 2 ? '✓' : '●'} {t('goalPlanner.identifyingLocation')}
                 </span>
-                <span className="text-[10px] text-slate-500 font-medium">Done</span>
+                <span className="text-[10px] text-slate-500 font-medium">{t("common.done")}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 3 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
                   {generationStage >= 3 ? '✓' : '●'} {t('goalPlanner.findingServices')}
                 </span>
-                <span className="text-[10px] text-slate-500 font-medium">Done</span>
+                <span className="text-[10px] text-slate-500 font-medium">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className={generationStage >= 4 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
                   {generationStage >= 4 ? '✓' : '●'} {t('goalPlanner.checkingEligibility')}
                 </span>
-                <span className="text-[10px] text-slate-500 font-medium">Ready</span>
+                <span className="text-[10px] text-slate-500 font-medium">{t('common.ready')}</span>
               </div>
             </div>
           </div>
@@ -1026,14 +1026,14 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <span className="text-2xl font-black text-amber-500 font-mono">03</span>
           <div className="border-l border-slate-800 pl-3">
-            <h2 className="text-base font-bold text-white uppercase tracking-wider">APPLICATIONS</h2>
-            <p className="text-xs text-slate-400">Track your applications</p>
+            <h2 className="text-base font-bold text-white uppercase tracking-wider">{t("navigation.applications")}</h2>
+            <p className="text-xs text-slate-400">{t("applications.trackApplications")}</p>
           </div>
         </div>
 
         {mockApplications.length === 0 ? (
           <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
-            No active applications found. Use the Goal Planner to start a journey.
+            {t("applications.noApplications")} {t("applications.useGoalPlanner")}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1061,7 +1061,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
                   <span>Submitted: {app.submittedDate}</span>
                   <span className="text-amber-400 font-bold flex items-center gap-1">
-                    Track <ArrowRight className="w-3 h-3" />
+                    {t("journeys.trackWorkflow")} <ArrowRight className="w-3 h-3" />
                   </span>
                 </div>
               </div>
@@ -1176,25 +1176,25 @@ export default function DashboardPage() {
           {/* Applications Stats Bar */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Applications</span>
-              <span className="text-lg font-black text-white">{mockApplications.length} Registered</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("applications.totalApplications")}</span>
+              <span className="text-lg font-black text-white">{mockApplications.length} {t("common.registered")}</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Active Verification</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("applications.activeVerification")}</span>
               <span className="text-lg font-black text-amber-400">
-                {mockApplications.filter(a => ['VERIFICATION', 'SUBMITTED', 'ACTION_REQUIRED'].includes(a.status)).length} Pending
+                {mockApplications.filter(a => ['VERIFICATION', 'SUBMITTED', 'ACTION_REQUIRED'].includes(a.status)).length} {t("common.pending_label")}
               </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completed</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("common.completed")}</span>
               <span className="text-lg font-black text-emerald-400">
-                {mockApplications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length} Issued
+                {mockApplications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length} {t("common.issued")}
               </span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Action Required</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("applications.actionRequired")}</span>
               <span className="text-lg font-black text-red-400 animate-pulse">
-                {mockApplications.filter(a => a.status === 'ACTION_REQUIRED').length} Alert
+                {mockApplications.filter(a => a.status === 'ACTION_REQUIRED').length} {t("common.alert_label")}
               </span>
             </div>
           </div>
@@ -1204,10 +1204,10 @@ export default function DashboardPage() {
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-amber-400" />
-                  <span>Unified Government Application Tracking</span>
+                  <span>{t("applications.unifiedTracking")}</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Track and manage registrations across multiple departments from a single authenticated citizen window.
+                  {t("applications.trackDescription")}
                 </p>
               </div>
               <button
@@ -1221,7 +1221,7 @@ export default function DashboardPage() {
 
             {mockApplications.length === 0 ? (
               <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
-                No active applications found. Use the Goal Planner to start a journey.
+                {t("applications.noApplications")} {t("applications.useGoalPlanner")}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1251,7 +1251,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
                       <span>Submitted: {app.submittedDate}</span>
                       <span className="text-amber-400 font-bold hover:underline flex items-center gap-1">
-                        View Details <ArrowRight className="w-3 h-3" />
+                        {t("common.viewDetails")} <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
                   </div>
@@ -1273,14 +1273,14 @@ export default function DashboardPage() {
                     onClick={() => setSelectedApp(null)}
                     className="text-slate-400 hover:text-white text-sm font-bold bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg transition"
                   >
-                    Close
+                    {t("common.close")}
                   </button>
                 </div>
 
                 <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto text-xs">
                   {/* Timeline Progress */}
                   <div className="space-y-3">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Application Timeline</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">{t("applications.timeline")}</span>
                     <div className="relative border-l border-slate-800 ml-1.5 pl-4 space-y-4 py-1">
                       <div className="relative">
                         <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
@@ -1396,15 +1396,15 @@ export default function DashboardPage() {
           {/* Consent stats bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Active Consents</span>
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{t("consent.activeConsentsLabel")}</span>
               <span className="text-lg font-black text-emerald-400">{mockConsents.filter(c => c.status === 'ACTIVE').length}</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Pending Requests</span>
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{t("consent.pendingRequests")}</span>
               <span className="text-lg font-black text-amber-400">{mockConsents.filter(c => c.status === 'PENDING').length}</span>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Revoked Accounts</span>
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{t("consent.revokedAccounts")}</span>
               <span className="text-lg font-black text-slate-500">{mockConsents.filter(c => c.status === 'REVOKED').length}</span>
             </div>
           </div>
@@ -1413,10 +1413,10 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Key className="w-5 h-5 text-amber-400" />
-                <span>Consent-Based Data Sharing Dashboard</span>
+                <span>{t("consent.dashboard")}</span>
               </h2>
               <p className="text-xs text-slate-400">
-                You control privacy. Authorize, restrict, or revoke access to your verified e-KYC documents dynamically.
+                {t("consent.dashboardDesc")}
               </p>
             </div>
 
@@ -1497,7 +1497,7 @@ export default function DashboardPage() {
             <div className="divide-y divide-slate-800/80 text-xs max-h-64 overflow-y-auto">
               {auditLogs.length === 0 ? (
                 <div className="p-6 text-center text-slate-500">
-                  <p>No audit events yet. Consent actions will be logged here.</p>
+                  <p>{t("dataQuality.noAuditEvents")}</p>
                 </div>
               ) : auditLogs.map((log: any) => (
                 <div key={log.id} className="p-4 hover:bg-slate-800/40 transition flex items-start justify-between gap-4">
@@ -1525,13 +1525,13 @@ export default function DashboardPage() {
                 <div className="bg-slate-950 p-5 border-b border-slate-800 flex justify-between items-center">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <Key className="w-4 h-4 text-amber-400" />
-                    <span>Consent Details Sheet</span>
+                    <span>{t("consent.consentDetails")}</span>
                   </h3>
                   <button 
                     onClick={() => setSelectedConsent(null)}
                     className="text-slate-400 hover:text-white text-xs bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg transition"
                   >
-                    Close
+                    {t("common.close")}
                   </button>
                 </div>
 
@@ -1609,7 +1609,7 @@ export default function DashboardPage() {
               </div>
               
               <h1 className="text-3xl font-extrabold text-white mb-4">
-                Government Interop Hub
+                {t("interop.title")}
               </h1>
               
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 text-left w-full max-w-xl mx-auto my-6 space-y-4 shadow-inner">
@@ -1619,12 +1619,12 @@ export default function DashboardPage() {
                 <div className="h-px w-full bg-slate-800/50 my-4" />
                 <p className="text-emerald-400 font-bold text-lg flex items-center justify-center gap-2">
                   <CheckCircle2 className="w-6 h-6" />
-                  Because of JanSetu, you didn't have to fill out 45 form fields.
+                  {t("interop.noFormFields")}
                 </p>
               </div>
               
               <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-                JanSetu securely routes your authorized information behind the scenes, so you only provide your details once.
+                {t("interop.secureRouting")}
               </p>
             </div>
           </div>
@@ -1642,24 +1642,24 @@ export default function DashboardPage() {
                 <div>
                   <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
                     <ShieldCheck className="w-8 h-8 text-emerald-400" />
-                    Your Information Across Government
+                    {t("dataQuality.title")}
                   </h1>
                   <p className="text-sm text-slate-400 mt-2 max-w-xl">
-                    JanSetu automatically ensures your records are consistent across all departments, preventing delays in your applications.
+                    {t("dataQuality.description")}
                   </p>
                 </div>
                 <div className="text-right hidden sm:block">
                   <div className="text-3xl font-black text-emerald-400 flex items-center justify-end gap-2">
-                    <CheckCircle2 className="w-6 h-6" /> 100% Match
+                    <CheckCircle2 className="w-6 h-6" /> {t("dataQuality.match")}
                   </div>
-                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Data Consistency</div>
+                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t("dataQuality.consistency")}</div>
                 </div>
               </div>
               
               <div className="grid gap-6">
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <UserCircle className="w-5 h-5 text-blue-400" /> Verified Name
+                    <UserCircle className="w-5 h-5 text-blue-400" /> {t("dataQuality.verifiedName")}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
@@ -1679,7 +1679,7 @@ export default function DashboardPage() {
 
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-amber-400" /> Registered Address
+                    <MapPin className="w-5 h-5 text-amber-400" /> {t("dataQuality.registeredAddress")}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
@@ -1699,7 +1699,7 @@ export default function DashboardPage() {
               
               <div className="flex justify-center pt-4">
                  <p className="text-xs text-slate-500 flex items-center gap-2">
-                   <ShieldCheck className="w-4 h-4 text-slate-400" /> Your information is securely vaulted and never shared without your explicit consent.
+                   <ShieldCheck className="w-4 h-4 text-slate-400" /> {t("dataQuality.secureVaulted")}
                  </p>
               </div>
             </div>
@@ -1713,10 +1713,10 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-amber-400" />
-                <span>Your Active Workflows & Journeys</span>
+                <span>{t("journeys.yourWorkflows")}</span>
               </h2>
               <p className="text-xs text-slate-400">
-                Monitor status, check prerequisite dependencies, and execute step-by-step onboarding sequences.
+                {t("journeys.monitorStatus")}
               </p>
             </div>
             
@@ -1755,7 +1755,7 @@ export default function DashboardPage() {
                       onClick={() => router.push(`/journeys/${j.id}`)}
                       className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition shadow self-start sm:self-center"
                     >
-                      <span>Track Workflow</span>
+                      <span>{t("journeys.trackWorkflow")}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1777,7 +1777,7 @@ export default function DashboardPage() {
                       onClick={() => router.push(`/journeys/${j.id}`)}
                       className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition shadow self-start sm:self-center"
                     >
-                      <span>Track Workflow</span>
+                      <span>{t("journeys.trackWorkflow")}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -1861,7 +1861,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Bell className="w-5 h-5 text-amber-400" />
-                <span>System Policy & Regulatory Updates</span>
+                <span>{t("dashboard.alertsEvents")}</span>
               </h2>
               <p className="text-xs text-slate-400">
                 Official regulatory policy triggers automatically mapped to your location and profile.

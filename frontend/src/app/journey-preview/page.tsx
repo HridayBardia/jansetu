@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import { FileText, Compass, CheckCircle2, AlertTriangle, ArrowLeft } from 'lucide-react';
 
@@ -30,6 +31,7 @@ const testJourney = {
 };
 
 export default function JourneyPreviewPage() {
+  const { t } = useLanguage();
   const [journey, setJourney] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +52,7 @@ export default function JourneyPreviewPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#020205] text-white flex flex-col items-center justify-center p-4">
-        <p className="text-slate-400 text-sm">Loading journey preview...</p>
+        <p className="text-slate-400 text-sm">{t("loading.loading")}</p>
       </div>
     );
   }
@@ -106,9 +108,9 @@ export default function JourneyPreviewPage() {
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-amber-500 transition-colors mb-3 group"
           >
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-            Back to Dashboard
+            {t("common.back")}
           </Link>
-          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">JANSETU PREVIEW ROUTE</span>
+          <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">{t("journeyPreview.previewRoute")}</span>
         </div>
 
         {/* Header */}
@@ -119,16 +121,16 @@ export default function JourneyPreviewPage() {
           </h1>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
             <span className="bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
-              🏡 Domicile: <strong className="text-white font-bold">{domicileState}</strong>
+              🏡 {t("journeyPreview.domicile")} <strong className="text-white font-bold">{domicileState}</strong>
             </span>
             {targetCity && (
               <span className="bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
-                📍 Location: <strong className="text-white font-bold">{targetCity}{targetState ? `, ${targetState}` : ''}</strong>
+                📍 {t("journeyPreview.location")} <strong className="text-white font-bold">{targetCity}{targetState ? `, ${targetState}` : ''}</strong>
               </span>
             )}
             {targetCountry && !targetCity && (
               <span className="bg-slate-950 border border-slate-800 px-3 py-1 rounded-full text-slate-300">
-                ✈️ Destination: <strong className="text-white font-bold">{targetCountry}</strong>
+                ✈️ {t("journeyPreview.destination")} <strong className="text-white font-bold">{targetCountry}</strong>
               </span>
             )}
           </div>
@@ -137,13 +139,13 @@ export default function JourneyPreviewPage() {
         {isPuneFoodBiz && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
             <div>
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">GOAL UNDERSTOOD</span>
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">{t("journeyPreview.goalUnderstood")}</span>
               <h2 className="text-lg font-bold text-white mt-1">Start a small food business in Pune, Maharashtra</h2>
             </div>
 
             {/* Identified Services */}
             <div className="space-y-3">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">IDENTIFIED SERVICES</span>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">{t("journeyPreview.identifiedServices")}</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                 <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 flex items-center justify-between">
                   <span className="text-slate-300">Identity verification</span>
@@ -170,7 +172,7 @@ export default function JourneyPreviewPage() {
 
             {/* YOUR JOURNEY */}
             <div className="space-y-4 pt-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">YOUR JOURNEY</span>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">{t("journeyPreview.yourJourney")}</span>
               <div className="relative border-l border-slate-800 ml-3 pl-6 space-y-6 text-xs">
                 
                 {/* Step 1 */}
@@ -179,7 +181,7 @@ export default function JourneyPreviewPage() {
                   <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-bold text-white text-sm">1. Verify identity</h4>
-                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">COMPLETED</span>
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">{t("journeyPreview.completed")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
                       <p><strong>Service:</strong> Identity Service (Aadhaar API)</p>
@@ -200,7 +202,7 @@ export default function JourneyPreviewPage() {
                   <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-bold text-white text-sm">2. Verify address</h4>
-                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">COMPLETED</span>
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">{t("journeyPreview.completed")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
                       <p><strong>Service:</strong> Address Verification Service</p>
@@ -221,7 +223,7 @@ export default function JourneyPreviewPage() {
                   <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-bold text-white text-sm">3. Register business</h4>
-                      <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-bold">UNDER VERIFICATION</span>
+                      <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-bold">{t("journeyPreview.underVerification")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
                       <p><strong>Service:</strong> Business Registration (Single Window)</p>
@@ -242,7 +244,7 @@ export default function JourneyPreviewPage() {
                   <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-bold text-white text-sm">4. Complete applicable licensing</h4>
-                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded text-[10px] font-bold">ACTION REQUIRED</span>
+                      <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded text-[10px] font-bold">{t("journeyPreview.actionRequired")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
                       <p><strong>Service:</strong> Trade License / Food Safety</p>
@@ -263,7 +265,7 @@ export default function JourneyPreviewPage() {
                   <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-bold text-white text-sm">5. Submit required applications</h4>
-                      <span className="bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">PENDING</span>
+                      <span className="bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">{t("journeyPreview.pending")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
                       <p><strong>Service:</strong> Interoperability Registry Submission</p>
@@ -284,7 +286,7 @@ export default function JourneyPreviewPage() {
                   <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <h4 className="font-bold text-white text-sm">6. Track all applications</h4>
-                      <span className="bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">PENDING</span>
+                      <span className="bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded text-[10px] font-bold">{t("journeyPreview.pending")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
                       <p><strong>Service:</strong> Unified tracking console</p>
@@ -308,16 +310,16 @@ export default function JourneyPreviewPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
           <h2 className="text-sm font-bold text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
             <CheckCircle2 className="w-4 h-4" />
-            <span>01 — Verified Documents</span>
+            <span>{t("documents.verifiedDocuments")}</span>
           </h2>
           <div className="space-y-2">
             {rawHave.length === 0 ? (
-              <p className="text-slate-500 text-xs italic">No verified documents available in this configuration.</p>
+              <p className="text-slate-500 text-xs italic">{t("documents.noVerifiedDocuments")}</p>
             ) : (
               rawHave.map((doc: any, idx: number) => (
                 <div key={idx} className="bg-slate-950 border border-slate-800/80 rounded-lg p-3 flex items-center justify-between text-xs">
                   <span className="font-semibold text-white">✓ {doc.name || doc.title}</span>
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Verified</span>
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">{t("documents.issuerVerified")}</span>
                 </div>
               ))
             )}
@@ -328,11 +330,11 @@ export default function JourneyPreviewPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
           <h2 className="text-sm font-bold text-amber-500 flex items-center gap-2 uppercase tracking-wider">
             <AlertTriangle className="w-4 h-4" />
-            <span>02 — Documents You Need</span>
+            <span>{t("documents.youNeed")}</span>
           </h2>
           <div className="space-y-2">
             {rawNeed.length === 0 ? (
-              <p className="text-slate-500 text-xs italic">All required documents verified in vault.</p>
+              <p className="text-slate-500 text-xs italic">{t("documents.allRequiredVerified")}</p>
             ) : (
               rawNeed.map((doc: any, idx: number) => (
                 <div key={idx} className="bg-slate-950 border border-slate-800/80 rounded-lg p-3 flex flex-col gap-1 text-xs">
@@ -348,11 +350,11 @@ export default function JourneyPreviewPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl">
           <h2 className="text-sm font-bold text-cyan-400 flex items-center gap-2 uppercase tracking-wider">
             <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-            <span>03 — Relevant Government Support / Scholarships</span>
+            <span>{t("journeyPreview.relevantGovSupport")}</span>
           </h2>
           
           {schemesList.length === 0 ? (
-            <p className="text-slate-500 text-xs italic">Government support matches will appear here.</p>
+            <p className="text-slate-500 text-xs italic">{t("journeyPreview.supportMatchesAppear")}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {schemesList.map((scheme: any, idx: number) => (

@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Briefcase, Filter, CheckCircle2, Clock, AlertTriangle, ArrowRight, X, FileText, ChevronDown, RefreshCw, AlertCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface AdminApplicationData {
   id: string;
@@ -39,6 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export const AdminApplicationsView = ({ adminUsername }: Props) => {
   const [applications, setApplications] = useState<AdminApplicationData[]>([]);
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

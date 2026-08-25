@@ -5,12 +5,14 @@ import { BarChart2, ShieldCheck, Clock, CheckCircle2, TrendingUp, BookOpen, Laye
 import { AnalyticsSummary } from '@/types';
 import { ImpactDashboard } from './ImpactDashboard';
 import { apiFetch } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface AdminAnalyticsViewProps {
   analytics?: AnalyticsSummary;
 }
 
 export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytics: propAnalytics }) => {
+  const { t } = useLanguage();
   const [analytics, setAnalytics] = useState<AnalyticsSummary>(propAnalytics || {
     total_journeys_started: 0,
     prerequisites_auto_resolved: 0,

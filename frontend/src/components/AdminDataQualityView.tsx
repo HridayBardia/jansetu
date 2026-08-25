@@ -11,6 +11,7 @@ import {
 } from '@/lib/api';
 import { EntityMatchReview } from './EntityMatchReview';
 import { calculateDataQuality } from '@/lib/adminData';
+import { useLanguage } from '@/context/LanguageContext';
 
 const SERVICE_IDS = ['srv_mca', 'srv_uidai', 'srv_kar_municipal'];
 
@@ -20,6 +21,7 @@ interface Props {
 
 export const AdminDataQualityView = ({ adminUsername }: Props) => {
   const [conflicts, setConflicts] = useState<any[]>([]);
+  const { t } = useLanguage();
   const [health, setHealth] = useState<any>({});
   const [simulating, setSimulating] = useState<string | null>(null);
   const [loadingConflicts, setLoadingConflicts] = useState(true);

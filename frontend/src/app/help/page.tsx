@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { HelpCircle, ShieldCheck, Sparkles, FileText, Compass, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HelpPage() {
+  const { t } = useLanguage();
   const faqs = [
     {
       q: "How is Citizen Journey Engine different from DigiLocker or UMANG?",
@@ -30,10 +32,10 @@ export default function HelpPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
             <HelpCircle className="w-6 h-6 text-amber-400" />
-            <span>Help & Grounded Information</span>
+            <span>{t("help.title")}</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Understanding the Citizen Journey Engine architecture and legal transparency guardrails
+            {t("help.subtitle")}
           </p>
         </div>
       </div>
@@ -54,15 +56,15 @@ export default function HelpPage() {
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="space-y-1">
-          <h3 className="text-base font-bold text-slate-100">Ready to start your citizen journey?</h3>
-          <p className="text-xs text-slate-400">Tell us what you want to accomplish in natural language.</p>
+          <h3 className="text-base font-bold text-slate-100">{t("help.readyToStart")}</h3>
+          <p className="text-xs text-slate-400">{t("help.tellUsGoal")}</p>
         </div>
         <Link
           href="/"
           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-extrabold text-xs hover:brightness-110 transition flex items-center gap-1.5 shadow-lg shadow-amber-500/20"
         >
           <Compass className="w-4 h-4 text-slate-950" />
-          <span>Start a Journey</span>
+          <span>{t("help.startJourney")}</span>
         </Link>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Radio, Database, Shield, Server, ArrowRight, Activity, ArrowRightLeft, ArrowDownCircle, Network } from 'lucide-react';
 import { ExceptionCenter } from './ExceptionCenter';
+import { useLanguage } from '@/context/LanguageContext';
 
 const mockNodes = [
   {
@@ -69,6 +70,7 @@ const mockNodes = [
 
 export const AdminInteropView = () => {
   const [selectedNode, setSelectedNode] = useState<any>(null);
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'topology' | 'registry' | 'exceptions'>('topology');
 
   return (

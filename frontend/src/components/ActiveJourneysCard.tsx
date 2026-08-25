@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import { Journey } from '@/types';
 import { MapPin, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -10,6 +11,7 @@ interface ActiveJourneysCardProps {
 }
 
 export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys }) => {
+  const { t } = useLanguage();
   if (!journeys || journeys.length === 0) return null;
 
   return (
@@ -17,10 +19,10 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-amber-400" />
-          <span>Your Active Journeys</span>
+          <span>{t("journeys.activeJourneys")}</span>
         </h2>
         <span className="text-xs text-slate-400 font-medium">
-          {journeys.length} Journey{journeys.length > 1 ? 's' : ''} in progress
+          {journeys.length} {t("journeys.journeysInProgress")}
         </span>
       </div>
 
@@ -75,7 +77,7 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
                   <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/80 mb-4 text-xs">
                     <div className="flex items-center gap-1.5 text-amber-400 font-semibold mb-1">
                       <AlertCircle className="w-3.5 h-3.5" />
-                      <span>Current Step:</span>
+                      <span>{t("journeys.currentStep")}</span>
                     </div>
                     <p className="text-slate-200 font-medium">
                       {activeStep.title}
@@ -88,7 +90,7 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
                 href={`/journeys/${jrn.id}`}
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition flex items-center justify-center gap-2 group border border-slate-700"
               >
-                <span>View Full Journey Workflow</span>
+                <span>{t("journeys.viewFullWorkflow")}</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition text-amber-400" />
               </Link>
             </div>
