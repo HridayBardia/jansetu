@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 // Import all available locale files
 import en from '../locales/en.json';
@@ -80,24 +80,38 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 /**
- * Resolve a dot-notation key from a flat JSON object.
- * e.g., "goalPlanner.understandGoal" → en["goalPlanner.understandGoal"]
- * Falls back to English if key not found in current language.
+ * Resolve a translation key with fallback chain:
+ * 1. Try exact key in current language (dot-notation: "goalPlanner.understandGoal")
+ * 2. Try last segment of dot-notation key in current language ("understandGoal")
+ * 3. Try exact key in English
+ * 4. Try last segment in English
+ * 5. Return fallback or the key itself
  */
-function resolveKey(dict: Record<string, string>, key: string, enDict: Record<string, string>, fallback?: string): string {
-  // Try current language
-  if (dict[key]) return dict[key];
+function resolveKey(
+  currentDict: Record<string, string>,
+  key: string,
+  enDict: Record<string, string>,
+  fallback?: string
+): string {
+  // 1. Try exact key in current language
+  if (currentDict[key] !== undefined) return currentDict[key];
 
-  // Try English fallback
-  if (enDict[key]) return enDict[key];
+  // 2. Try last segment (flat key) in current language
+  const lastSegment = key.includes('.') ? key.split('.').pop()! : key;
+  if (lastSegment !== key && currentDict[lastSegment] !== undefined) return currentDict[lastSegment];
 
-  // Return fallback or the key itself
+  // 3. Try exact key in English
+  if (enDict[key] !== undefined) return enDict[key];
+
+  // 4. Try last segment in English
+  if (lastSegment !== key && enDict[lastSegment] !== undefined) return enDict[lastSegment];
+
+  // 5. Return fallback or the key itself
   return fallback || key;
 }
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<string>('en');
-  const [translationStatus, setTranslationStatus] = useState<'ready' | 'degraded' | 'unavailable'>('ready');
 
   useEffect(() => {
     // Restore saved language from localStorage
@@ -126,7 +140,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [language, isRTL]);
 
-  // Translation function: resolves dot-notation keys with English fallback
+  // Translation function with fallback chain
   const t = useCallback((key: string, fallback?: string): string => {
     const currentDict = LOCALES[language] || LOCALES['en'];
     const enDict = LOCALES['en'];
@@ -141,7 +155,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         t,
         isRTL,
         supportedLanguages: SUPPORTED_LANGUAGES_LIST,
-        translationStatus,
+        translationStatus: 'ready',
       }}
     >
       {children}
