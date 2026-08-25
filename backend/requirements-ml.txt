@@ -1,0 +1,14 @@
+# Optional: AI4Bharat IndicTrans2 Translation Model Dependencies
+# Install ONLY on dedicated translation microservice or GPU-enabled server.
+# NOT for Vercel deployment (Vercel cannot host ML models).
+#
+# Usage:
+#   pip install -r requirements-ml.txt
+#
+# This enables the full IndicTrans2 model for server-side translation.
+# Without these, the translation engine runs in DEGRADED mode
+# using pretranslated dictionaries and cache fallback.
+
+torch>=2.0.0
+transformers>=4.30.0
+sentencepiece>=0.1.99

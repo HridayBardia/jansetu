@@ -8,7 +8,3 @@ httpx>=0.24.0
 python-multipart>=0.0.6
 bcrypt>=4.0.0
 aiohttp>=3.8.0
-# Translation Engine (IndicTrans2)
-torch>=2.0.0
-transformers>=4.30.0
-sentencepiece>=0.1.99

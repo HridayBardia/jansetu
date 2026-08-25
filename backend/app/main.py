@@ -123,12 +123,26 @@ def startup_translation_engine():
     """
     Load the IndicTrans2 translation model on server startup.
     The model is loaded once and kept in memory for all requests.
-    If loading fails, the system operates in DEGRADED mode.
+    If loading fails or ML deps are missing, the system operates in DEGRADED mode.
     """
     import os
     skip_model = os.getenv("TRANSLATION_SKIP_MODEL", "").lower() in ("1", "true", "yes")
     if skip_model:
         print("[TRANSLATION] Model loading skipped (TRANSLATION_SKIP_MODEL=true)")
+        return
+
+    # Check if ML dependencies are available before attempting model load
+    try:
+        import torch
+        import transformers
+        ml_deps_available = True
+    except ImportError:
+        ml_deps_available = False
+
+    if not ml_deps_available:
+        print("[TRANSLATION] ML dependencies (torch/transformers) not installed.")
+        print("[TRANSLATION] Translation engine: DEGRADED | Using pretranslated dictionaries only.")
+        print("[TRANSLATION] To enable full model, install: pip install -r requirements-ml.txt")
         return
 
     try:
