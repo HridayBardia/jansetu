@@ -33,6 +33,7 @@ import {
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
+import { ConsentLedger } from '@/components/ConsentLedger';
 import { analyzeGoalUniversal } from '@/lib/goalClassifier';
 import { DocumentVault } from '@/components/DocumentVault';
 import { useLanguage } from '@/context/LanguageContext';
@@ -404,7 +405,12 @@ export default function DashboardPage() {
   const nationalSchemes = schemes.filter(s => s.level === 'CENTRAL' || s.level === 'NATIONAL');
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6">
+    <div className="relative min-h-screen bg-slate-950 font-sans">
+      {/* Dynamic Background Gradients */}
+      <div className="fixed top-0 right-0 w-full md:w-[600px] h-[600px] bg-gradient-to-bl from-amber-500/10 via-orange-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-0 w-full md:w-[600px] h-[600px] bg-gradient-to-tr from-blue-500/10 via-indigo-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+
+      <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6 relative z-10">
       {/* Brand Header */}
       <div className="flex items-center justify-between border-b border-slate-900 pb-5">
         <div className="flex items-center gap-2">
@@ -1409,81 +1415,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-400" />
-                <span>{t("consent.dashboard")}</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                {t("consent.dashboardDesc")}
-              </p>
-            </div>
-
-            {/* List of consents */}
-            <div className="space-y-4">
-              {mockConsents.map((c) => (
-                <div key={c.id} className="bg-slate-950 border border-slate-800/80 rounded-xl p-5 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div>
-                      <h4 className="font-bold text-white text-sm">{c.department}</h4>
-                      <p className="text-slate-400 mt-1">Purpose: {c.purpose}</p>
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Requested Fields: <span className="font-mono text-cyan-400 font-bold">{c.requestedFields.join(", ")}</span>
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        c.status === 'ACTIVE'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : c.status === 'REVOKED' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      }`}>
-                        {c.status === 'ACTIVE' ? 'Active Consent' : c.status === 'REVOKED' ? 'Access Revoked' : 'Pending Authorization'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2 justify-end border-t border-slate-900 pt-3">
-                    <button
-                      onClick={() => setSelectedConsent(c)}
-                      className="bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
-                    >
-                      View Details
-                    </button>
-                    {c.status === 'PENDING' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            createConsentAPI(c.id, c.department, c.requestedFields, c.purpose, "ALWAYS").then(() => loadInteropData());
-                          }}
-                          className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
-                        >
-                          Allow Always
-                        </button>
-                        <button
-                          onClick={() => {
-                            createConsentAPI(c.id, c.department, c.requestedFields, c.purpose, "ONCE").then(() => loadInteropData());
-                          }}
-                          className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] hover:from-amber-400 hover:to-orange-400 transition text-center min-h-[44px] sm:min-h-0"
-                        >
-                          Allow Once
-                        </button>
-                      </>
-                    )}
-                    {c.status === 'ACTIVE' && (
-                      <button
-                        onClick={() => revokeConsentAPI(c.id).then(() => loadInteropData())}
-                        className="text-red-400 hover:text-red-300 font-bold bg-red-500/5 sm:bg-transparent hover:bg-red-500/10 border border-red-500/10 sm:border-transparent hover:border-red-500/20 px-3 py-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] transition text-center min-h-[44px] sm:min-h-0"
-                      >
-                        Revoke Access
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+            <ConsentLedger 
+              consents={mockConsents} 
+              onRevoke={(id) => revokeConsentAPI(id).then(() => loadInteropData())} 
+            />
 
           {/* Audit Log Section */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
@@ -2066,7 +2001,6 @@ export default function DashboardPage() {
       )}
 
     </div>
-
+    </div>
   );
 }
-

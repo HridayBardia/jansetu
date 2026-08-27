@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Radio, Database, Shield, Server, ArrowRight, Activity, ArrowRightLeft, ArrowDownCircle, Network } from 'lucide-react';
 import { ExceptionCenter } from './ExceptionCenter';
+import { InteroperabilityDataFlow } from './InteroperabilityDataFlow';
 import { useLanguage } from '@/context/LanguageContext';
 
 const mockNodes = [
@@ -220,8 +221,12 @@ export const AdminInteropView = () => {
             </div>
           </div>
 
+          <div className="mt-8">
+            <InteroperabilityDataFlow />
+          </div>
+
           {/* Interactive Topology Diagram */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row relative mt-8">
             
             {/* Canvas Area */}
             <div className="flex-1 p-8 relative min-h-[400px] border-b md:border-b-0 md:border-r border-slate-800 flex items-center justify-center bg-[#05050a] overflow-x-auto">
