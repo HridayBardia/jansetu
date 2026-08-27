@@ -106,7 +106,7 @@ export function ConsentLedger({ consents, onRevoke }: { consents: any[], onRevok
                   <p className="text-sm text-slate-400 mt-1"><span className="text-slate-500">Purpose:</span> {entry.purpose}</p>
                   
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {entry.dataPoints.map((dp, i) => (
+                    {entry.dataPoints.map((dp: string, i: number) => (
                       <span key={i} className="flex items-center gap-1 text-[10px] bg-slate-900 border border-slate-800 text-slate-300 px-2 py-1 rounded">
                         <FileText className="w-3 h-3 text-amber-500" />
                         {dp}
