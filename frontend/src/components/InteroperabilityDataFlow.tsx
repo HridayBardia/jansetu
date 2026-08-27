@@ -115,7 +115,7 @@ export function InteroperabilityDataFlow() {
             <div
               key={node.id}
               className={`absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500 z-10 ${isActive ? 'scale-110' : 'scale-100'}`}
-              style={{ left: \`\${node.x}%\`, top: \`\${node.y}%\` }}
+              style={{ left: `${node.x}%`, top: `${node.y}%` }}
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center border backdrop-blur-md shadow-xl transition-colors duration-300 ${isActive ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 shadow-amber-500/20' : 'bg-slate-800/80 border-slate-700 text-slate-300'}`}>
                 <Icon className="w-6 h-6" />
