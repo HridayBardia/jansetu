@@ -1,0 +1,15 @@
+{
+  "name": "jansetu-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "cd backend && .venv\\Scripts\\python -m uvicorn app.main:app --port 8000 --host 127.0.0.1",
+    "build": "npm --prefix frontend run build",
+    "check:cloud": "npm --prefix frontend run check:cloud",
+    "test:supabase": "npm --prefix frontend run test:supabase",
+    "test:incognito": "npm --prefix frontend run test:incognito",
+    "test:isolation": "npx tsx frontend/src/tests/verify_realtime_isolation.js",
+    "test:session": "npx tsx frontend/src/tests/verify_session_break.js"
+  }
+}

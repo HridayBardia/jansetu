@@ -4,6 +4,13 @@ import React, { createContext, useContext, useState, useEffect, useMemo, ReactNo
 import { supabase } from '@/lib/supabaseClient';
 import { isCitizenMatching } from '@/lib/vaultDetection';
 import { eventBus } from '@/utils/eventBus';
+import {
+  toSupabaseApplication, fromSupabaseApplication,
+  toSupabaseJourney, fromSupabaseJourney,
+  toSupabaseConsent, fromSupabaseConsent,
+  toSupabaseNotification, fromSupabaseNotification,
+  toSupabaseDocRequest, fromSupabaseDocRequest
+} from '@/lib/supabaseMapper';
 
 export interface ApplicationRecord {
   id: string;
@@ -591,44 +598,57 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     const client = supabase;
     if (!client) return;
 
-    // 1. Initial Baseline Fetch (Supabase Cloud PostgreSQL)
+    // 1. Initial Baseline Fetch (Supabase Cloud PostgreSQL) with column mapping
     const fetchSupabaseBaseline = async () => {
       try {
-        const [appRes, jrnRes, cstRes, notifRes] = await Promise.allSettled([
+        const [appRes, jrnRes, cstRes, notifRes, docReqRes] = await Promise.allSettled([
           client.from('applications').select('*').order('created_at', { ascending: false }).limit(50),
-          client.from('journeys').select('*').order('timestamp', { ascending: false }).limit(50),
+          client.from('journeys').select('*').order('created_at', { ascending: false }).limit(50),
           client.from('consents').select('*').limit(50),
           client.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
+          client.from('doc_requests').select('*').order('created_at', { ascending: false }).limit(50),
         ]);
 
         if (appRes.status === 'fulfilled' && appRes.value?.data && appRes.value.data.length > 0) {
+          const remoteData = appRes.value.data;
           setApplications(prev => {
-            const remote = appRes.value.data as ApplicationRecord[];
+            const remote = remoteData.map(fromSupabaseApplication);
             const ids = new Set(remote.map(r => r.id));
-            const merged = [...remote, ...prev.filter(p => !ids.has(p.id))];
-            return merged;
+            return [...remote, ...prev.filter(p => !ids.has(p.id))];
           });
         }
 
         if (jrnRes.status === 'fulfilled' && jrnRes.value?.data && jrnRes.value.data.length > 0) {
+          const remoteData = jrnRes.value.data;
           setJourneys(prev => {
-            const remote = jrnRes.value.data as JourneyRecord[];
+            const remote = remoteData.map(fromSupabaseJourney);
             const ids = new Set(remote.map(r => r.id));
             return [...remote, ...prev.filter(p => !ids.has(p.id))];
           });
         }
 
         if (cstRes.status === 'fulfilled' && cstRes.value?.data && cstRes.value.data.length > 0) {
+          const remoteData = cstRes.value.data;
           setConsents(prev => {
-            const remote = cstRes.value.data as ConsentRecord[];
+            const remote = remoteData.map(fromSupabaseConsent);
             const ids = new Set(remote.map(r => r.id));
             return [...remote, ...prev.filter(p => !ids.has(p.id))];
           });
         }
 
         if (notifRes.status === 'fulfilled' && notifRes.value?.data && notifRes.value.data.length > 0) {
+          const remoteData = notifRes.value.data;
           setNotifications(prev => {
-            const remote = notifRes.value.data as NotificationRecord[];
+            const remote = remoteData.map(fromSupabaseNotification);
+            const ids = new Set(remote.map(r => r.id));
+            return [...remote, ...prev.filter(p => !ids.has(p.id))];
+          });
+        }
+
+        if (docReqRes.status === 'fulfilled' && docReqRes.value?.data && docReqRes.value.data.length > 0) {
+          const remoteData = docReqRes.value.data;
+          setDocRequests(prev => {
+            const remote = remoteData.map(fromSupabaseDocRequest);
             const ids = new Set(remote.map(r => r.id));
             return [...remote, ...prev.filter(p => !ids.has(p.id))];
           });
@@ -640,39 +660,89 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     fetchSupabaseBaseline();
 
-    // 2. Setup Realtime Change Stream Subscriptions
+    // 2. Setup Realtime Change Stream Subscriptions (with column mapping)
     try {
       const channel = client
         .channel('jansetu_realtime_mesh')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, (payload: any) => {
           if (payload.eventType === 'INSERT' && payload.new) {
-            setApplications(prev => [payload.new, ...prev.filter(a => a.id !== payload.new.id)]);
-            setRecentlyAddedAppId(payload.new.id);
+            const mapped = fromSupabaseApplication(payload.new);
+            setApplications(prev => [mapped, ...prev.filter(a => a.id !== mapped.id)]);
+            setRecentlyAddedAppId(mapped.id);
             setTimeout(() => setRecentlyAddedAppId(null), 4500);
           } else if (payload.eventType === 'UPDATE' && payload.new) {
-            setApplications(prev => prev.map(a => a.id === payload.new.id ? { ...a, ...payload.new } : a));
+            const mapped = fromSupabaseApplication(payload.new);
+            setApplications(prev => prev.map(a => a.id === mapped.id ? { ...a, ...mapped } : a));
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'journeys' }, (payload: any) => {
           if (payload.eventType === 'INSERT' && payload.new) {
-            setJourneys(prev => [payload.new, ...prev.filter(j => j.id !== payload.new.id)]);
-            setRecentlyAddedJourneyId(payload.new.id);
+            const mapped = fromSupabaseJourney(payload.new);
+            setJourneys(prev => [mapped, ...prev.filter(j => j.id !== mapped.id)]);
+            setRecentlyAddedJourneyId(mapped.id);
             setTimeout(() => setRecentlyAddedJourneyId(null), 5000);
           } else if (payload.eventType === 'UPDATE' && payload.new) {
-            setJourneys(prev => prev.map(j => j.id === payload.new.id ? { ...j, ...payload.new } : j));
+            const mapped = fromSupabaseJourney(payload.new);
+            setJourneys(prev => prev.map(j => j.id === mapped.id ? { ...j, ...mapped } : j));
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'consents' }, (payload: any) => {
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            setConsents(prev => prev.map(c => c.id === payload.new.id ? { ...c, ...payload.new } : c));
-            if (payload.new.status === 'REVOKED') {
-              setRevokedDepartments(prev => [...new Set([...prev, payload.new.department])]);
+          const mapped = fromSupabaseConsent(payload.new || {});
+          if (payload.eventType === 'INSERT' && mapped.id) {
+            setConsents(prev => {
+              if (prev.some(c => c.id === mapped.id)) return prev.map(c => c.id === mapped.id ? { ...c, ...mapped } : c);
+              return [mapped, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE' && mapped.id) {
+            setConsents(prev => prev.map(c => c.id === mapped.id ? { ...c, ...mapped } : c));
+            if (mapped.status === 'REVOKED') {
+              setRevokedDepartments(prev => [...new Set([...prev, mapped.department])]);
+            } else if (mapped.status === 'ACTIVE') {
+              setRevokedDepartments(prev => prev.filter(d => d.toLowerCase() !== mapped.department.toLowerCase()));
             }
           }
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload: any) => {
           if (payload.new) {
-            setNotifications(prev => [payload.new, ...prev.filter(n => n.id !== payload.new.id)]);
+            const mapped = fromSupabaseNotification(payload.new);
+            setNotifications(prev => {
+              if (prev.some(n => n.id === mapped.id)) return prev;
+              return [mapped, ...prev];
+            });
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'doc_requests' }, (payload: any) => {
+          if (payload.new) {
+            const mapped = fromSupabaseDocRequest(payload.new);
+            if (payload.eventType === 'INSERT') {
+              setDocRequests(prev => [mapped, ...prev.filter(r => r.id !== mapped.id)]);
+              // Also inject into pendingKycRequests for PendingRequestBanner
+              const pendingReq: PendingKycRequest = {
+                requestId: mapped.id,
+                appId: (payload.new as any).app_id || mapped.id,
+                citizenName: mapped.citizenName,
+                citizenId: mapped.citizenId,
+                docName: mapped.docType,
+                dept: mapped.deptName,
+                timestamp: mapped.requestedAt || 'Just now',
+                type: 'DOC_KYC_REQUEST'
+              };
+              setPendingKycRequests(prev => {
+                const updated = [...prev.filter(r => r.appId !== pendingReq.appId), pendingReq];
+                if (typeof window !== 'undefined') {
+                  try {
+                    localStorage.setItem('jansetu_pending_kyc_requests', JSON.stringify(updated));
+                    localStorage.setItem('jansetu_pending_kyc_request', JSON.stringify(pendingReq));
+                  } catch {}
+                }
+                return updated;
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              setDocRequests(prev => prev.map(r => r.id === mapped.id ? { ...r, ...mapped } : r));
+              if (mapped.status === 'FULFILLED') {
+                setPendingKycRequests(prev => prev.filter(r => r.requestId !== mapped.id));
+              }
+            }
           }
         })
         .subscribe();
@@ -1342,107 +1412,16 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   useEffect(() => {
-    let ch1: BroadcastChannel | null = null;
-    let ch2: BroadcastChannel | null = null;
+    // Legacy Transport Removal:
+    // We previously used BroadcastChannel, eventBus, and localStorage 'storage' listeners.
+    // They have been completely removed in V2 to rely exclusively on Supabase Realtime 
+    // for cross-tab and cross-device synchronization, preventing duplicate event loops (flickering).
+  }, []);
 
-    // 1. Root Listener for Universal JANSETU_SHARED_BUS
-    const handleBusMessage = (msg: MessageEvent<any>) => {
-      if (msg.data && msg.data.type) {
-        console.log('[JANSETU CITIZEN] Received Message on BUS:', msg.data);
-        handleIncomingEvent(msg.data, false);
-      }
-    };
-    eventBus.addEventListener('message', handleBusMessage);
-
-    // 2. Compatibility BroadcastChannel listeners
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        ch1 = new BroadcastChannel('jansetu_realtime_mesh');
-        ch1.onmessage = (msg) => { if (msg.data && msg.data.type) handleIncomingEvent(msg.data, false); };
-
-        ch2 = new BroadcastChannel('jansetu_event_mesh');
-        ch2.onmessage = (msg) => { if (msg.data && msg.data.type) handleIncomingEvent(msg.data, false); };
-      }
-    } catch (e) {}
-
-    // 3. Storage Event Listener Fallback
-    const handleStorageEvent = (e: StorageEvent) => {
-      if (!e.key) return;
-      if ((e.key === 'jansetu_bus_trigger' || e.key === 'jansetu_realtime_mesh_trigger' || e.key === 'jansetu_event_mesh_trigger') && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          console.log('[JANSETU CITIZEN] Received Storage Trigger:', parsed);
-          handleIncomingEvent(parsed, false);
-        } catch (err) {}
-      } else if (e.key === 'jansetu_active_requests' && e.newValue) {
-        try {
-          const items = JSON.parse(e.newValue);
-          if (items.length > 0) {
-            handleIncomingEvent({ type: 'DOC_KYC_REQUEST', payload: items[0] }, false);
-          }
-        } catch (err) {}
-      } else if (e.key === 'jansetu_journeys' && e.newValue) {
-        try { setJourneys(JSON.parse(e.newValue)); } catch (err) {}
-      } else if (e.key === 'jansetu_applications' && e.newValue) {
-        try { setApplications(JSON.parse(e.newValue)); } catch (err) {}
-      } else if (e.key === 'jansetu_consents' && e.newValue) {
-        try { setConsents(JSON.parse(e.newValue)); } catch (err) {}
-      } else if (e.key === 'jansetu_notifications' && e.newValue) {
-        try { setNotifications(JSON.parse(e.newValue)); } catch (err) {}
-      } else if (e.key === 'jansetu_doc_requests' && e.newValue) {
-        try { setDocRequests(JSON.parse(e.newValue)); } catch (err) {}
-      } else if (e.key === 'jansetu_pending_kyc_requests') {
-        try { setPendingKycRequests(e.newValue ? JSON.parse(e.newValue) : []); } catch (err) {}
-      } else if (e.key === 'jansetu_revoked_departments' && e.newValue) {
-        try { setRevokedDepartments(JSON.parse(e.newValue)); } catch (err) {}
-      }
-    };
-
-    window.addEventListener('storage', handleStorageEvent);
-
-    return () => {
-      eventBus.removeEventListener('message', handleBusMessage);
-      if (ch1) ch1.close();
-      if (ch2) ch2.close();
-      window.removeEventListener('storage', handleStorageEvent);
-    };
-  }, [handleIncomingEvent]);
-
-  // Dispatch event over eventBus (JANSETU_SHARED_BUS), BroadcastChannel, Supabase, and localStorage triggers
+  // Dispatch event over Supabase Realtime
   const dispatchMeshEvent = (event: LiveSyncEvent) => {
-    // 1. Post to unified global singleton eventBus (JANSETU_SHARED_BUS)
-    eventBus.postMessage(event);
-
-    // 2. Compatibility BroadcastChannel fallback
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const bc1 = new BroadcastChannel('jansetu_realtime_mesh');
-        bc1.postMessage(event);
-        setTimeout(() => bc1.close(), 1000);
-
-        const bc2 = new BroadcastChannel('jansetu_event_mesh');
-        bc2.postMessage(event);
-        setTimeout(() => bc2.close(), 1000);
-      }
-    } catch (e) {}
-
-    // 3. Storage fallback with unique nonce and active requests array
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('jansetu_realtime_mesh_trigger', JSON.stringify({
-          ...event,
-          _ts: Date.now(),
-          _nonce: Math.random().toString(36).substring(2, 9)
-        }));
-
-        if (event.type === 'DOC_KYC_REQUEST' || event.type === 'TARGETED_CITIZEN_REQUEST' || event.type === 'CITIZEN_DOC_REQUESTED') {
-          const existing = JSON.parse(localStorage.getItem('jansetu_active_requests') || '[]');
-          localStorage.setItem('jansetu_active_requests', JSON.stringify([event.payload, ...existing.filter((r: any) => r.appId !== event.payload.appId)]));
-        }
-      } catch (e) {}
-    }
-
-    // 4. Apply to local sender state
+    // V2: Rely exclusively on Supabase Realtime for cross-tab mesh
+    // We only apply to local sender state optimistically to keep the UI snappy
     handleIncomingEvent(event, true);
   };
 
@@ -1465,7 +1444,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     if (supabase) {
-      Promise.resolve(supabase.from('journeys').upsert(newJourney)).catch(() => {});
+      Promise.resolve(supabase.from('journeys').upsert(toSupabaseJourney(newJourney))).catch(() => {});
     }
 
     dispatchMeshEvent({
@@ -1478,7 +1457,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const submitApplication = (appData: ApplicationRecord) => {
     if (supabase) {
-      Promise.resolve(supabase.from('applications').upsert(appData)).catch(() => {});
+      Promise.resolve(supabase.from('applications').upsert(toSupabaseApplication(appData), { onConflict: 'id' })).catch(() => {});
     }
     dispatchMeshEvent({
       type: 'APPLICATION_CREATED',
@@ -1502,13 +1481,13 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     if (supabase) {
-      Promise.resolve(supabase.from('notifications').insert({
-        id: `alt_doc_${Date.now()}`,
-        timestamp: 'Just now',
-        message: `Consent Request: ${deptName} has requested your ${docType}.`,
+      Promise.resolve(supabase.from('notifications').insert([toSupabaseNotification({
         category: 'Document',
-        isNew: true
-      })).catch(() => {});
+        message: `${deptName} has requested your ${docType}.`,
+        recipientRole: 'CITIZEN',
+        citizenName: reqPayload.citizenName,
+        citizenId: reqPayload.citizenId
+      })])).catch(() => {});
     }
 
     dispatchMeshEvent({
@@ -1527,11 +1506,11 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     dept?: string;
     schemeName?: string;
   }) => {
-    const targetAppId = payload.appId || 'JS-2026-8802';
-    const targetDoc = payload.docName || 'Polytechnic Marksheet';
-    const targetDept = payload.dept || 'Ministry of Education';
-    const targetCitizen = payload.citizenName || 'Hriday Bardia';
-    const targetUid = payload.citizenId || (targetAppId === 'JS-2026-8801' ? '1111 2222 0207' : targetAppId === 'JS-2026-8802' ? '1111 2222 1405' : targetAppId === 'JS-2026-8803' ? '1111 2222 1304' : '1111 2222 3333');
+    const targetAppId = payload.appId || '';
+    const targetDoc = payload.docName || '';
+    const targetDept = payload.dept || 'Department';
+    const targetCitizen = payload.citizenName || 'Citizen';
+    const targetUid = payload.citizenId || '';
     const requestId = `REQ_${targetAppId}_${targetDoc.replace(/\s+/g, '_').toUpperCase()}`;
 
     const fullPayload = {
@@ -1554,15 +1533,25 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     };
 
     if (supabase) {
-      Promise.resolve(supabase.from('notifications').upsert([{
+      Promise.resolve(supabase.from('doc_requests').upsert(toSupabaseDocRequest({
         id: requestId,
-        recipient_uid: fullPayload.targetCitizenUid,
-        title: `Document Required: ${targetDoc}`,
-        message: `${fullPayload.deptName} has requested ${targetDoc} for Application #${fullPayload.appId}`,
-        type: 'doc_request',
-        metadata: fullPayload,
-        created_at: new Date()
-      }], { onConflict: 'id' })).catch(() => {});
+        appId: targetAppId,
+        deptName: targetDept,
+        docType: targetDoc,
+        citizenName: targetCitizen,
+        citizenId: targetUid,
+        status: 'PENDING',
+        requestedAt: fullPayload.timestamp
+      }))).catch(() => {});
+
+      Promise.resolve(supabase.from('notifications').insert([toSupabaseNotification({
+        category: 'Document',
+        message: `${targetDept} has requested ${targetDoc} for Application #${targetAppId}`,
+        appId: targetAppId,
+        citizenName: targetCitizen,
+        citizenId: targetUid,
+        recipientRole: 'CITIZEN'
+      })])).catch(() => {});
     }
 
     dispatchMeshEvent({
@@ -1574,10 +1563,10 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const authorizeCitizenDoc = (payload: { appId: string; docName: string; dept?: string; citizenName?: string; }) => {
-    const targetAppId = payload.appId || 'JS-2026-8802';
-    const targetDoc = payload.docName || 'Polytechnic Marksheet';
-    const targetDept = payload.dept || 'Ministry of Education';
-    const targetCitizen = payload.citizenName || 'Hriday Bardia';
+    const targetAppId = payload.appId || '';
+    const targetDoc = payload.docName || '';
+    const targetDept = payload.dept || 'Department';
+    const targetCitizen = payload.citizenName || 'Citizen';
 
     const responsePayload = {
       appId: targetAppId,
@@ -1592,17 +1581,29 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (supabase) {
       Promise.resolve(supabase.from('applications').update({
         status: 'UNDER_VERIFICATION',
-        lastUpdated: 'Just now'
+        last_updated: 'Just now'
       }).eq('id', targetAppId)).catch(() => {});
 
-      Promise.resolve(supabase.from('consents').upsert([{
+      const requestId = `REQ_${targetAppId}_${targetDoc.replace(/\s+/g, '_').toUpperCase()}`;
+      Promise.resolve(supabase.from('doc_requests').update({
+        status: 'FULFILLED'
+      }).eq('id', requestId)).catch(() => {});
+
+      Promise.resolve(supabase.from('consents').upsert([toSupabaseConsent({
         id: `cst_${Date.now()}`,
         department: targetDept,
         purpose: `e-KYC Verification for ${targetDoc}`,
-        requestedFields: [targetDoc, 'Aadhaar e-KYC'],
         status: 'ACTIVE',
-        grantedDate: new Date().toLocaleDateString('en-GB')
-      }])).catch(() => {});
+        citizenName: targetCitizen
+      })], { onConflict: 'dept_id' })).catch(() => {});
+
+      Promise.resolve(supabase.from('notifications').insert([toSupabaseNotification({
+        category: 'Verification',
+        message: `${targetCitizen} has authorized access to ${targetDoc} for Application #${targetAppId}.`,
+        appId: targetAppId,
+        citizenName: targetCitizen,
+        recipientRole: 'ADMIN'
+      })])).catch(() => {});
     }
 
     dispatchMeshEvent({
@@ -1635,7 +1636,13 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (e) {}
 
     if (supabase) {
-      Promise.resolve(supabase.from('consents').update({ status: 'ACTIVE', grantedDate: new Date().toLocaleDateString('en-GB') }).eq('id', deptId)).catch(() => {});
+      Promise.resolve(supabase.from('consents').upsert(toSupabaseConsent({
+        id: deptId,
+        department: department || deptId,
+        purpose: 'Citizen DPDP Electronic Consent',
+        status: 'ACTIVE',
+        citizenName
+      }), { onConflict: 'dept_id' })).catch(() => {});
     }
     dispatchMeshEvent({
       type: 'CONSENT_GRANTED',
@@ -1657,7 +1664,20 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     } catch (e) {}
 
     if (supabase) {
-      Promise.resolve(supabase.from('consents').update({ status: 'REVOKED' }).eq('id', deptId)).catch(() => {});
+      Promise.resolve(supabase.from('consents').upsert(toSupabaseConsent({
+        id: deptId,
+        department: department || deptId,
+        purpose: 'Citizen DPDP Electronic Consent',
+        status: 'REVOKED',
+        citizenName
+      }), { onConflict: 'dept_id' })).catch(() => {});
+
+      Promise.resolve(supabase.from('notifications').insert([toSupabaseNotification({
+        category: 'Security',
+        message: `${citizenName} has REVOKED consent for ${department || deptId}.`,
+        citizenName: citizenName,
+        recipientRole: 'ADMIN'
+      })])).catch(() => {});
     }
     dispatchMeshEvent({
       type: 'CONSENT_REVOKED',
@@ -1686,7 +1706,17 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const broadcastApplicationStatusUpdated = (id: string, status: ApplicationRecord['status'], reason?: string) => {
     if (supabase) {
-      Promise.resolve(supabase.from('applications').update({ status, lastUpdated: 'Just now' }).eq('id', id)).catch(() => {});
+      Promise.resolve(supabase.from('applications').update({ 
+        status,
+        last_updated: 'Just now'
+      }).eq('id', id)).catch(() => {});
+
+      Promise.resolve(supabase.from('notifications').insert([toSupabaseNotification({
+        category: 'Application Update',
+        message: `Application #${id} status updated to ${status}.${reason ? ` Reason: ${reason}` : ''}`,
+        appId: id,
+        recipientRole: 'CITIZEN'
+      })])).catch(() => {});
     }
     dispatchMeshEvent({
       type: 'APPLICATION_STATUS_UPDATED',
@@ -1696,23 +1726,37 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   };
 
-  const syncAll = () => {
-    if (typeof window === 'undefined') return;
+  const syncAll = async () => {
+    if (!supabase) return;
     try {
-      const apps = localStorage.getItem('jansetu_applications');
-      if (apps) setApplications(JSON.parse(apps));
-      const jns = localStorage.getItem('jansetu_journeys');
-      if (jns) setJourneys(JSON.parse(jns));
-      const csts = localStorage.getItem('jansetu_consents');
-      if (csts) setConsents(JSON.parse(csts));
-      const notifs = localStorage.getItem('jansetu_notifications');
-      if (notifs) setNotifications(JSON.parse(notifs));
-      const docs = localStorage.getItem('jansetu_doc_requests');
-      if (docs) setDocRequests(JSON.parse(docs));
-      const pReqs = localStorage.getItem('jansetu_pending_kyc_requests');
-      if (pReqs) setPendingKycRequests(JSON.parse(pReqs));
-      const revs = localStorage.getItem('jansetu_revoked_departments');
-      if (revs) setRevokedDepartments(JSON.parse(revs));
+      const [appRes, jrnRes, cstRes, notifRes, docReqRes] = await Promise.allSettled([
+        supabase.from('applications').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('journeys').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('consents').select('*').limit(50),
+        supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('doc_requests').select('*').order('created_at', { ascending: false }).limit(50),
+      ]);
+
+      if (appRes.status === 'fulfilled' && appRes.value?.data) {
+        const remoteData = appRes.value.data;
+        setApplications(remoteData.map(fromSupabaseApplication));
+      }
+      if (jrnRes.status === 'fulfilled' && jrnRes.value?.data) {
+        const remoteData = jrnRes.value.data;
+        setJourneys(remoteData.map(fromSupabaseJourney));
+      }
+      if (cstRes.status === 'fulfilled' && cstRes.value?.data) {
+        const remoteData = cstRes.value.data;
+        setConsents(remoteData.map(fromSupabaseConsent));
+      }
+      if (notifRes.status === 'fulfilled' && notifRes.value?.data) {
+        const remoteData = notifRes.value.data;
+        setNotifications(remoteData.map(fromSupabaseNotification));
+      }
+      if (docReqRes.status === 'fulfilled' && docReqRes.value?.data) {
+        const remoteData = docReqRes.value.data;
+        setDocRequests(remoteData.map(fromSupabaseDocRequest));
+      }
     } catch (e) {}
   };
 

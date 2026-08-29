@@ -1,0 +1,66 @@
+==============================================================================
+JANSETU - CLOUD NETWORK & SUPABASE CONNECTIVITY DIAGNOSTIC GUIDE
+==============================================================================
+
+This guide explains how to check and verify whether cloud network access
+and the Supabase cloud database instance are reachable from your environment.
+
+------------------------------------------------------------------------------
+METHOD 1: DEDICATED DIAGNOSTIC SCRIPT (RECOMMENDED)
+------------------------------------------------------------------------------
+Navigate to the frontend folder and run the built-in diagnostic command:
+
+  cd "C:\Users\HP\Desktop\SIH Final\jansetu\frontend"
+  npm run check:cloud
+
+Or run directly with Node:
+  node src/tests/check_cloud_access.js
+
+Expected Success Output:
+  ====================================================
+  🌐 JANSETU CLOUD NETWORK CONNECTIVITY CHECK
+  ====================================================
+  Endpoint: https://lrkxsxhcknkhqyrvnzrl.supabase.co
+  Checking connection...
+
+  ✅ Cloud Access: ONLINE & HEALTHY
+     - Latency: ~380ms
+     - Table 'applications' accessible
+     - Record sample retrieved: 1 items
+  ====================================================
+
+------------------------------------------------------------------------------
+METHOD 2: DIRECT COMMAND-LINE CHECK (CURL / POWERSHELL)
+------------------------------------------------------------------------------
+In PowerShell or Command Prompt, run:
+
+  curl.exe -I -s "https://lrkxsxhcknkhqyrvnzrl.supabase.co"
+
+- IF ONLINE:
+  Returns HTTP headers from Supabase/Cloudflare (HTTP/1.1 200/404).
+
+- IF OFFLINE / UNREACHABLE:
+  Returns "Could not resolve host" or "Connection timed out".
+
+------------------------------------------------------------------------------
+METHOD 3: IN BROWSER DEVELOPER CONSOLE (F12)
+------------------------------------------------------------------------------
+1. Open http://localhost:3000 in your browser.
+2. Press F12 (or right-click -> Inspect) and switch to the "Console" tab.
+3. Check the "Network" tab for requests directed to "*.supabase.co".
+   - Status 200 OK confirms active real-time WebSocket / REST connection.
+   - If offline, JanSetu automatically falls back to local FastAPI + SQLite.
+
+------------------------------------------------------------------------------
+CLOUD CONFIGURATION REFERENCE (.env / .env.local)
+------------------------------------------------------------------------------
+- Supabase Project URL:
+  NEXT_PUBLIC_SUPABASE_URL="https://lrkxsxhcknkhqyrvnzrl.supabase.co"
+
+- Supabase Anon/Public Key:
+  NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_tOXJcq-7LCYS9FjZBhkVIA_2pRW5y3P"
+
+- Local Authoritative Backend:
+  http://127.0.0.1:8000 (FastAPI + SQLite: citizen_journey.db)
+
+==============================================================================

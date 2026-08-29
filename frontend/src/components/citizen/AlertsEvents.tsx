@@ -17,7 +17,7 @@ import {
   FolderLock
 } from 'lucide-react';
 import { useLiveSync } from '@/context/LiveSyncContext';
-import { checkDocInVault } from '@/lib/vaultDetection';
+import { checkDocInVault, isCitizenMatching } from '@/lib/vaultDetection';
 import { eventBus } from '@/utils/eventBus';
 
 interface PolicyTrigger {
@@ -133,20 +133,58 @@ export const AlertsEvents: React.FC = () => {
     ];
   });
 
-  // 2. Listen for Admin dispatch events across JANSETU_SHARED_BUS
+  // 2. Listen for Admin dispatch events across JANSETU_SHARED_BUS & Backend Event Relay
   useEffect(() => {
     const handleBusMessage = (event: MessageEvent<any>) => {
       if (event.data?.type === 'NEW_WEBHOOK_ALERT' || event.data?.type === 'DOC_KYC_REQUEST' || event.data?.type === 'TARGETED_CITIZEN_REQUEST') {
         const alert = event.data.payload;
         if (!alert) return;
 
-        // Target validation: match "Hriday Bardia" or UID ending in "1405" or active profile
-        const currentCitizen = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('jansetu_citizen_session') || '{}') : {};
-        const isTarget = !alert.targetUidLast4 || 
-                         (currentCitizen.uid && currentCitizen.uid.includes(alert.targetUidLast4)) ||
-                         (currentCitizen.name && currentCitizen.name.toLowerCase().includes((alert.targetCitizenName || 'hriday').toLowerCase())) ||
-                         (profile?.full_name && profile.full_name.toLowerCase().includes((alert.targetCitizenName || 'hriday').toLowerCase())) ||
-                         (profile?.aadhaar && profile.aadhaar.includes(alert.targetUidLast4 || '1405'));
+        // Target validation: match active citizen session
+        let citName = profile?.full_name || '';
+        let citAadhaar = profile?.aadhaar || '';
+        let citUser = '';
+
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = sessionStorage.getItem('jansetu_citizen_session') || localStorage.getItem('jansetu_citizen_session');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const u = parsed.user || {};
+              const p = parsed.profile || {};
+              citName = citName || p.full_name || u.full_name || '';
+              citAadhaar = citAadhaar || p.aadhaar || u.id || '';
+              citUser = citUser || u.username || '';
+            }
+          } catch {}
+
+          if (!citName && !citAadhaar) {
+            try {
+              const rawDemo = sessionStorage.getItem('demo_citizen') || localStorage.getItem('demo_citizen');
+              if (rawDemo) {
+                const parsed = JSON.parse(rawDemo);
+                citName = parsed.name || parsed.full_name || '';
+                citAadhaar = parsed.aadhaar || parsed.rawAadhaar || parsed.id || '';
+                citUser = parsed.username || '';
+              }
+            } catch {}
+          }
+        }
+
+        // Fallback default for citizen dashboard (Hriday Bardia)
+        if (!citName && !citAadhaar) {
+          citName = 'Hriday Bardia';
+          citAadhaar = '1111 2222 1405';
+        }
+
+        const isTarget = isCitizenMatching(
+          {
+            citizenName: alert.targetCitizenName || alert.citizenName,
+            citizenId: alert.citizenId || alert.targetCitizenUid || alert.targetUidLast4,
+            appId: alert.appId
+          },
+          { name: citName, aadhaar: citAadhaar, username: citUser }
+        );
 
         if (isTarget) {
           const alertItem = {

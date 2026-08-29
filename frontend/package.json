@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node src/tests/redirection.test.js",
+    "test:supabase": "node src/tests/verify_supabase_interlinking.js",
+    "test:incognito": "node src/tests/verify_incognito_cross_window_relay.js",
+    "check:cloud": "node src/tests/check_cloud_access.js",
     "discover-apis": "cd ../backend && python -m app.scripts.discover_apis"
   },
   "dependencies": {

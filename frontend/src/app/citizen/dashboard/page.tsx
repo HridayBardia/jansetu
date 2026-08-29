@@ -542,77 +542,7 @@ export default function DashboardPage() {
   const nationalSchemes = schemes.filter(s => s.level === 'CENTRAL' || s.level === 'NATIONAL');
 
   return (
-    <div className="relative min-h-screen bg-slate-950 font-sans">
-      {/* Dynamic Background Gradients */}
-      <div className="fixed top-0 right-0 w-full md:w-[600px] h-[600px] bg-gradient-to-bl from-amber-500/10 via-orange-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
-      <div className="fixed bottom-0 left-0 w-full md:w-[600px] h-[600px] bg-gradient-to-tr from-blue-500/10 via-indigo-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
-
-      <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6 relative z-10">
-      {/* Brand Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
-            JS
-          </div>
-          <span className="text-xs font-black text-slate-600 dark:text-slate-400 tracking-widest uppercase">{t('dashboard.oneCitizen')}</span>
-        </div>
-        <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-400 relative">
-          {/* Notifications Bell */}
-          <div className="relative" ref={notificationsRef}>
-            <button
-              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg transition relative cursor-pointer shadow-2xs"
-            >
-              <Bell className="w-4.5 h-4.5" />
-              {realNotifications.filter((n: any) => !n.is_read).length > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />
-              )}
-            </button>
-            
-            {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl p-4 z-50 space-y-3 text-xs">
-                <LockScroll />
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider">{t('dashboard.notificationsCenter')}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-500">{realNotifications.length} alerts</span>
-                    <button onClick={() => setIsNotificationsOpen(false)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 p-1 rounded-md transition cursor-pointer">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-                <div className="max-h-60 overflow-y-auto space-y-2">
-                  {realNotifications.slice(0, 10).map((n: any) => (
-                    <div key={n.id} className="p-2.5 bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-md space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">{n.category || 'Update'}</span>
-                        <span className="text-[9px] text-slate-500">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
-                      </div>
-                      <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">{n.title}: {n.message}</p>
-                    </div>
-                  ))}
-                  {realNotifications.length === 0 && (
-                    <p className="text-slate-500 text-center py-4">{t('dashboard.noNotifications')}</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-            <span>Secure Gate</span>
-          </span>
-          <button 
-            type="button"
-            onClick={logout} 
-            className="hover:text-[#133E87] dark:hover:text-blue-400 text-slate-700 dark:text-slate-300 transition font-bold cursor-pointer"
-          >
-            {t("navigation.signOut")}
-          </button>
-        </div>
-      </div>
-
+    <div className="w-full space-y-6 animate-fade-in">
       {/* e-KYC Verified Citizen Banner */}
       <CitizenHero />
 
@@ -620,9 +550,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div 
           onClick={() => setActiveTab('documents')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+          className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-xs hover:shadow-sm"
         >
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+          <div className="w-10 h-10 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-300 dark:border-emerald-800 shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
@@ -633,9 +563,9 @@ export default function DashboardPage() {
 
         <div 
           onClick={() => setActiveTab('journeys')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+          className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-xs hover:shadow-sm"
         >
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-300 dark:border-amber-800 shrink-0">
+          <div className="w-10 h-10 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-300 dark:border-amber-800 shrink-0">
             <Compass className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
@@ -646,9 +576,9 @@ export default function DashboardPage() {
 
         <div 
           onClick={() => setActiveTab('schemes')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+          className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-xs hover:shadow-sm"
         >
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-cyan-600 dark:text-[#133E87] dark:text-blue-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
+          <div className="w-10 h-10 rounded bg-blue-50 dark:bg-blue-950/40 text-[#133E87] dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-800 shrink-0">
             <Landmark className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
@@ -1734,7 +1664,6 @@ export default function DashboardPage() {
       {/* Department e-KYC Pending Request Banner / Drawer */}
       <PendingRequestBanner />
 
-    </div>
     </div>
   );
 }

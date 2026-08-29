@@ -2591,3 +2591,68 @@ def get_system_health(
     }, request)
 
 
+# =====================================================================
+# REAL-TIME CROSS-BROWSER & INCOGNITO EVENT RELAY
+# =====================================================================
+import time
+_LIVE_EVENT_QUEUE: List[Dict[str, Any]] = []
+_MAX_EVENT_QUEUE = 200
+
+@api_v1_router.post("/events/broadcast")
+async def broadcast_event_relay(
+    payload: Dict[str, Any],
+    request: Request
+):
+    """
+    Relays real-time events across Incognito, Regular, and multi-browser sessions.
+    """
+    event_type = payload.get("type", "EVENT")
+    event_payload = payload.get("payload", {})
+    sender = payload.get("sender", "SYSTEM")
+    sender_tab_id = payload.get("senderTabId") or payload.get("sender_tab_id", "")
+    event_id = payload.get("id") or str(uuid.uuid4())
+    now_ts = int(time.time() * 1000)
+
+    event_item = {
+        "id": event_id,
+        "type": event_type,
+        "payload": event_payload,
+        "sender": sender,
+        "senderTabId": sender_tab_id,
+        "timestamp": payload.get("timestamp") or datetime.utcnow().isoformat(),
+        "created_at_ms": now_ts
+    }
+
+    _LIVE_EVENT_QUEUE.append(event_item)
+    if len(_LIVE_EVENT_QUEUE) > _MAX_EVENT_QUEUE:
+        _LIVE_EVENT_QUEUE.pop(0)
+
+    # Also broadcast over websocket manager
+    try:
+        await ws_manager.broadcast_json("events", event_item)
+    except Exception:
+        pass
+
+    return success_response(event_item, request)
+
+
+@api_v1_router.get("/events/poll")
+def poll_event_relay(
+    request: Request,
+    since: Optional[int] = Query(0, description="Timestamp in ms to fetch events after")
+):
+    """
+    Polls for events created after the 'since' timestamp (ms).
+    """
+    if since and since > 0:
+        events = [e for e in _LIVE_EVENT_QUEUE if e["created_at_ms"] > since]
+    else:
+        events = _LIVE_EVENT_QUEUE[-30:]
+
+    return success_response({
+        "events": events,
+        "server_time_ms": int(time.time() * 1000)
+    }, request)
+
+
+

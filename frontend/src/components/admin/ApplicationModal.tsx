@@ -37,6 +37,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
     requestCitizenDoc({
       appId: activeApp.id,
       citizenName: activeApp.citizenName,
+      citizenId: activeApp.citizenId,
       docName: docName,
       dept: activeApp.department
     });

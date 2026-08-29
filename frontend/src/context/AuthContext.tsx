@@ -6,6 +6,8 @@ import { getStoredConsent, storeConsent } from '@/components/TermsConsentModal';
 import { DEMO_CITIZENS, findCitizen, findAdminByOfficerId } from '@/data/demoCitizens';
 import { ShieldAlert, LogIn } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { SessionBreakModal } from '@/components/SessionBreakModal';
+import { eventBus } from '@/utils/eventBus';
 
 export interface User {
   id: string;
@@ -66,11 +68,33 @@ interface AuthContextType {
   updateProfile: (profileData: Partial<CitizenProfile>) => Promise<any>;
   refreshUser: () => Promise<void>;
   setDemoSession: (citizenAadhaarOrId: any, role?: 'CITIZEN' | 'ADMIN') => void;
+
+  // Session Break / Concurrent Login Status
+  isSessionBroken: boolean;
+  triggerSessionBreak: (accountName?: string) => void;
 }
 
 const CITIZEN_STORAGE_KEY = 'jansetu_citizen_session';
 const ADMIN_STORAGE_KEY = 'jansetu_admin_session';
 const LEGACY_STORAGE_KEY = 'jansetu_session';
+
+function getOrCreateTabId(): string {
+  if (typeof window === 'undefined') return '';
+  let tabId = sessionStorage.getItem('jansetu_tab_session_id');
+  if (!tabId) {
+    tabId = 'TS_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    sessionStorage.setItem('jansetu_tab_session_id', tabId);
+  }
+  return tabId;
+}
+
+function getNormalizedAccountKey(user: User | null, profile?: CitizenProfile | null): string {
+  if (!user && !profile) return '';
+  const raw = profile?.aadhaar || user?.id || user?.username || '';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length >= 4) return digits;
+  return (user?.username || raw).toLowerCase().trim();
+}
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -98,6 +122,8 @@ const AuthContext = createContext<AuthContextType>({
   updateProfile: async () => {},
   refreshUser: async () => {},
   setDemoSession: () => {},
+  isSessionBroken: false,
+  triggerSessionBreak: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -107,46 +133,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
-  const [sessionConsentAccepted, setSessionConsent] = useState(true);
-  const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [sessionConsentAccepted, setSessionConsentState] = useState(false);
+  const [isSessionBroken, setIsSessionBroken] = useState(false);
+  const [brokenAccountName, setBrokenAccountName] = useState('Citizen Beneficiary');
 
   const pathname = usePathname();
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
 
-  // Baseline citizen fallback for citizen portal routes
-  const defaultCitizenUser: User = {
-    id: '111122221405',
-    username: 'hriday',
-    full_name: 'Hriday Bardia',
-    role: 'CITIZEN',
-    mobile_number: '+91 98765 00002'
-  };
-
-  const defaultCitizenProfile: CitizenProfile = {
-    id: '111122221405',
-    full_name: 'Hriday Bardia',
-    date_of_birth: '15/08/2001',
-    gender: 'Male',
-    location_state: 'Gujarat',
-    location_city: 'Vadodara',
-    location_district: 'Vadodara',
-    pincode: '390007',
-    aadhaar: 'XXXX XXXX 1405',
-    phone: '+91 98765 00002',
-    occupation: 'Citizen Beneficiary',
-    annual_income: 350000,
-    income_category: 'Middle Class',
-    category: 'General'
-  };
-
   // Active User / Profile resolved dynamically with strict portal separation
-  const activeUser = isAdminRoute ? adminUser : (citizenUser || defaultCitizenUser);
-  const activeProfile = isAdminRoute ? null : (citizenProfile || defaultCitizenProfile);
+  const activeUser = isAdminRoute ? adminUser : citizenUser;
+  const activeProfile = isAdminRoute ? null : citizenProfile;
   const isAuthenticated = isAdminRoute ? !!adminUser : !!citizenUser;
+
+  const setSessionConsent = useCallback((accepted: boolean) => {
+    setSessionConsentState(accepted);
+    if (typeof window !== 'undefined') {
+      if (accepted) {
+        sessionStorage.setItem('jansetu_session_consent_accepted', 'true');
+      } else {
+        sessionStorage.removeItem('jansetu_session_consent_accepted');
+      }
+    }
+  }, []);
+
+  const triggerSessionBreak = useCallback((accountName?: string) => {
+    setIsSessionBroken(true);
+    if (accountName) setBrokenAccountName(accountName);
+    setCitizenUser(null);
+    setCitizenProfile(null);
+    setAdminUser(null);
+    setSessionConsentState(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(CITIZEN_STORAGE_KEY);
+      sessionStorage.removeItem(ADMIN_STORAGE_KEY);
+      sessionStorage.removeItem('citizen_token');
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('jansetu_session_consent_accepted');
+    }
+  }, []);
 
   // Set demo citizen/admin session directly
   const setDemoSession = useCallback((identifier: any, role: 'CITIZEN' | 'ADMIN' = 'CITIZEN') => {
     if (typeof window === 'undefined') return;
+
+    const currentTabId = getOrCreateTabId();
 
     if (role === 'ADMIN') {
       const searchStr = typeof identifier === 'string' ? identifier : identifier?.username || identifier?.officerId || 'dis123456';
@@ -161,7 +191,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         mobile_number: '+91 98765 00001',
       };
       setAdminUser(admin);
+      setSessionConsentState(true);
       storeConsent('admin');
+
+      const adminAccountKey = (admin.username || admin.id).toLowerCase();
 
       const payload = {
         user: admin,
@@ -169,11 +202,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token: `admin_token_${admin.id}`,
         role: 'ADMIN',
         sessionConsentAccepted: true,
+        tabSessionId: currentTabId,
+        accountKey: adminAccountKey,
       };
 
-      localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(payload));
+      // Store in tab session storage (per-tab isolation)
       sessionStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(payload));
       sessionStorage.setItem('admin_token', `admin_token_${admin.id}`);
+      sessionStorage.setItem('jansetu_session_consent_accepted', 'true');
+
+      // Update active session in global register & notify other tabs
+      localStorage.setItem('jansetu_active_account_' + adminAccountKey, currentTabId);
+      localStorage.setItem('jansetu_session_takeover_trigger', JSON.stringify({
+        accountKey: adminAccountKey,
+        newTabSessionId: currentTabId,
+        accountName: admin.full_name,
+        role: 'ADMIN',
+        timestamp: Date.now()
+      }));
+
+      eventBus.postMessage({
+        type: 'SESSION_TAKEN_OVER',
+        payload: {
+          accountKey: adminAccountKey,
+          newTabSessionId: currentTabId,
+          accountName: admin.full_name,
+          role: 'ADMIN'
+        }
+      });
     } else {
       let queryStr = '';
       if (typeof identifier === 'string') {
@@ -279,7 +335,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setCitizenUser(citizenU);
       setCitizenProfile(citizenP);
+      setSessionConsentState(true);
       storeConsent('citizen');
+
+      const citizenAccountKey = getNormalizedAccountKey(citizenU, citizenP);
 
       const payload = {
         user: citizenU,
@@ -287,13 +346,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token: `citizen_token_${citizenU.id}`,
         role: 'CITIZEN',
         sessionConsentAccepted: true,
+        tabSessionId: currentTabId,
+        accountKey: citizenAccountKey,
       };
 
-      localStorage.setItem(CITIZEN_STORAGE_KEY, JSON.stringify(payload));
+      // Store in tab session storage (per-tab isolation)
       sessionStorage.setItem(CITIZEN_STORAGE_KEY, JSON.stringify(payload));
       sessionStorage.setItem('citizen_token', `citizen_token_${citizenU.id}`);
       sessionStorage.setItem('demo_citizen', JSON.stringify(citizen || citizenU));
+      sessionStorage.setItem('jansetu_session_consent_accepted', 'true');
       localStorage.setItem('jansetu_ekyc_profile', JSON.stringify(citizen || citizenP));
+
+      // Update active session in global register & notify other tabs
+      localStorage.setItem('jansetu_active_account_' + citizenAccountKey, currentTabId);
+      localStorage.setItem('jansetu_session_takeover_trigger', JSON.stringify({
+        accountKey: citizenAccountKey,
+        newTabSessionId: currentTabId,
+        accountName: citizenU.full_name,
+        role: 'CITIZEN',
+        timestamp: Date.now()
+      }));
+
+      eventBus.postMessage({
+        type: 'SESSION_TAKEN_OVER',
+        payload: {
+          accountKey: citizenAccountKey,
+          newTabSessionId: currentTabId,
+          accountName: citizenU.full_name,
+          role: 'CITIZEN'
+        }
+      });
     }
   }, []);
 
@@ -301,42 +383,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDemoSession(profileOrIdentifier, 'CITIZEN');
     setSessionConsent(true);
     return { success: true };
-  }, [setDemoSession]);
+  }, [setDemoSession, setSessionConsent]);
 
   const loginAdmin = useCallback(async (credentialsOrIdentifier?: any) => {
     setDemoSession(credentialsOrIdentifier, 'ADMIN');
     setSessionConsent(true);
     return { success: true };
-  }, [setDemoSession]);
+  }, [setDemoSession, setSessionConsent]);
 
   const logoutCitizen = useCallback(async () => {
     setCitizenUser(null);
     setCitizenProfile(null);
+    setSessionConsentState(false);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(CITIZEN_STORAGE_KEY);
+      const currentTabId = sessionStorage.getItem('jansetu_tab_session_id');
+      const citRaw = sessionStorage.getItem(CITIZEN_STORAGE_KEY);
+      if (citRaw) {
+        try {
+          const parsed = JSON.parse(citRaw);
+          const key = parsed.accountKey || getNormalizedAccountKey(parsed.user, parsed.profile);
+          if (key && localStorage.getItem('jansetu_active_account_' + key) === currentTabId) {
+            localStorage.removeItem('jansetu_active_account_' + key);
+          }
+        } catch {}
+      }
       sessionStorage.removeItem(CITIZEN_STORAGE_KEY);
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
       sessionStorage.removeItem(LEGACY_STORAGE_KEY);
       sessionStorage.removeItem('citizen_token');
       sessionStorage.removeItem('demo_citizen');
-      localStorage.removeItem('demo_citizen');
-      localStorage.removeItem('jansetu_ekyc_profile');
-      sessionStorage.removeItem('jansetu_ekyc_profile');
+      sessionStorage.removeItem('jansetu_session_consent_accepted');
     }
   }, []);
 
   const logoutAdmin = useCallback(async () => {
     setAdminUser(null);
+    setSessionConsentState(false);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(ADMIN_STORAGE_KEY);
+      const currentTabId = sessionStorage.getItem('jansetu_tab_session_id');
+      const admRaw = sessionStorage.getItem(ADMIN_STORAGE_KEY);
+      if (admRaw) {
+        try {
+          const parsed = JSON.parse(admRaw);
+          const key = parsed.accountKey || (parsed.user?.username || parsed.user?.id || '').toLowerCase();
+          if (key && localStorage.getItem('jansetu_active_account_' + key) === currentTabId) {
+            localStorage.removeItem('jansetu_active_account_' + key);
+          }
+        } catch {}
+      }
       sessionStorage.removeItem(ADMIN_STORAGE_KEY);
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
       sessionStorage.removeItem(LEGACY_STORAGE_KEY);
       sessionStorage.removeItem('admin_token');
       sessionStorage.removeItem('demo_admin');
-      localStorage.removeItem('demo_admin');
+      sessionStorage.removeItem('jansetu_session_consent_accepted');
     }
   }, []);
+
+  // Ask before reload/refresh: browser confirmation prompt when authenticated
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isAuthenticated) return;
+      try {
+        sessionStorage.setItem('jansetu_page_reloaded', 'true');
+      } catch {}
+
+      const message = 'You have an active government session. Reloading or leaving this page will terminate your session and log you out. Are you sure you want to proceed?';
+      e.preventDefault();
+      e.returnValue = message;
+      return message;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isAuthenticated]);
 
   const refreshUser = useCallback(async () => {
     if (typeof window === 'undefined') {
@@ -345,48 +467,150 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // 1. Check Citizen Session
-      const rawCitizen = localStorage.getItem(CITIZEN_STORAGE_KEY) || sessionStorage.getItem(CITIZEN_STORAGE_KEY);
-      if (rawCitizen) {
+      const currentTabId = getOrCreateTabId();
+
+      // Detect reload/refresh via performance API or session flag
+      let isReload = false;
+      try {
+        const navEntries = performance.getEntriesByType('navigation');
+        if (navEntries && navEntries.length > 0) {
+          isReload = (navEntries[0] as PerformanceNavigationTiming).type === 'reload';
+        } else if ((performance as any).navigation) {
+          isReload = (performance as any).navigation.type === 1;
+        }
+      } catch {}
+
+      const wasPendingReload = sessionStorage.getItem('jansetu_page_reloaded') === 'true';
+
+      if (isReload || wasPendingReload) {
+        // Clear session on page reload / refresh
+        sessionStorage.removeItem('jansetu_page_reloaded');
+        sessionStorage.removeItem(CITIZEN_STORAGE_KEY);
+        sessionStorage.removeItem(ADMIN_STORAGE_KEY);
+        sessionStorage.removeItem('citizen_token');
+        sessionStorage.removeItem('admin_token');
+        sessionStorage.removeItem('jansetu_session_consent_accepted');
+        setCitizenUser(null);
+        setCitizenProfile(null);
+        setAdminUser(null);
+        setSessionConsentState(false);
+        setIsLoading(false);
+        return;
+      }
+
+      const isConsentAccepted = sessionStorage.getItem('jansetu_session_consent_accepted') === 'true';
+
+      // 1. Check Citizen Session in sessionStorage (strict tab scope)
+      const rawCitizen = sessionStorage.getItem(CITIZEN_STORAGE_KEY);
+      if (rawCitizen && isConsentAccepted) {
         try {
           const parsed = JSON.parse(rawCitizen);
           if (parsed && parsed.user) {
+            const accKey = parsed.accountKey || getNormalizedAccountKey(parsed.user, parsed.profile);
+            const activeTabInRegister = localStorage.getItem('jansetu_active_account_' + accKey);
+
+            // Check if active session was taken over by another tab
+            if (activeTabInRegister && activeTabInRegister !== currentTabId) {
+              triggerSessionBreak(parsed.user.full_name);
+              return;
+            }
+
             setCitizenUser(parsed.user);
             setCitizenProfile(parsed.profile || null);
+            setSessionConsentState(true);
           }
         } catch {}
       }
 
-      // 2. Check Admin Session
-      const rawAdmin = localStorage.getItem(ADMIN_STORAGE_KEY) || sessionStorage.getItem(ADMIN_STORAGE_KEY);
-      if (rawAdmin) {
+      // 2. Check Admin Session in sessionStorage (strict tab scope)
+      const rawAdmin = sessionStorage.getItem(ADMIN_STORAGE_KEY);
+      if (rawAdmin && isConsentAccepted) {
         try {
           const parsed = JSON.parse(rawAdmin);
           if (parsed && parsed.user) {
+            const accKey = parsed.accountKey || (parsed.user.username || parsed.user.id || '').toLowerCase();
+            const activeTabInRegister = localStorage.getItem('jansetu_active_account_' + accKey);
+
+            if (activeTabInRegister && activeTabInRegister !== currentTabId) {
+              triggerSessionBreak(parsed.user.full_name);
+              return;
+            }
+
             setAdminUser(parsed.user);
+            setSessionConsentState(true);
           }
         } catch {}
-      }
-
-      // 3. Fallback Legacy check
-      if (!rawCitizen && !rawAdmin) {
-        const rawLegacy = localStorage.getItem(LEGACY_STORAGE_KEY) || sessionStorage.getItem(LEGACY_STORAGE_KEY);
-        if (rawLegacy) {
-          try {
-            const parsed = JSON.parse(rawLegacy);
-            if (parsed?.role === 'ADMIN' || parsed?.user?.role === 'ADMIN' || parsed?.user?.role === 'SYSTEM_ADMIN') {
-              setAdminUser(parsed.user);
-            } else if (parsed?.user) {
-              setCitizenUser(parsed.user);
-              setCitizenProfile(parsed.profile || null);
-            }
-          } catch {}
-        }
       }
     } catch {} finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [triggerSessionBreak]);
+
+  // Session Break Listener: detects concurrent login of the same account across tabs
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleSessionTakeover = (payload: any) => {
+      if (!payload) return;
+      const { accountKey, newTabSessionId, accountName } = payload;
+      const currentTabId = sessionStorage.getItem('jansetu_tab_session_id');
+
+      // Check current tab's active account
+      const rawCit = sessionStorage.getItem(CITIZEN_STORAGE_KEY);
+      const rawAdm = sessionStorage.getItem(ADMIN_STORAGE_KEY);
+
+      let myAccountKey = '';
+      let myName = '';
+
+      if (rawCit) {
+        try {
+          const parsed = JSON.parse(rawCit);
+          myAccountKey = parsed.accountKey || getNormalizedAccountKey(parsed.user, parsed.profile);
+          myName = parsed.user?.full_name || 'Citizen Beneficiary';
+        } catch {}
+      } else if (rawAdm) {
+        try {
+          const parsed = JSON.parse(rawAdm);
+          myAccountKey = parsed.accountKey || (parsed.user?.username || parsed.user?.id || '').toLowerCase();
+          myName = parsed.user?.full_name || 'Officer';
+        } catch {}
+      }
+
+      if (myAccountKey && accountKey) {
+        const isMatch = myAccountKey === accountKey || myAccountKey.includes(accountKey) || accountKey.includes(myAccountKey);
+        if (isMatch && currentTabId && newTabSessionId && currentTabId !== newTabSessionId) {
+          console.warn(`[JANSETU DPDP] Session Break Triggered: Account ${accountKey} logged in on tab ${newTabSessionId}. Disconnecting tab ${currentTabId}.`);
+          triggerSessionBreak(accountName || myName);
+        }
+      }
+    };
+
+    // 1. Bus message listener
+    const handleBusMessage = (event: MessageEvent<any>) => {
+      if (event?.data?.type === 'SESSION_TAKEN_OVER') {
+        handleSessionTakeover(event.data.payload);
+      }
+    };
+
+    eventBus.addEventListener('message', handleBusMessage);
+
+    // 2. Cross-tab storage trigger listener
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === 'jansetu_session_takeover_trigger' && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          handleSessionTakeover(data);
+        } catch {}
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+
+    return () => {
+      eventBus.removeEventListener('message', handleBusMessage);
+      window.removeEventListener('storage', handleStorageEvent);
+    };
+  }, [triggerSessionBreak]);
 
   const login = async (username: string, pin: string, expectedRole?: 'CITIZEN' | 'ADMIN') => {
     try {
@@ -462,9 +686,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateProfile,
         refreshUser,
         setDemoSession,
+        isSessionBroken,
+        triggerSessionBreak,
       }}
     >
       {children}
+      <SessionBreakModal
+        isOpen={isSessionBroken}
+        accountName={brokenAccountName}
+        onConfirm={() => {
+          setIsSessionBroken(false);
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        }}
+      />
     </AuthContext.Provider>
   );
 };
