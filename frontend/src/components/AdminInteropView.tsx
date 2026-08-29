@@ -1,22 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { 
-  Network, 
-  RefreshCw, 
-  GitBranch, 
-  ExternalLink, 
-  Activity, 
-  Radio, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Shield, 
-  Zap, 
-  ArrowRight,
-  Database,
-  ArrowDownCircle,
-  FileCode
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { Radio, Database, Shield, Server, ArrowRight, Activity, ArrowRightLeft, ArrowDownCircle, Network } from 'lucide-react';
+import { ExceptionCenter } from './ExceptionCenter';
+import { InteroperabilityDataFlow } from './InteroperabilityDataFlow';
 import { useLanguage } from '@/context/LanguageContext';
 import { ExceptionCenter } from './ExceptionCenter';
 
@@ -186,8 +173,12 @@ export const AdminInteropView = () => {
             </div>
           </div>
 
+          <div className="mt-8">
+            <InteroperabilityDataFlow />
+          </div>
+
           {/* Interactive Topology Diagram */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xs overflow-hidden flex flex-col md:flex-row relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row relative mt-8">
             
             {/* Canvas Area */}
             <div className="flex-1 p-8 relative min-h-[400px] border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex items-center justify-center bg-slate-50/70 dark:bg-[#05050a] overflow-x-auto">

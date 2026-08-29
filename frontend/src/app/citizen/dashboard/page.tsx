@@ -34,9 +34,7 @@ import {
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
-import { CitizenHero } from '@/components/citizen/CitizenHero';
-import { SchemeExplorer } from '@/components/citizen/SchemeExplorer';
-import { ApplicationTracker } from '@/components/citizen/ApplicationTracker';
+import { ConsentLedger } from '@/components/ConsentLedger';
 import { analyzeGoalUniversal } from '@/lib/goalClassifier';
 import { DocumentVault } from '@/components/DocumentVault';
 import { CitizenNavTabs } from '@/components/citizen/CitizenNavTabs';
@@ -540,7 +538,12 @@ export default function DashboardPage() {
   const nationalSchemes = schemes.filter(s => s.level === 'CENTRAL' || s.level === 'NATIONAL');
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6">
+    <div className="relative min-h-screen bg-slate-950 font-sans">
+      {/* Dynamic Background Gradients */}
+      <div className="fixed top-0 right-0 w-full md:w-[600px] h-[600px] bg-gradient-to-bl from-amber-500/10 via-orange-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-0 w-full md:w-[600px] h-[600px] bg-gradient-to-tr from-blue-500/10 via-indigo-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+
+      <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6 relative z-10">
       {/* Brand Header */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div className="flex items-center gap-2">
@@ -1272,7 +1275,137 @@ export default function DashboardPage() {
 
       {/* Consent Tab */}
       {activeTab === 'consent' && (
-        <YourDataConsent auditLogs={auditLogs} loadInteropData={loadInteropData} />
+        <div className="space-y-6 animate-fadeIn">
+          {/* Consent stats bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{t("consent.activeConsentsLabel")}</span>
+              <span className="text-lg font-black text-emerald-400">{mockConsents.filter(c => c.status === 'ACTIVE').length}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{t("consent.pendingRequests")}</span>
+              <span className="text-lg font-black text-amber-400">{mockConsents.filter(c => c.status === 'PENDING').length}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">{t("consent.revokedAccounts")}</span>
+              <span className="text-lg font-black text-slate-500">{mockConsents.filter(c => c.status === 'REVOKED').length}</span>
+            </div>
+          </div>
+
+            <ConsentLedger 
+              consents={mockConsents} 
+              onRevoke={(id) => revokeConsentAPI(id).then(() => loadInteropData())} 
+            />
+
+          {/* Audit Log Section */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <History className="w-4 h-4 text-amber-400" />
+                <span>Immutable Data Access Audit Trail</span>
+              </h3>
+              <span className="text-xs text-slate-400 font-mono">256-bit Encrypted Logs</span>
+            </div>
+            <div className="divide-y divide-slate-800/80 text-xs max-h-64 overflow-y-auto">
+              {auditLogs.length === 0 ? (
+                <div className="p-6 text-center text-slate-500">
+                  <p>{t("dataQuality.noAuditEvents")}</p>
+                </div>
+              ) : auditLogs.map((log: any) => (
+                <div key={log.id} className="p-4 hover:bg-slate-800/40 transition flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-amber-400 px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px]">
+                        {log.action}
+                      </span>
+                      <span className="font-semibold text-slate-200">{log.resource}</span>
+                    </div>
+                    <p className="text-slate-400">{log.status || 'SUCCESS'}</p>
+                  </div>
+                  <span className="text-[11px] text-slate-500 shrink-0 font-mono">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Consent Details Modal */}
+          {selectedConsent && (
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-scaleUp">
+                <div className="bg-slate-950 p-5 border-b border-slate-800 flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Key className="w-4 h-4 text-amber-400" />
+                    <span>{t("consent.consentDetails")}</span>
+                  </h3>
+                  <button 
+                    onClick={() => setSelectedConsent(null)}
+                    className="text-slate-400 hover:text-white text-xs bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg transition"
+                  >
+                    {t("common.close")}
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4 text-xs">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHO IS REQUESTING?</span>
+                      <p className="text-slate-200 font-bold">{selectedConsent.department}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHAT DATA FIELDS?</span>
+                      <p className="text-cyan-400 font-mono font-bold">{selectedConsent.requestedFields.join(", ")}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">WHY ACCESS IS NEEDED?</span>
+                      <p className="text-slate-300">{selectedConsent.purpose}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">DURATION</span>
+                      <p className="text-slate-300">Scoped strictly to the application lifetime ({selectedConsent.status}).</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">SECURITY PROTOCOL</span>
+                      <p className="text-slate-300 font-bold text-emerald-400">✓ End-to-end Encrypted payload exchange in transit</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] font-semibold block uppercase">AUDIT COMPLIANCE</span>
+                      <p className="text-slate-300">All lookups logged permanently in system audit trails.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    {selectedConsent.status === 'PENDING' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            createConsentAPI(selectedConsent.id, selectedConsent.department, selectedConsent.requestedFields, selectedConsent.purpose, "ONCE").then(() => {
+                              setSelectedConsent(null);
+                              loadInteropData();
+                            });
+                          }}
+                          className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-2 rounded-lg text-xs hover:from-amber-400 hover:to-orange-400 transition"
+                        >
+                          Approve Consent
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedConsent(null);
+                          }}
+                          className="flex-1 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition"
+                        >
+                          Deny
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
       )}
 
       {/* Interop Tab */}
@@ -1604,9 +1737,6 @@ export default function DashboardPage() {
       <PendingRequestBanner />
 
     </div>
-
+    </div>
   );
 }
-
-
-

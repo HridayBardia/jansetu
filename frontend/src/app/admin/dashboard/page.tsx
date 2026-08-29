@@ -88,16 +88,20 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-        <Home className="w-3.5 h-3.5" />
-        <Link href="/" className="hover:text-slate-900 dark:hover:text-white">{t('Home', 'Home')}</Link>
-        <span>&gt;</span>
-        <span>{t('Administration Portal', 'Administration Portal')}</span>
-        <span>&gt;</span>
-        <span className="font-bold text-slate-900 dark:text-white">{t('Beneficiary Dashboard', 'Beneficiary Dashboard')}</span>
-      </div>
+    <div className="relative min-h-screen bg-slate-950 text-slate-200 selection:bg-amber-500/30 font-sans">
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-amber-500/10 via-orange-500/5 to-transparent blur-3xl pointer-events-none -z-10" />
+
+      <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8 relative z-10">
+        <div>
+          <header className="mb-8">
+            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
+              {t('admin.systemOverview')}
+            </h1>
+            <p className="text-slate-400 mt-2 text-sm leading-relaxed max-w-2xl">
+              {t('admin.adminAnalytics')}
+            </p>
+          </header>
 
       {/* Dashboard Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
