@@ -96,7 +96,7 @@ const POLICY_POOL: PolicyTrigger[] = [
 export const AlertsEvents: React.FC = () => {
   const { t } = useLanguage();
   const { user, profile } = useAuth();
-  const { notifications: liveSyncNotifs, pendingKycRequest, authorizeCitizenDoc, dismissPendingKycRequest } = useLiveSync();
+  const { notifications: liveSyncNotifs, docRequests: liveSyncDocRequests, pendingKycRequest, authorizeCitizenDoc, dismissPendingKycRequest } = useLiveSync();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
@@ -105,124 +105,65 @@ export const AlertsEvents: React.FC = () => {
   const [isRefreshingPolicies, setIsRefreshingPolicies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Dynamic Webhook Notifications Feed initialized from localStorage
-  const [webhookAlerts, setWebhookAlerts] = useState<any[]>(() => {
+  // 1. Dynamic Webhook Notifications Feed initialized from LiveSync Context
+  const webhookAlerts = useMemo(() => {
+    let citName = profile?.full_name || '';
+    let citAadhaar = profile?.aadhaar || '';
+    let citUser = '';
+
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('jansetu_webhook_notifications');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return [
-      {
-        id: 'default-1',
-        title: 'Application Update',
-        timestamp: '2 days ago',
-        message: 'Application #JS-2026-8802 for National Apprenticeship Training Scheme (NATS) is Under Verification by Ministry of Education.',
-        type: 'INFO',
-        category: 'Application Update'
-      },
-      {
-        id: 'default-2',
-        title: 'Registry Sync Alert',
-        timestamp: '3 days ago',
-        message: 'Aadhaar Demographic e-KYC Attestation verified with UIDAI master vault.',
-        type: 'INFO',
-        category: 'Verification'
-      }
-    ];
-  });
+        const raw = sessionStorage.getItem('jansetu_citizen_session') || localStorage.getItem('jansetu_citizen_session');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const u = parsed.user || {};
+          const p = parsed.profile || {};
+          citName = citName || p.full_name || u.full_name || '';
+          citAadhaar = citAadhaar || p.aadhaar || u.id || '';
+          citUser = citUser || u.username || '';
+        }
+      } catch {}
 
-  // 2. Listen for Admin dispatch events across JANSETU_SHARED_BUS & Backend Event Relay
-  useEffect(() => {
-    const handleBusMessage = (event: MessageEvent<any>) => {
-      if (event.data?.type === 'NEW_WEBHOOK_ALERT' || event.data?.type === 'DOC_KYC_REQUEST' || event.data?.type === 'TARGETED_CITIZEN_REQUEST') {
-        const alert = event.data.payload;
-        if (!alert) return;
-
-        // Target validation: match active citizen session
-        let citName = profile?.full_name || '';
-        let citAadhaar = profile?.aadhaar || '';
-        let citUser = '';
-
-        if (typeof window !== 'undefined') {
-          try {
-            const raw = sessionStorage.getItem('jansetu_citizen_session') || localStorage.getItem('jansetu_citizen_session');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              const u = parsed.user || {};
-              const p = parsed.profile || {};
-              citName = citName || p.full_name || u.full_name || '';
-              citAadhaar = citAadhaar || p.aadhaar || u.id || '';
-              citUser = citUser || u.username || '';
-            }
-          } catch {}
-
-          if (!citName && !citAadhaar) {
-            try {
-              const rawDemo = sessionStorage.getItem('demo_citizen') || localStorage.getItem('demo_citizen');
-              if (rawDemo) {
-                const parsed = JSON.parse(rawDemo);
-                citName = parsed.name || parsed.full_name || '';
-                citAadhaar = parsed.aadhaar || parsed.rawAadhaar || parsed.id || '';
-                citUser = parsed.username || '';
-              }
-            } catch {}
+      if (!citName && !citAadhaar) {
+        try {
+          const rawDemo = sessionStorage.getItem('demo_citizen') || localStorage.getItem('demo_citizen');
+          if (rawDemo) {
+            const parsed = JSON.parse(rawDemo);
+            citName = parsed.name || parsed.full_name || '';
+            citAadhaar = parsed.aadhaar || parsed.rawAadhaar || parsed.id || '';
+            citUser = parsed.username || '';
           }
-        }
-
-        // Fallback default for citizen dashboard (Hriday Bardia)
-        if (!citName && !citAadhaar) {
-          citName = 'Hriday Bardia';
-          citAadhaar = '1111 2222 1405';
-        }
-
-        const isTarget = isCitizenMatching(
-          {
-            citizenName: alert.targetCitizenName || alert.citizenName,
-            citizenId: alert.citizenId || alert.targetCitizenUid || alert.targetUidLast4,
-            appId: alert.appId
-          },
-          { name: citName, aadhaar: citAadhaar, username: citUser }
-        );
-
-        if (isTarget) {
-          const alertItem = {
-            id: alert.id || `REQ-${Date.now()}`,
-            appId: alert.appId || 'JS-2026-8802',
-            schemeName: alert.schemeName || 'National Apprenticeship Training Scheme (NATS)',
-            deptName: alert.deptName || alert.dept || 'Ministry of Education',
-            targetCitizenName: alert.targetCitizenName || 'Hriday Bardia',
-            requestedDoc: alert.requestedDoc || alert.docName || 'Polytechnic Marksheet',
-            docType: alert.docType || 'polytechnic_marksheet',
-            timestamp: alert.timestamp || 'Just now',
-            status: alert.status || 'ACTION_REQUIRED',
-            type: 'DOC_KYC_REQUEST',
-            category: 'Document'
-          };
-
-          setWebhookAlerts(prev => {
-            const existingIdx = prev.findIndex(a => a.id === alertItem.id || (a.appId === alertItem.appId && a.requestedDoc === alertItem.requestedDoc));
-            let updated;
-            if (existingIdx >= 0) {
-              updated = [alertItem, ...prev.filter((_, idx) => idx !== existingIdx)];
-            } else {
-              updated = [alertItem, ...prev];
-            }
-            if (typeof window !== 'undefined') {
-              try { localStorage.setItem('jansetu_webhook_notifications', JSON.stringify(updated)); } catch (e) {}
-            }
-            return updated;
-          });
-        }
+        } catch {}
       }
-    };
+    }
 
-    eventBus.addEventListener('message', handleBusMessage);
-    return () => {
-      eventBus.removeEventListener('message', handleBusMessage);
-    };
-  }, [profile]);
+    // Fallback default for citizen dashboard (Hriday Bardia)
+    if (!citName && !citAadhaar) {
+      citName = 'Hriday Bardia';
+      citAadhaar = '1111 2222 1405';
+    }
+
+    const filtered = liveSyncDocRequests.filter(req => 
+      isCitizenMatching(
+        { citizenName: req.citizenName, citizenId: req.citizenId, appId: req.appId },
+        { name: citName, aadhaar: citAadhaar, username: citUser }
+      )
+    );
+
+    return filtered.map(req => ({
+      id: req.id,
+      appId: req.appId || req.id,
+      schemeName: 'National Apprenticeship Training Scheme (NATS)',
+      deptName: req.deptName,
+      targetCitizenName: req.citizenName,
+      requestedDoc: req.docType,
+      docType: req.docType,
+      timestamp: req.requestedAt,
+      status: req.status === 'PENDING' ? 'ACTION_REQUIRED' : 'RESOLVED',
+      type: 'DOC_KYC_REQUEST',
+      category: 'Document'
+    }));
+  }, [liveSyncDocRequests, profile]);
 
   // Shuffle and pick 2-3 randomized & profile-relevant policies on every refresh/mount
   const refreshPolicies = () => {
@@ -467,14 +408,14 @@ export const AlertsEvents: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <span className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping" />
                         <h4 className="text-amber-900 dark:text-amber-300 font-bold text-xs">
-                          Action Required: Document e-KYC
+                          Action Required: Document {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'e-KYC' : 'Request'}
                         </h4>
                       </div>
                       <span className="text-[10px] text-slate-500 font-mono font-bold">{item.timestamp || 'Just now'}</span>
                     </div>
 
                     <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
-                      <strong>{item.deptName || item.dept || 'Ministry of Education'}</strong> requested e-KYC verification for <strong>{docName}</strong> (App #{item.appId || 'JS-2026-8802'}).
+                      <strong>{item.deptName || item.dept || 'Ministry of Education'}</strong> requested {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'e-KYC verification' : 'a verified copy'} for <strong>{docName}</strong> (App #{item.appId || 'JS-2026-8802'}).
                     </p>
 
                     {/* Vault Detection Notice */}

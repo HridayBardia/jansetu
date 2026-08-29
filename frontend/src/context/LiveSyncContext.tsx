@@ -74,6 +74,7 @@ export interface DocRequestRecord {
   citizenName: string;
   requestedAt: string;
   status: 'PENDING' | 'FULFILLED';
+  appId?: string;
 }
 
 export interface PendingKycRequest {
@@ -652,6 +653,24 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
             const ids = new Set(remote.map(r => r.id));
             return [...remote, ...prev.filter(p => !ids.has(p.id))];
           });
+          
+          setPendingKycRequests(prev => {
+            const pendingFromRemote = remoteData.map(fromSupabaseDocRequest)
+              .filter(r => r.status === 'PENDING' || r.status === 'PENDING_CITIZEN_ACTION')
+              .map(r => ({
+                requestId: r.id,
+                appId: r.appId || r.id,
+                citizenName: r.citizenName,
+                citizenId: r.citizenId,
+                docName: r.docType,
+                dept: r.deptName,
+                timestamp: r.requestedAt || 'Just now',
+                type: 'DOC_KYC_REQUEST' as const
+              }));
+            
+            const newIds = new Set(pendingFromRemote.map(r => r.requestId));
+            return [...pendingFromRemote, ...prev.filter(p => !newIds.has(p.requestId))];
+          });
         }
       } catch {
         // Fallback gracefully to offline mock state
@@ -714,26 +733,23 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
         .on('postgres_changes', { event: '*', schema: 'public', table: 'doc_requests' }, (payload: any) => {
           if (payload.new) {
             const mapped = fromSupabaseDocRequest(payload.new);
+            const pendingReq: PendingKycRequest = {
+              requestId: mapped.id,
+              appId: (payload.new as any).app_id || mapped.id,
+              citizenName: mapped.citizenName,
+              citizenId: mapped.citizenId,
+              docName: mapped.docType,
+              dept: mapped.deptName,
+              timestamp: mapped.requestedAt || 'Just now',
+              type: 'DOC_KYC_REQUEST'
+            };
+
             if (payload.eventType === 'INSERT') {
               setDocRequests(prev => [mapped, ...prev.filter(r => r.id !== mapped.id)]);
-              // Also inject into pendingKycRequests for PendingRequestBanner
-              const pendingReq: PendingKycRequest = {
-                requestId: mapped.id,
-                appId: (payload.new as any).app_id || mapped.id,
-                citizenName: mapped.citizenName,
-                citizenId: mapped.citizenId,
-                docName: mapped.docType,
-                dept: mapped.deptName,
-                timestamp: mapped.requestedAt || 'Just now',
-                type: 'DOC_KYC_REQUEST'
-              };
               setPendingKycRequests(prev => {
                 const updated = [...prev.filter(r => r.appId !== pendingReq.appId), pendingReq];
                 if (typeof window !== 'undefined') {
-                  try {
-                    localStorage.setItem('jansetu_pending_kyc_requests', JSON.stringify(updated));
-                    localStorage.setItem('jansetu_pending_kyc_request', JSON.stringify(pendingReq));
-                  } catch {}
+                  try { localStorage.setItem('jansetu_pending_kyc_requests', JSON.stringify(updated)); } catch {}
                 }
                 return updated;
               });
@@ -741,6 +757,14 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
               setDocRequests(prev => prev.map(r => r.id === mapped.id ? { ...r, ...mapped } : r));
               if (mapped.status === 'FULFILLED') {
                 setPendingKycRequests(prev => prev.filter(r => r.requestId !== mapped.id));
+              } else if (mapped.status === 'PENDING' || mapped.status === 'PENDING_CITIZEN_ACTION') {
+                setPendingKycRequests(prev => {
+                  const updated = [...prev.filter(r => r.appId !== pendingReq.appId), pendingReq];
+                  if (typeof window !== 'undefined') {
+                    try { localStorage.setItem('jansetu_pending_kyc_requests', JSON.stringify(updated)); } catch {}
+                  }
+                  return updated;
+                });
               }
             }
           }

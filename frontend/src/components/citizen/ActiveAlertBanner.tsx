@@ -127,7 +127,7 @@ export const ActiveAlertBanner: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                 <h3 className="text-sm md:text-base font-black text-amber-900 dark:text-amber-300 uppercase tracking-wide">
-                  🔔 URGENT ACTION REQUIRED: e-KYC Verification for {docName}
+                  🔔 URGENT ACTION REQUIRED: {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'e-KYC Verification' : 'Document Request'} for {docName}
                 </h3>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">

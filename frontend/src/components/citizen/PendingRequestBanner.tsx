@@ -100,7 +100,7 @@ export const PendingRequestBanner: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>⚠️ Action Required: Department e-KYC Request</span>
+                <span>⚠️ Action Required: Department {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'e-KYC ' : ''}Request</span>
               </h4>
               <p className="text-[11px] font-mono text-amber-700 dark:text-amber-400 font-semibold">
                 Application #{appId} • Live Mesh
@@ -123,7 +123,7 @@ export const PendingRequestBanner: React.FC = () => {
             <span>{dept}</span>
           </div>
           <p className="leading-relaxed">
-            The department has requested verified e-KYC credentials for <strong>{docName}</strong> to finalize processing for beneficiary <strong>{citizenName}</strong>.
+            The department has requested {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'verified e-KYC credentials for' : 'a verified copy of'} <strong>{docName}</strong> to finalize processing for beneficiary <strong>{citizenName}</strong>.
           </p>
 
           {/* Vault Detection Status */}

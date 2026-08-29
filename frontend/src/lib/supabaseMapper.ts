@@ -177,6 +177,7 @@ export function fromSupabaseDocRequest(row: Record<string, any>): DocRequestReco
     citizenName: row.citizen_name || '',
     requestedAt: row.requested_at || '',
     status: row.status || 'PENDING',
+    appId: row.app_id || row.id,
   };
 }
 
