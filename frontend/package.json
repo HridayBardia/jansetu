@@ -11,6 +11,8 @@
     "discover-apis": "cd ../backend && python -m app.scripts.discover_apis"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "google-translate-api-x": "^10.7.3",
     "lucide-react": "^1.31.0",
     "next": "16.3.1",
     "react": "19.2.8",

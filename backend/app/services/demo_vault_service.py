@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.db_models import UserDB, CitizenProfileDB, UserDocumentDB, DocumentConsistencyDB
 
-SYNTHETIC_WATERMARK = "DEMO DOCUMENT — NOT A GOVERNMENT-ISSUED DOCUMENT — FOR DEMONSTRATION ONLY"
+SYNTHETIC_WATERMARK = "DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY"
 
 DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
     "hriday": {
@@ -74,7 +74,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
-                "document_number_masked": "XXXX XXXX 8865",
+                "document_number_masked": "XXXX XXXX 1405",
                 "file_name": "demo_aadhaar_hriday_bardia.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 192000,
@@ -89,7 +89,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                     "full_name": "Hriday Bardia",
                     "date_of_birth": "15/08/2001",
                     "gender": "Male",
-                    "aadhaar_number": "DEMO-AADHAAR-7016918865",
+                    "aadhaar_number": "1111 2222 1405",
                     "address": "42, Sunrise Greens, Alkapuri, Vadodara, Gujarat - 390007"
                 },
                 "field_confidence": {"full_name": 0.99, "date_of_birth": 0.98, "aadhaar_number": 0.99},
@@ -263,7 +263,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
-                "document_number_masked": "XXXX XXXX 2422",
+                "document_number_masked": "XXXX XXXX 1304",
                 "file_name": "demo_aadhaar_varad.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 180000,
@@ -278,7 +278,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                     "full_name": "Varad Kanade",
                     "date_of_birth": "10/05/2000",
                     "gender": "Male",
-                    "aadhaar_number": "DEMO-AADHAAR-8830482422",
+                    "aadhaar_number": "1111 2222 1304",
                     "address": "12, Kothrud Main Road, Pune, Maharashtra - 411038"
                 },
                 "field_confidence": {"full_name": 0.99, "aadhaar_number": 0.99},
@@ -407,12 +407,13 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             }
         ]
     },
-    "ayuh": {
-        "key": "ayuh",
-        "user_id": "user_ayuh_chauhan",
-        "full_name": "Ayuh Chauhan",
+    "ayush": {
+        "key": "ayush",
+        "user_id": "user_ayush_chauhan",
+        "full_name": "Ayush Singh Chauhan",
+        "role": "CITIZEN",
         "mobile_number": "+918969707785",
-        "email": "ayuh@demo.citizen",
+        "email": "ayush@demo.citizen",
         "age": 22,
         "annual_income": 180000.0,
         "income_category": "EWS",
@@ -426,8 +427,8 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
-                "document_number_masked": "XXXX XXXX 7785",
-                "file_name": "demo_aadhaar_ayuh.pdf",
+                "document_number_masked": "XXXX XXXX 0207",
+                "file_name": "demo_aadhaar_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 182000,
                 "status": "AVAILABLE",
@@ -438,10 +439,10 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "UIDAI",
                 "extracted_fields": {
-                    "full_name": "Ayuh Chauhan",
+                    "full_name": "Ayush Singh Chauhan",
                     "date_of_birth": "20/12/2004",
                     "gender": "Male",
-                    "aadhaar_number": "DEMO-AADHAAR-8969707785",
+                    "aadhaar_number": "1111 2222 0207",
                     "address": "88, Boring Road, Jaipur, Rajasthan - 302001"
                 },
                 "field_confidence": {"full_name": 0.99, "aadhaar_number": 0.99},
@@ -453,7 +454,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "PAN",
                 "document_name": "PAN Card",
                 "document_number_masked": "XXXXX9101N",
-                "file_name": "demo_pan_ayuh.pdf",
+                "file_name": "demo_pan_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 148000,
                 "status": "AVAILABLE",
@@ -464,7 +465,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Income Tax Department",
                 "extracted_fields": {
-                    "full_name": "Ayuh Chauhan",
+                    "full_name": "Ayush Singh Chauhan",
                     "pan_number": "DEMO-PAN-00003"
                 },
                 "field_confidence": {"full_name": 0.99},
@@ -476,7 +477,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "PASSPORT",
                 "document_name": "Indian Republic Passport",
                 "document_number_masked": "ZXXXXXX1",
-                "file_name": "demo_passport_ayuh.pdf",
+                "file_name": "demo_passport_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 320000,
                 "status": "AVAILABLE",
@@ -487,7 +488,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Ministry of External Affairs, India",
                 "extracted_fields": {
-                    "full_name": "Ayuh Chauhan",
+                    "full_name": "Ayush Singh Chauhan",
                     "passport_number": "DEMO-PASS-0003",
                     "valid_until": "2032-11-20"
                 },
@@ -500,7 +501,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "document_type": "DRIVING_LICENCE",
                 "document_name": "Driving Licence",
                 "document_number_masked": "RJ-14-2020-XXXXXXX",
-                "file_name": "demo_dl_ayuh.pdf",
+                "file_name": "demo_dl_ayush.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 205000,
                 "status": "AVAILABLE",
@@ -511,7 +512,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                 "is_digilocker": True,
                 "issued_by": "Transport Dept, Jaipur, Rajasthan",
                 "extracted_fields": {
-                    "full_name": "Ayuh Chauhan",
+                    "full_name": "Ayush Singh Chauhan",
                     "dl_number": "DEMO-DL-RJ14-0003",
                     "valid_until": "2035-12-19"
                 },
@@ -541,7 +542,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
             {
                 "document_type": "AADHAAR",
                 "document_name": "Aadhaar Card",
-                "document_number_masked": "XXXX XXXX 4455",
+                "document_number_masked": "XXXX XXXX 3333",
                 "file_name": "demo_aadhaar_satwik.pdf",
                 "mime_type": "application/pdf",
                 "file_size": 182000,
@@ -556,7 +557,7 @@ DEMO_CITIZENS: Dict[str, Dict[str, Any]] = {
                     "full_name": "Satwik Guru",
                     "date_of_birth": "12/04/2005",
                     "gender": "Male",
-                    "aadhaar_number": "DEMO-AADHAAR-9988776655",
+                    "aadhaar_number": "1111 2222 3333",
                     "address": "15, MG Road, Bengaluru, Karnataka - 560001"
                 },
                 "field_confidence": {"full_name": 0.99, "aadhaar_number": 0.99},
@@ -693,13 +694,19 @@ class DemoVaultService:
     @staticmethod
     def get_demo_citizen(key_or_username: str) -> Optional[Dict[str, Any]]:
         query = key_or_username.lower().strip()
-        # Resolve display aliases back to real keys
-        if query == "aarav":
+        # Resolve display aliases and test IDs back to canonical keys
+        if query in ("aarav", "111122221405", "demo_citizen_hriday", "user_hriday_bardia"):
             query = "hriday"
-        elif query == "priya":
+        elif query in ("priya", "111122221304", "demo_citizen_varad", "user_varad_kanade"):
             query = "varad"
-        elif query == "arjun":
-            query = "satwik"  # maps arjun to satwik for test compatibility
+        elif query in ("arjun", "111122223333", "demo_citizen_satwik", "user_satwik_mishra"):
+            query = "satwik"
+        elif query in ("ayuh", "ayush", "111122220207", "demo_citizen_ayuh", "demo_citizen_ayush", "user_ayush_chauhan"):
+            query = "ayush"
+        elif query in ("dishita", "dis123456", "demo_citizen_dishita", "user_dishita"):
+            query = "dishita"
+        elif query in ("jyoti", "jyo123456", "demo_citizen_jyoti", "user_jyoti"):
+            query = "jyoti"
 
         # Match by key or full_name (case-insensitive)
         for key, data in DEMO_CITIZENS.items():
@@ -709,13 +716,20 @@ class DemoVaultService:
 
     @staticmethod
     def load_demo_citizen_into_db(db: Session, key: str) -> Dict[str, Any]:
-        alias_key = key.lower().strip()
-        if alias_key == "aarav":
+        raw_key = key.lower().strip()
+        alias_key = raw_key
+        if alias_key in ("aarav", "111122221405", "demo_citizen_hriday", "user_hriday_bardia"):
             alias_key = "hriday"
-        elif alias_key == "priya":
+        elif alias_key in ("priya", "111122221304", "demo_citizen_varad", "user_varad_kanade"):
             alias_key = "varad"
-        elif alias_key == "arjun":
+        elif alias_key in ("arjun", "111122223333", "demo_citizen_satwik", "user_satwik_mishra"):
             alias_key = "satwik"
+        elif alias_key in ("ayuh", "ayush", "111122220207", "demo_citizen_ayuh", "demo_citizen_ayush", "user_ayush_chauhan"):
+            alias_key = "ayush"
+        elif alias_key in ("dishita", "dis123456", "demo_citizen_dishita", "user_dishita"):
+            alias_key = "dishita"
+        elif alias_key in ("jyoti", "jyo123456", "demo_citizen_jyoti", "user_jyoti"):
+            alias_key = "jyoti"
             
         demo_info = DemoVaultService.get_demo_citizen(alias_key)
         if not demo_info:
@@ -725,22 +739,26 @@ class DemoVaultService:
         expected_state = demo_info.get("location_state", "Gujarat")
         expected_city = demo_info.get("location_city", "Vadodara")
 
-        if key.lower().strip() == "aarav":
+        if raw_key == "aarav":
             expected_name = "Aarav Mehta"
             expected_state = "Gujarat"
             expected_city = "Vadodara"
-        elif key.lower().strip() == "priya":
+        elif raw_key == "priya":
             expected_name = "Priya Sharma"
             expected_state = "Rajasthan"
             expected_city = "Jaipur"
-        elif key.lower().strip() == "arjun":
+        elif raw_key == "arjun":
             expected_name = "Arjun Nair"
             expected_state = "Karnataka"
             expected_city = "Bengaluru"
+        elif raw_key == "ayuh":
+            expected_name = "Ayuh Chauhan"
+            expected_state = "Rajasthan"
+            expected_city = "Jaipur"
 
         # Check if user exists
         from app.models.db_models import CitizenProfileDB
-        user_id_expected = f"demo_citizen_{key.lower().strip()}"
+        user_id_expected = f"demo_citizen_{raw_key}"
         user = db.query(UserDB).filter(UserDB.id == user_id_expected).first()
         if not user:
             from app.core.security import hash_pin

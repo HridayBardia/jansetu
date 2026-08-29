@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { 
   analyzeGoalAPI, 
   generateJourneyAPI, 
@@ -36,8 +37,18 @@ import { SchemeCard } from '@/components/SchemeCard';
 import { ConsentLedger } from '@/components/ConsentLedger';
 import { analyzeGoalUniversal } from '@/lib/goalClassifier';
 import { DocumentVault } from '@/components/DocumentVault';
+import { CitizenNavTabs } from '@/components/citizen/CitizenNavTabs';
+import { CheckMyInformation } from '@/components/citizen/CheckMyInformation';
+import { YourDataConsent } from '@/components/citizen/YourDataConsent';
+import { AlertsEvents } from '@/components/citizen/AlertsEvents';
+import { GovInteropHub } from '@/components/citizen/GovInteropHub';
+import { AiHelpDrawer } from '@/components/AiHelpDrawer';
+import { PendingRequestBanner } from '@/components/citizen/PendingRequestBanner';
+import { ActiveAlertBanner } from '@/components/citizen/ActiveAlertBanner';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
+import { useLiveSync } from '@/context/LiveSyncContext';
+import { DEMO_CITIZENS, findCitizen } from '@/data/demoCitizens';
 import {
   Sparkles,
   ArrowRight,
@@ -64,9 +75,12 @@ import {
   Trash2,
   BarChart2,
   Network,
-  UserCircle
+  UserCircle,
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { useMockData } from '@/context/MockDataContext';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
 
 const INDIAN_STATES_AND_UTS = [
   { name: "Andhra Pradesh", code: "AP", type: "STATE", official_name: "State of Andhra Pradesh" },
@@ -134,11 +148,41 @@ function generateDemoJourney(query: string, domicileState: string, matchedScheme
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { t, isRTL } = useLanguage();
-  const { user, isAuthenticated, isLoading, profile } = useAuth();
+  const { t, isRTL, language, translateInputToEnglish, translateDynamicText } = useLanguage();
+  const { user, isAuthenticated, isLoading, profile, logout } = useAuth();
+
+  const [ekycProfile, setEkycProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('jansetu_ekyc_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && (parsed.name === user?.full_name || parsed.username === user?.username || parsed.rawAadhaar === user?.id)) {
+            setEkycProfile(parsed);
+            return;
+          }
+        }
+        if (user) {
+          const matched = findCitizen(user.username || user.full_name || user.id);
+          if (matched) setEkycProfile(matched);
+          else setEkycProfile(null);
+        }
+      } catch (e) {}
+    }
+  }, [user]);
+
+  const citizenName = profile?.full_name || ekycProfile?.name || user?.full_name || 'Ayush Singh Chauhan';
+  const citizenAadhaar = profile?.aadhaar || ekycProfile?.aadhaar || (user?.id && /^\d+$/.test(user.id) ? `XXXX XXXX ${user.id.slice(-4)}` : '1111 2222 0207');
+  const citizenPhone = profile?.phone || ekycProfile?.phone || user?.mobile_number || '+91 XXXXX 0207';
+  const citizenDob = profile?.date_of_birth || ekycProfile?.dob || '20/12/2004';
+  const citizenGender = profile?.gender || ekycProfile?.gender || 'Male';
+  const citizenAddress = profile?.location_city ? `${profile.location_city}, ${profile.location_state}` : ekycProfile?.address || '88, Boring Road, Jaipur, Rajasthan - 302001';
 
   const [goalInput, setGoalInput] = useState('');
   const latestRequestIdRef = React.useRef<number>(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [journeyAnalysis, setJourneyAnalysis] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -161,30 +205,69 @@ export default function DashboardPage() {
     consents: mockConsents, 
     governmentConnections, 
     alerts: mockAlerts,
-    addDocument
+    addDocument,
+    removeDocument,
+    addApplication
   } = useMockData();
 
-  const [activeTab, setActiveTab] = useState<'planner' | 'journeys' | 'documents' | 'applications' | 'consent' | 'interop' | 'conflicts' | 'alerts' | 'official'>('planner');
+  const { 
+    journeys: liveJourneys, 
+    startJourney 
+  } = useLiveSync();
+
+  const [activeTab, _setActiveTab] = useState<'planner' | 'schemes' | 'journeys' | 'documents' | 'applications' | 'consent' | 'interop' | 'conflicts' | 'alerts' | 'official'>('planner');
+
+  const setActiveTab = (tab: 'planner' | 'schemes' | 'journeys' | 'documents' | 'applications' | 'consent' | 'interop' | 'conflicts' | 'alerts' | 'official') => {
+    _setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('tab', tab);
+      router.push(newUrl.pathname + newUrl.search, { scroll: false });
+    }
+  };
+
+  const searchParams = useSearchParams();
+  const queryTab = searchParams.get('tab');
 
   useEffect(() => {
-    const handleUrlChange = () => {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab');
-        if (tab) {
-          const validTabs = ['planner', 'journeys', 'documents', 'applications', 'consent', 'interop', 'conflicts', 'alerts', 'official'];
-          if (validTabs.includes(tab)) {
-            setActiveTab(tab as any);
-          }
-        }
+    if (queryTab) {
+      const validTabs = ['planner', 'schemes', 'journeys', 'documents', 'applications', 'consent', 'interop', 'conflicts', 'alerts', 'official'];
+      if (validTabs.includes(queryTab)) {
+        _setActiveTab(prev => {
+          if (prev !== queryTab) return queryTab as any;
+          return prev;
+        });
       }
-    };
-    
-    handleUrlChange();
-    const interval = setInterval(handleUrlChange, 200);
-    return () => clearInterval(interval);
-  }, []);
+    } else {
+      // If no tab parameter exists in the URL, default to planner
+      _setActiveTab(prev => {
+        if (prev !== 'planner') return 'planner';
+        return prev;
+      });
+    }
+  }, [queryTab]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  // Close notifications menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (
+        isNotificationsOpen &&
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isNotificationsOpen]);
   
   const [healthData, setHealthData] = useState<any>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -203,6 +286,7 @@ export default function DashboardPage() {
   const [realNotifications, setRealNotifications] = useState<any[]>([]);
   const [realDocuments, setRealDocuments] = useState<any[]>([]);
   const [realJourneys, setRealJourneys] = useState<any[]>([]);
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
 
   const loadInteropData = () => {
     setIsRefreshing(true);
@@ -274,7 +358,7 @@ export default function DashboardPage() {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#133E87] dark:text-blue-400" />
       </div>
     );
   }
@@ -315,7 +399,9 @@ export default function DashboardPage() {
 
     try {
       console.log("[Journey] User query:", trimmedGoal);
-      const res = await analyzeJourneyAPI(trimmedGoal, domicileState);
+      const normalizedQuery = await translateInputToEnglish(trimmedGoal);
+      console.log("[Journey] Normalized query for search engine:", normalizedQuery);
+      const res = await analyzeJourneyAPI(normalizedQuery || trimmedGoal, domicileState);
       
       if (currentRequestId !== latestRequestIdRef.current) {
         clearTimeout(timer1);
@@ -367,6 +453,53 @@ export default function DashboardPage() {
     setGoalInput(text);
   };
 
+  const handleStartActiveJourney = (customTitle?: string, customCat?: string, customLoc?: string) => {
+    let title = customTitle || goalInput.trim();
+    let category = customCat || 'General Welfare';
+    let location = customLoc || `${domicileState}, India`;
+    let currentStage = 'Document & e-KYC Verification';
+
+    if (title.toLowerCase().includes('vadodara') || title.toLowerCase().includes('business')) {
+      title = 'Start Commercial Food Business in Vadodara';
+      category = 'Business & Commerce';
+      location = 'Vadodara, Gujarat';
+      currentStage = 'FSSAI License & Municipal Trade Clearance';
+    } else if (title.toLowerCase().includes('australia') || title.toLowerCase().includes('masters')) {
+      title = 'Higher Education & Masters in Australia';
+      category = 'Higher Education';
+      location = 'Udaipur, Rajasthan';
+      currentStage = 'Academic Marksheet Verification & Bank Mandate';
+    } else if (title.toLowerCase().includes('scholarship')) {
+      title = 'Post-Matric Scholarship Scheme Application';
+      category = 'Scholarships & Welfare';
+      location = 'Jaipur, Rajasthan';
+      currentStage = 'Income Certificate & Category Scrutiny';
+    } else if (title.toLowerCase().includes('farmer') || title.toLowerCase().includes('kisan')) {
+      title = 'PM-KISAN Beneficiary Registration & Land Linking';
+      category = 'Agriculture & Rural';
+      location = 'Kota, Rajasthan';
+      currentStage = 'Land Revenue Khasra e-Authentication';
+    }
+
+    startJourney({
+      id: `jrn_${Date.now()}`,
+      title,
+      category,
+      citizenName,
+      status: 'In Progress',
+      progress: 10,
+      currentStage,
+      documentsReady: 2,
+      documentsTotal: 4,
+      nextAction: 'Verify Aadhaar e-KYC and upload state credentials',
+      lastUpdated: 'Just now',
+      timestamp: Date.now(),
+      location
+    });
+
+    setActiveTab('journeys');
+  };
+
   const handleCreateJourney = async () => {
     if (!journeyAnalysis) return;
     setIsGenerating(true);
@@ -412,40 +545,46 @@ export default function DashboardPage() {
 
       <div className="max-w-5xl mx-auto space-y-8 py-6 px-4 pb-24 md:pb-6 relative z-10">
       {/* Brand Header */}
-      <div className="flex items-center justify-between border-b border-slate-900 pb-5">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
             JS
           </div>
-          <span className="text-xs font-black text-slate-400 tracking-widest uppercase">{t('dashboard.oneCitizen')}</span>
+          <span className="text-xs font-black text-slate-600 dark:text-slate-400 tracking-widest uppercase">{t('dashboard.oneCitizen')}</span>
         </div>
-        <div className="flex items-center gap-4 text-xs font-medium text-slate-400 relative">
+        <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-400 relative">
           {/* Notifications Bell */}
-          <div className="relative">
+          <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="p-1.5 bg-slate-900 border border-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition relative"
+              className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg transition relative cursor-pointer shadow-2xs"
             >
               <Bell className="w-4.5 h-4.5" />
               {realNotifications.filter((n: any) => !n.is_read).length > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border border-slate-950 animate-pulse" />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />
               )}
             </button>
             
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-4 z-50 space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                  <span className="font-bold text-white uppercase tracking-wider">{t('dashboard.notificationsCenter')}</span>
-                  <span className="text-[10px] text-slate-500">{realNotifications.length} alerts</span>
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl p-4 z-50 space-y-3 text-xs">
+                <LockScroll />
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider">{t('dashboard.notificationsCenter')}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500">{realNotifications.length} alerts</span>
+                    <button onClick={() => setIsNotificationsOpen(false)} className="text-slate-500 hover:text-slate-800 dark:hover:text-white bg-slate-100 dark:bg-slate-800 p-1 rounded-md transition cursor-pointer">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-2">
                   {realNotifications.slice(0, 10).map((n: any) => (
-                    <div key={n.id} className="p-2 bg-slate-950 border border-slate-850 rounded-lg space-y-1">
+                    <div key={n.id} className="p-2.5 bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-md space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-300">{n.category || 'Update'}</span>
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">{n.category || 'Update'}</span>
                         <span className="text-[9px] text-slate-500">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
                       </div>
-                      <p className="text-slate-400 text-[11px] leading-relaxed">{n.title}: {n.message}</p>
+                      <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">{n.title}: {n.message}</p>
                     </div>
                   ))}
                   {realNotifications.length === 0 && (
@@ -456,262 +595,121 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <span className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800/60 text-[10px] uppercase font-bold text-slate-300">
-            ✓ Secure Gate
+          <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+            <span>Secure Gate</span>
           </span>
           <button 
             type="button"
-            onClick={() => logoutAPI().then(() => router.push('/login'))} 
-            className="hover:text-amber-500 transition font-bold"
+            onClick={logout} 
+            className="hover:text-[#133E87] dark:hover:text-blue-400 text-slate-700 dark:text-slate-300 transition font-bold cursor-pointer"
           >
             {t("navigation.signOut")}
           </button>
         </div>
       </div>
 
-      {/* Greeting Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            {t('dashboard.welcome')}, {user?.full_name || t('dashboard.citizen')} 👋
-          </h1>
-          <p className="text-xs font-black text-amber-500 tracking-wider uppercase">
-            {t('dashboard.oneCitizen')}
-          </p>
-          <p className="text-[11px] text-slate-500">
-            {t('dashboard.jurisdictionAware')}
-          </p>
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2.5 bg-slate-950/40 border border-slate-850 px-2.5 py-1 rounded-lg w-fit">
-            <span>JanSetu</span>
-            <span>/</span>
-            <span className="text-amber-400">
-              {activeTab === 'planner' ? t('dashboard.goalPlanner') : 
-               activeTab === 'journeys' ? t('dashboard.activeJourneys') : 
-               activeTab === 'documents' ? t('dashboard.documentsVault') :
-               activeTab === 'applications' ? t('dashboard.myApplications') :
-               activeTab === 'consent' ? t('dashboard.yourDataConsent') :
-               activeTab === 'interop' ? t('dashboard.govtInteropHub') :
-               activeTab === 'conflicts' ? t('dashboard.checkMyInformation') :
-               activeTab === 'alerts' ? t('dashboard.alertsEvents') : t('dashboard.officialView')}
-            </span>
-          </div>
-        </div>
-
-
-      </div>
+      {/* e-KYC Verified Citizen Banner */}
+      <CitizenHero />
 
       {/* Overview Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex items-center gap-4 transition hover:border-slate-700/80">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
+        <div 
+          onClick={() => setActiveTab('documents')}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+        >
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('dashboard.documentVault')}</span>
-            <span className="text-sm font-black text-white">{realDocuments.length > 0 ? realDocuments.length : mockDocs.length} {t('dashboard.verifiedFiles')}</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{t('dashboard.documentVault')}</span>
+            <span className="text-sm font-black text-slate-900 dark:text-white">{realDocuments.length > 0 ? realDocuments.length : mockDocs.length} {t('dashboard.verifiedFiles')}</span>
           </div>
         </div>
 
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex items-center gap-4 transition hover:border-slate-700/80">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0">
+        <div 
+          onClick={() => setActiveTab('journeys')}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-300 dark:border-amber-800 shrink-0">
             <Compass className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('dashboard.activeJourneys')}</span>
-            <span className="text-sm font-black text-white">{(realJourneys.length || mockJourneys.length)} {t('dashboard.activeJourneysCount')}</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{t('dashboard.activeJourneys')}</span>
+            <span className="text-sm font-black text-slate-900 dark:text-white">{(realJourneys.length || mockJourneys.length)} {t('dashboard.activeJourneysCount')}</span>
           </div>
         </div>
 
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex items-center gap-4 transition hover:border-slate-700/80">
-          <div className="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
+        <div 
+          onClick={() => setActiveTab('schemes')}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-4 transition hover:border-amber-500/50 cursor-pointer shadow-sm hover:shadow-md hover:-translate-y-0.5"
+        >
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-cyan-600 dark:text-[#133E87] dark:text-blue-400 flex items-center justify-center border border-cyan-500/20 shrink-0">
             <Landmark className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('dashboard.govtSupport')}</span>
-            <span className="text-sm font-black text-white">{schemes.length} {t('dashboard.schemesAvailable')}</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{t('dashboard.govtSupport')}</span>
+            <span className="text-sm font-black text-slate-900 dark:text-white">{schemes.length || 6} {t('dashboard.schemesAvailable')}</span>
           </div>
         </div>
       </div>
 
       {/* Interoperability Tabs Switcher (Hidden on Mobile) */}
-      <div className="hidden md:flex border-b border-slate-800 gap-1 overflow-x-auto pb-px shrink-0">
-        <button
-          onClick={() => setActiveTab('planner')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'planner'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Compass className="w-4 h-4" />
-          <span>{t('dashboard.goalPlanner')}</span>
-        </button>
+      <CitizenNavTabs activeTab={activeTab as any} setActiveTab={setActiveTab} loadInteropData={loadInteropData} />
 
-        <button
-          onClick={() => setActiveTab('journeys')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'journeys'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <MapPin className="w-4 h-4" />
-          <span>{t('dashboard.activeJourneys')}</span>
-          {(realJourneys.length || mockJourneys.length) > 0 && (
-            <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {realJourneys.length || mockJourneys.length}
-            </span>
-          )}
-        </button>
+      {/* Prominent High-Visibility e-KYC Urgent Action Banner */}
+      <ActiveAlertBanner />
 
-        <button
-          onClick={() => setActiveTab('documents')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'documents'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          <span>{t('dashboard.documentsVault')}</span>
-          {(realDocuments.length > 0 ? realDocuments.length : mockDocs.length) > 0 && (
-            <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {realDocuments.length > 0 ? realDocuments.length : mockDocs.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => { setActiveTab('applications'); loadInteropData(); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap relative ${
-            activeTab === 'applications'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Briefcase className="w-4 h-4" />
-          <span>{t('dashboard.myApplications')}</span>
-          {mockApplications.length > 0 && (
-            <span className="bg-amber-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {mockApplications.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => { setActiveTab('consent'); loadInteropData(); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'consent'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Key className="w-4 h-4" />
-          <span>{t('dashboard.yourDataConsent')}</span>
-          {mockConsents.filter(c => c.status === 'ACTIVE').length > 0 && (
-            <span className="bg-emerald-500 text-slate-950 font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1">
-              {mockConsents.filter(c => c.status === 'ACTIVE').length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => { setActiveTab('interop'); loadInteropData(); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'interop'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          <span>{t('dashboard.govtInteropHub')}</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveTab('conflicts'); loadInteropData(); }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'conflicts'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <ShieldAlert className="w-4 h-4" />
-          <span>{t('dashboard.checkMyInformation')}</span>
-          {conflicts.filter(c => c.status === 'DETECTED').length > 0 && (
-            <span className="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ml-1 animate-pulse">
-              {conflicts.filter(c => c.status === 'DETECTED').length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('alerts')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-            activeTab === 'alerts'
-              ? 'border-amber-500 text-amber-400 font-black'
-              : 'border-transparent text-slate-400 hover:text-white'
-          }`}
-        >
-          <Bell className="w-4 h-4" />
-          <span>{t('dashboard.alertsEvents')}</span>
-        </button>
-
-        {(user?.role === 'SYSTEM_ADMIN' || user?.role === 'DEPARTMENT_ADMIN') && (
-          <button
-            onClick={() => setActiveTab('official')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition whitespace-nowrap ${
-              activeTab === 'official'
-                ? 'border-emerald-500 text-emerald-400 font-black'
-                : 'border-transparent text-slate-400 hover:text-white'
-            }`}
-          >
-            <BarChart2 className="w-4 h-4" />
-            <span>{t('dashboard.officialView')}</span>
-          </button>
-        )}
-      </div>
+      {activeTab === 'schemes' && (
+        <SchemeExplorer 
+          onApplicationCreated={(newApp) => {
+            addApplication(newApp);
+          }} 
+        />
+      )}
 
       {activeTab === 'planner' && (
         <>
           {/* Main Goal Input Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-6 shadow-sm">
         <form onSubmit={handleAnalyzeGoal} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1 md:col-span-1 relative">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 {t('goalPlanner.domicileState')}
               </label>
               
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 text-sm text-left focus:outline-none focus:border-amber-500/50 flex items-center justify-between transition-colors hover:border-slate-700"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md p-3 text-slate-900 dark:text-white text-sm text-left focus:outline-none focus:ring-2 focus:ring-[#133E87] dark:focus:ring-blue-500 flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
               >
                 <span>{domicileState}</span>
-                <span className="text-slate-500 text-xs">▼</span>
+                <ChevronDown className="w-4 h-4 text-slate-500" />
               </button>
 
               {isDropdownOpen && (
                 <>
+                  <LockScroll />
                   <div 
                     className="fixed inset-0 z-40 bg-transparent" 
                     onClick={() => setIsDropdownOpen(false)} 
                   />
-                  <div className="absolute left-0 right-0 mt-1.5 bg-slate-900 border border-slate-855 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 max-h-72 overflow-y-auto">
+                  <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md shadow-lg z-50 p-2.5 space-y-2 max-h-72 overflow-y-auto">
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={t('goalPlanner.searchStates')}
                       autoFocus
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500/50"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded p-2 text-slate-900 dark:text-white placeholder-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-[#133E87]"
                     />
                     
                     <div className="space-y-3 pt-1">
                       {/* States Group */}
                       {filteredStates.filter(s => s.type === 'STATE').length > 0 && (
                         <div className="space-y-1">
-                          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2 block">
+                          <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase px-2 block">
                             {t('goalPlanner.states')}
                           </span>
                           {filteredStates.filter(s => s.type === 'STATE').map(st => (
@@ -725,8 +723,8 @@ export default function DashboardPage() {
                               }}
                               className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition ${
                                 domicileState === st.name 
-                                  ? 'bg-amber-500/10 text-amber-400 font-semibold' 
-                                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                  ? 'bg-blue-50 dark:bg-blue-950/40 text-[#133E87] dark:text-blue-400 font-bold' 
+                                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                               }`}
                             >
                               {st.name}
@@ -738,7 +736,7 @@ export default function DashboardPage() {
                       {/* UTs Group */}
                       {filteredStates.filter(s => s.type === 'UNION_TERRITORY').length > 0 && (
                         <div className="space-y-1">
-                          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-2 block">
+                          <span className="text-[10px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase px-2 block">
                             {t('goalPlanner.unionTerritories')}
                           </span>
                           {filteredStates.filter(s => s.type === 'UNION_TERRITORY').map(st => (
@@ -752,8 +750,8 @@ export default function DashboardPage() {
                               }}
                               className={`w-full text-left px-2 py-1.5 rounded-md text-xs transition ${
                                 domicileState === st.name 
-                                  ? 'bg-amber-500/10 text-amber-400 font-semibold' 
-                                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                  ? 'bg-blue-50 dark:bg-blue-950/40 text-[#133E87] dark:text-blue-400 font-bold' 
+                                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                               }`}
                             >
                               {st.name}
@@ -772,7 +770,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 {t('goalPlanner.whatToAccomplish')}
               </label>
               <div className="relative flex flex-col md:block">
@@ -781,12 +779,12 @@ export default function DashboardPage() {
                   value={goalInput}
                   onChange={(e) => setGoalInput(e.target.value)}
                   placeholder={t('goalPlanner.tellUs')}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 md:pr-40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 text-base md:text-sm resize-none min-h-[80px]"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md p-3 md:pr-44 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#133E87] dark:focus:ring-blue-500 text-base md:text-sm resize-none min-h-[80px] shadow-2xs"
                 />
                 <button
                   type="submit"
                   disabled={isAnalyzing}
-                  className="mt-2 md:mt-0 md:absolute md:bottom-3 md:right-3 w-full md:w-auto justify-center bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-4 py-3 md:py-2 rounded-lg text-sm md:text-xs flex items-center gap-2 shadow-lg disabled:opacity-50 transition"
+                  className="mt-2 md:mt-0 md:absolute md:bottom-3 md:right-3 w-full md:w-auto justify-center bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-md text-sm md:text-xs flex items-center gap-2 shadow-xs disabled:opacity-50 transition cursor-pointer"
                 >
                   {isAnalyzing ? (
                     <>
@@ -806,24 +804,24 @@ export default function DashboardPage() {
         </form>
         
         {errorMessage && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg flex items-center gap-2 mt-4">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs p-3 rounded-md flex items-center gap-2 mt-4">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* Quick Starts */}
-        <div className="mt-4 pt-4 border-t border-slate-800/80">
-          <span className="text-xs text-slate-500 font-semibold block mb-2">{t('goalPlanner.quickStarts')}</span>
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider block mb-2">{t('goalPlanner.quickStarts')}</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             <button
               onClick={() => {
                 setDomicileState("Gujarat");
                 handleQuickStart("I want to start a business in Vadodara, Gujarat.");
               }}
-              className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
+              className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2.5 rounded-md text-xs text-slate-800 dark:text-slate-200 transition text-left cursor-pointer shadow-2xs"
             >
-              <Briefcase className="w-4 h-4 text-amber-400 shrink-0" />
+              <Briefcase className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>{t('goalPlanner.startBusinessVadodara')}</span>
             </button>
 
@@ -832,9 +830,9 @@ export default function DashboardPage() {
                 setDomicileState("Rajasthan");
                 handleQuickStart("I am living in Udaipur and I wanna go to Australia for masters.");
               }}
-              className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
+              className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2.5 rounded-md text-xs text-slate-800 dark:text-slate-200 transition text-left cursor-pointer shadow-2xs"
             >
-              <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
+              <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{t('goalPlanner.mastersAustralia')}</span>
             </button>
 
@@ -843,9 +841,9 @@ export default function DashboardPage() {
                 setDomicileState("Rajasthan");
                 handleQuickStart("I want a scholarship in Rajasthan.");
               }}
-              className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
+              className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2.5 rounded-md text-xs text-slate-800 dark:text-slate-200 transition text-left cursor-pointer shadow-2xs"
             >
-              <Landmark className="w-4 h-4 text-orange-400 shrink-0" />
+              <Landmark className="w-4 h-4 text-[#133E87] dark:text-blue-400 shrink-0" />
               <span>{t('goalPlanner.scholarshipRajasthan')}</span>
             </button>
 
@@ -854,53 +852,124 @@ export default function DashboardPage() {
                 setDomicileState("Rajasthan");
                 handleQuickStart("I am a farmer in Rajasthan.");
               }}
-              className="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-300 transition text-left"
+              className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 p-2.5 rounded-md text-xs text-slate-800 dark:text-slate-200 transition text-left cursor-pointer shadow-2xs"
             >
-              <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
+              <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{t('goalPlanner.farmerRajasthan')}</span>
             </button>
           </div>
         </div>
+
+        {/* Interactive Goal Road-Map Card & Direct Activation CTA */}
+        {goalInput.trim().length > 0 && (
+          <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-blue-50/80 via-slate-50 to-indigo-50/50 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-850 border-2 border-[#133E87]/30 dark:border-blue-500/30 shadow-md space-y-5 animate-scaleUp">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#133E87] dark:text-blue-400 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800">
+                    {t('goalPlanner.liveRoadmap', 'Live Goal Workflow Road-Map')}
+                  </span>
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
+                    ✓ {t('goalPlanner.blueprintGenerated', 'Cross-Departmental Blueprint Generated')}
+                  </span>
+                </div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  {goalInput.toLowerCase().includes('vadodara') || goalInput.toLowerCase().includes('business') ? t('goalPlanner.businessVadodara', 'Start Commercial Food Business in Vadodara') :
+                   goalInput.toLowerCase().includes('australia') || goalInput.toLowerCase().includes('masters') ? t('goalPlanner.studyAbroadAustralia', 'Higher Education & Masters in Australia') :
+                   goalInput.toLowerCase().includes('scholarship') ? t('goalPlanner.scholarshipScheme', 'Post-Matric Scholarship Scheme Application') :
+                   goalInput.toLowerCase().includes('farmer') || goalInput.toLowerCase().includes('kisan') ? t('goalPlanner.pmKisanBeneficiary', 'PM-KISAN Beneficiary Registration & Land Linking') :
+                   goalInput}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  {t('goalPlanner.automatedDagDesc', 'Automated regulatory DAG will sequence identity verification, statutory departmental NOCs, and direct DBT seeding.')}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleStartActiveJourney()}
+                className="bg-[#0B2545] hover:bg-[#133E87] dark:bg-amber-600 dark:hover:bg-amber-500 text-white font-bold px-5 py-3 rounded-xl text-xs shadow-md flex items-center gap-2 transition transform hover:scale-[1.02] cursor-pointer self-start sm:self-center shrink-0"
+              >
+                <span>{t('goalPlanner.startWithThisJourney', '▶ Start with this Journey →')}</span>
+              </button>
+            </div>
+
+            {/* Stages Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-2xs">
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">{t('workflow.stage1', 'Stage 1: Identity')}</span>
+                <p className="font-bold text-slate-900 dark:text-white text-xs">{t('workflow.aadhaarEkyc', 'Aadhaar e-KYC Verification')}</p>
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <span>✓ {t('workflow.matchVerified', '100% Match Verified')}</span>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-blue-300 dark:border-blue-800/80 space-y-1.5 shadow-2xs">
+                <span className="text-[10px] font-bold text-[#133E87] dark:text-blue-400 uppercase tracking-wider block">{t('workflow.stage2', 'Stage 2: Credentials')}</span>
+                <p className="font-bold text-slate-900 dark:text-white text-xs">
+                  {goalInput.toLowerCase().includes('vadodara') || goalInput.toLowerCase().includes('business') ? t('workflow.fssaiTradeNoc', 'FSSAI License & Trade NOC') :
+                   goalInput.toLowerCase().includes('australia') || goalInput.toLowerCase().includes('masters') ? t('workflow.passportAcademic', 'Passport & Academic ABC') :
+                   goalInput.toLowerCase().includes('scholarship') ? t('workflow.incomeCasteCert', 'Income & Caste Certificate') :
+                   t('workflow.landKhasraRegistry', 'Land Khasra & Farmer Registry')}
+                </p>
+                <div className="flex items-center gap-1.5 text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                  <span>● {t('workflow.readyIngestion', 'Ready for Ingestion')}</span>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('workflow.stage3', 'Stage 3: Approval')}</span>
+                <p className="font-bold text-slate-900 dark:text-white text-xs">{t('workflow.deptScrutiny', 'Department Nodal Scrutiny')}</p>
+                <p className="text-[10px] text-slate-400">{t('workflow.slaTime', 'Automated SLA: 24-48 Hours')}</p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('workflow.stage4', 'Stage 4: Execution')}</span>
+                <p className="font-bold text-slate-900 dark:text-white text-xs">{t('workflow.directBenefitOrder', 'Direct Benefit / License')}</p>
+                <p className="text-[10px] text-slate-400">{t('workflow.sanctionOrder', 'Final Digital Sanction Order')}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cinematic Progressive Processing Screen */}
       {isAnalyzing && (
-        <div className="fixed inset-0 z-50 bg-[#020205]/95 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full space-y-6 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-            
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-8 max-w-md w-full space-y-6 shadow-xl relative overflow-hidden">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+              <div className="w-10 h-10 rounded-md bg-blue-50 dark:bg-blue-950/50 text-[#133E87] dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-800">
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">{t('goalPlanner.analyzingGoal')}</h4>
-                <p className="text-xs text-slate-400">{t('goalPlanner.verifyingRequirements')}</p>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t('goalPlanner.analyzingGoal')}</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{t('goalPlanner.verifyingRequirements')}</p>
               </div>
             </div>
 
-            <div className="space-y-4 pt-2 border-t border-slate-800">
+            <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-800">
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 1 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 1 ? '✓' : '●'} {t("goalPlanner.understandingRequest")}
+                <span className={generationStage >= 1 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 1 ? '✓' : '○'} {t("goalPlanner.understandingRequest")}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">{t("common.done")}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 2 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 2 ? '✓' : '●'} {t('goalPlanner.identifyingLocation')}
+                <span className={generationStage >= 2 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 2 ? '✓' : '○'} {t('goalPlanner.identifyingLocation')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">{t("common.done")}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 3 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 3 ? '✓' : '●'} {t('goalPlanner.findingServices')}
+                <span className={generationStage >= 3 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 3 ? '✓' : '○'} {t('goalPlanner.findingServices')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 4 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 4 ? '✓' : '●'} {t('goalPlanner.checkingEligibility')}
+                <span className={generationStage >= 4 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 4 ? '✓' : '○'} {t('goalPlanner.checkingEligibility')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium">{t('common.ready')}</span>
               </div>
@@ -911,40 +980,40 @@ export default function DashboardPage() {
 
       {/* Real-time Progress Indicator */}
       {isGenerating && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full space-y-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-6 max-w-md w-full space-y-5 shadow-xl">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-md bg-blue-50 dark:bg-blue-950/50 text-[#133E87] dark:text-blue-400 flex items-center justify-center">
                 <Loader2 className="w-5 h-5 animate-spin" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">{t('goalPlanner.buildingJourney')}</h4>
-                <p className="text-xs text-slate-400">{t('goalPlanner.realTimeAnalysis')}</p>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t('goalPlanner.buildingJourney')}</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{t('goalPlanner.realTimeAnalysis')}</p>
               </div>
             </div>
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 1 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 1 ? '✓' : '●'} {t('goalPlanner.understandingRequest')}
+                <span className={generationStage >= 1 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 1 ? '✓' : '○'} {t('goalPlanner.understandingRequest')}
                 </span>
                 <span className="text-slate-500">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 2 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 2 ? '✓' : '●'} {t('goalPlanner.identifyingLocation')}
+                <span className={generationStage >= 2 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 2 ? '✓' : '○'} {t('goalPlanner.identifyingLocation')}
                 </span>
                 <span className="text-slate-500">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 3 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 3 ? '✓' : '●'} {t('goalPlanner.findingServices')}
+                <span className={generationStage >= 3 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 3 ? '✓' : '○'} {t('goalPlanner.findingServices')}
                 </span>
                 <span className="text-slate-500">{t('common.done')}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className={generationStage >= 4 ? 'text-amber-400 font-semibold' : 'text-slate-500'}>
-                  {generationStage >= 4 ? '✓' : '●'} {t('goalPlanner.checkingEligibility')}
+                <span className={generationStage >= 4 ? 'text-[#133E87] dark:text-blue-400 font-semibold' : 'text-slate-500'}>
+                  {generationStage >= 4 ? '✓' : '○'} {t('goalPlanner.checkingEligibility')}
                 </span>
                 <span className="text-slate-500">{t('common.ready')}</span>
               </div>
@@ -957,10 +1026,10 @@ export default function DashboardPage() {
           These are available via dedicated navigation tabs. */}
       {false && (
       <>
-      {/* 01 — YOUR JOURNEY */}
+      {/* 01 - YOUR JOURNEY */}
       <div className="space-y-4 mt-8">
         <div className="flex items-center gap-3">
-          <span className="text-2xl font-black text-amber-500 font-mono">01</span>
+          <span className="text-2xl font-black text-[#133E87] dark:text-blue-400 font-mono">01</span>
           <div className="border-l border-slate-800 pl-3">
             <h2 className="text-base font-bold text-white uppercase tracking-wider">YOUR JOURNEY</h2>
             <p className="text-xs text-slate-400">Your active government tasks</p>
@@ -968,7 +1037,7 @@ export default function DashboardPage() {
         </div>
 
         {mockJourneys.length === 0 ? (
-          <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
+          <div className="bg-slate-905 border border-slate-800/80 rounded-md p-6 text-center text-slate-500 text-xs">
             No active journeys yet. Enter your goal above (e.g. "I want to start a business in Pune") to build your first personalized government journey.
           </div>
         ) : (
@@ -977,11 +1046,11 @@ export default function DashboardPage() {
               <div
                 key={j.id}
                 onClick={() => router.push(`/journeys/${j.id || 'journey_biz_vadodara_1'}`)}
-                className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 rounded-xl p-5 cursor-pointer transition space-y-4 group"
+                className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/40 rounded-md p-5 cursor-pointer transition space-y-4 group"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-400 flex items-center justify-center font-bold text-xs">
                       {domicileState === 'Gujarat' ? 'GJ' : domicileState === 'Karnataka' ? 'KA' : domicileState === 'Rajasthan' ? 'RJ' : 'IN'}
                     </div>
                     <div>
@@ -1005,10 +1074,10 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* 02 — DOCUMENTS */}
+      {/* 02 - DOCUMENTS */}
       <div className="space-y-4 mt-8">
         <div className="flex items-center gap-3">
-          <span className="text-2xl font-black text-amber-500 font-mono">02</span>
+          <span className="text-2xl font-black text-[#133E87] dark:text-blue-400 font-mono">02</span>
           <div className="border-l border-slate-800 pl-3">
             <h2 className="text-base font-bold text-white uppercase tracking-wider">DOCUMENTS</h2>
             <p className="text-xs text-slate-400">Your verified documents</p>
@@ -1027,10 +1096,10 @@ export default function DashboardPage() {
         })) as any} />
       </div>
 
-      {/* 03 — APPLICATIONS */}
+      {/* 03 - APPLICATIONS */}
       <div className="space-y-4 mt-8">
         <div className="flex items-center gap-3">
-          <span className="text-2xl font-black text-amber-500 font-mono">03</span>
+          <span className="text-2xl font-black text-[#133E87] dark:text-blue-400 font-mono">03</span>
           <div className="border-l border-slate-800 pl-3">
             <h2 className="text-base font-bold text-white uppercase tracking-wider">{t("navigation.applications")}</h2>
             <p className="text-xs text-slate-400">{t("applications.trackApplications")}</p>
@@ -1038,62 +1107,73 @@ export default function DashboardPage() {
         </div>
 
         {mockApplications.length === 0 ? (
-          <div className="bg-slate-905 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
+          <div className="bg-slate-905 border border-slate-800/80 rounded-md p-6 text-center text-slate-500 text-xs">
             {t("applications.noApplications")} {t("applications.useGoalPlanner")}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockApplications.slice(0, 2).map((app) => (
-              <div 
-                key={app.id} 
-                onClick={() => { setActiveTab('applications'); setSelectedApp(app); }}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 space-y-4 cursor-pointer transition shadow-md"
-              >
-                <div className="flex justify-between items-start gap-2 border-b border-slate-850 pb-3 text-xs">
-                  <div>
-                    <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department}</span>
-                    <h3 className="text-sm font-bold text-white mt-0.5">{app.title}</h3>
-                    <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.id}</span></p>
+            {mockApplications.slice(0, 2).map((app) => {
+              const targetJourneyId = app.id === 'app_dl_001' ? 'jrn_003' : app.id === 'app_sch_002' ? 'jrn_002' : 'jrn_001';
+              return (
+                <div 
+                  key={app.id} 
+                  onClick={() => router.push(`/journeys/${targetJourneyId}`)}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#133E87] dark:hover:border-blue-500 rounded-xl p-5 space-y-4 cursor-pointer transition shadow-2xs hover:shadow-md border-l-4 border-l-[#133E87] dark:border-l-blue-500 group"
+                >
+                  <div className="flex justify-between items-start gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 text-xs">
+                    <div>
+                      <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department}</span>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 group-hover:text-[#133E87] dark:group-hover:text-blue-400 transition-colors">{app.title}</h3>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-mono">ID: <span className="text-[#133E87] dark:text-blue-400 font-bold">{app.id}</span></p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-wider text-center shrink-0 ${
+                      ['APPROVED', 'COMPLETED'].includes(app.status) ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' :
+                      app.status === 'ACTION_REQUIRED' ? 'bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 animate-pulse' :
+                      ['SUBMITTED', 'VERIFICATION'].includes(app.status) ? 'bg-blue-50 text-[#133E87] dark:bg-blue-950/30 dark:text-blue-400 border border-blue-200 dark:border-cyan-500/20' :
+                      'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                    }`}>
+                      {app.status.replace("_", " ")}
+                    </span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider text-center shrink-0 ${
-                    ['APPROVED', 'COMPLETED'].includes(app.status) ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                    app.status === 'ACTION_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                    ['SUBMITTED', 'VERIFICATION'].includes(app.status) ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
-                    'bg-slate-800 text-slate-400 border border-slate-700'
-                  }`}>
-                    {app.status.replace("_", " ")}
-                  </span>
+                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+                    <span>Submitted: {app.submittedDate}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/journeys/${targetJourneyId}`);
+                      }}
+                      className="text-[#133E87] dark:text-amber-400 font-bold flex items-center gap-1.5 hover:underline cursor-pointer group-hover:text-[#133E87] dark:group-hover:text-amber-300"
+                    >
+                      <span>{t("journeys.trackWorkflow")}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                  <span>Submitted: {app.submittedDate}</span>
-                  <span className="text-amber-400 font-bold flex items-center gap-1">
-                    {t("journeys.trackWorkflow")} <ArrowRight className="w-3 h-3" />
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* 04 — GOVERNMENT SUPPORT */}
+      {/* 04 - GOVERNMENT SUPPORT */}
       <div className="space-y-4 mt-8">
         <div className="flex items-center gap-3">
-          <span className="text-2xl font-black text-amber-500 font-mono">04</span>
+          <span className="text-2xl font-black text-[#133E87] dark:text-blue-400 font-mono">04</span>
           <div className="border-l border-slate-800 pl-3">
             <h2 className="text-base font-bold text-white uppercase tracking-wider">GOVERNMENT SUPPORT</h2>
             <p className="text-xs text-slate-400">Relevant support available to you</p>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-6 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <span>Verified Schemes & Benefits</span>
                 <span className="text-xs font-normal text-slate-400">({schemes.length} Available)</span>
               </h3>
-              <p className="text-xs text-slate-450 font-mono">
+              <p className="text-xs text-slate-500 font-mono">
                 Source: JanSetu federated query • Last verified: {new Date().toLocaleDateString('en-GB')}
               </p>
             </div>
@@ -1128,7 +1208,7 @@ export default function DashboardPage() {
             <div className="space-y-6">
               {localSchemes.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#133E87] dark:text-blue-400 uppercase tracking-wider">
                     <Building2 className="w-4 h-4" />
                     <span>LOCAL / DISTRICT SERVICES</span>
                   </div>
@@ -1178,222 +1258,19 @@ export default function DashboardPage() {
 
       {/* Applications Tab */}
       {activeTab === 'applications' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Applications Stats Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("applications.totalApplications")}</span>
-              <span className="text-lg font-black text-white">{mockApplications.length} {t("common.registered")}</span>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("applications.activeVerification")}</span>
-              <span className="text-lg font-black text-amber-400">
-                {mockApplications.filter(a => ['VERIFICATION', 'SUBMITTED', 'ACTION_REQUIRED'].includes(a.status)).length} {t("common.pending_label")}
-              </span>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("common.completed")}</span>
-              <span className="text-lg font-black text-emerald-400">
-                {mockApplications.filter(a => ['APPROVED', 'COMPLETED'].includes(a.status)).length} {t("common.issued")}
-              </span>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t("applications.actionRequired")}</span>
-              <span className="text-lg font-black text-red-400 animate-pulse">
-                {mockApplications.filter(a => a.status === 'ACTION_REQUIRED').length} {t("common.alert_label")}
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-amber-400" />
-                  <span>{t("applications.unifiedTracking")}</span>
-                </h2>
-                <p className="text-xs text-slate-400">
-                  {t("applications.trackDescription")}
-                </p>
-              </div>
-              <button
-                onClick={loadInteropData}
-                disabled={isRefreshing}
-                className="p-2 bg-slate-950 border border-slate-800 hover:bg-slate-850 text-slate-400 hover:text-white rounded-lg transition"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-
-            {mockApplications.length === 0 ? (
-              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center text-slate-500 text-xs">
-                {t("applications.noApplications")} {t("applications.useGoalPlanner")}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockApplications.map((app) => (
-                  <div 
-                    key={app.id} 
-                    onClick={() => setSelectedApp(app)}
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl p-5 space-y-4 cursor-pointer transition shadow-md"
-                  >
-                    <div className="flex justify-between items-start gap-2 border-b border-slate-900 pb-3 text-xs">
-                      <div>
-                        <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{app.department}</span>
-                        <h3 className="text-sm font-bold text-white mt-0.5">{app.title}</h3>
-                        <p className="text-[10px] text-slate-400 mt-1 font-mono">ID: <span className="text-amber-500 font-bold">{app.id}</span></p>
-                      </div>
-
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black tracking-wider text-center shrink-0 ${
-                        ['APPROVED', 'COMPLETED'].includes(app.status) ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        app.status === 'ACTION_REQUIRED' ? 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse' :
-                        ['SUBMITTED', 'VERIFICATION'].includes(app.status) ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
-                        'bg-slate-900 text-slate-400 border border-slate-800'
-                      }`}>
-                        {app.status.replace("_", " ")}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                      <span>Submitted: {app.submittedDate}</span>
-                      <span className="text-amber-400 font-bold hover:underline flex items-center gap-1">
-                        {t("common.viewDetails")} <ArrowRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Application Detail Modal */}
-          {selectedApp && (
-            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-scaleUp">
-                <div className="bg-slate-950 p-5 border-b border-slate-800 flex justify-between items-center">
-                  <div>
-                    <span className="text-[9px] font-black text-slate-500 tracking-wider block uppercase">{selectedApp.department_name}</span>
-                    <h3 className="text-base font-bold text-white">{selectedApp.service_name}</h3>
-                  </div>
-                  <button 
-                    onClick={() => setSelectedApp(null)}
-                    className="text-slate-400 hover:text-white text-sm font-bold bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg transition"
-                  >
-                    {t("common.close")}
-                  </button>
-                </div>
-
-                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto text-xs">
-                  {/* Timeline Progress */}
-                  <div className="space-y-3">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">{t("applications.timeline")}</span>
-                    <div className="relative border-l border-slate-800 ml-1.5 pl-4 space-y-4 py-1">
-                      <div className="relative">
-                        <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
-                        <h4 className="font-bold text-slate-300">Goal Created</h4>
-                        <p className="text-slate-500 text-[10px]">Citizen goal resolved and journey generated.</p>
-                      </div>
-                      <div className="relative">
-                        <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
-                        <h4 className="font-bold text-slate-300">Identity Verified</h4>
-                        <p className="text-slate-500 text-[10px]">Authoritative Aadhaar e-KYC validation successful.</p>
-                      </div>
-                      <div className="relative">
-                        <div className="absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-500" />
-                        <h4 className="font-bold text-slate-300">Address Verified</h4>
-                        <p className="text-slate-500 text-[10px]">Residential address validated from state land registry.</p>
-                      </div>
-                      {selectedApp.timeline.map((evt: any, idx: number) => (
-                        <div key={idx} className="relative">
-                          <div className={`absolute -left-[21.5px] top-1 w-2.5 h-2.5 rounded-full border ${
-                            evt.status === 'APPROVED' ? 'bg-emerald-500 border-emerald-500' :
-                            evt.status === 'DOCUMENTS_REQUIRED' ? 'bg-red-500 border-red-500 animate-pulse' :
-                            'bg-cyan-500 border-cyan-500'
-                          }`} />
-                          <h4 className="font-bold text-slate-300">{evt.title}</h4>
-                          <p className="text-slate-400 text-[11px] mt-0.5">{evt.description}</p>
-                          <span className="text-[9px] text-slate-500 block mt-0.5">{new Date(evt.timestamp).toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Metadata fields */}
-                  <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-3 text-[11px]">
-                      <div>
-                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Data Fields Reused</span>
-                        <span className="text-slate-300 font-bold">✓ Identity, Address, Contact</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Registry Source</span>
-                        <span className="text-slate-300 font-bold">UIDAI Registry, State Land Registry</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Consent token</span>
-                        <span className="text-cyan-400 font-mono font-bold">✓ CONSENT-8821 (Authorized)</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 font-semibold block uppercase text-[9px]">Connector Protocol</span>
-                        <span className="text-slate-300 font-bold">
-                          {selectedApp.service_id === 'srv_pmc_license' ? 'SOAP Legacy Adapter' : 'Modern OAuth REST API'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Simulate update action */}
-                  {selectedApp.status === 'UNDER_VERIFICATION' && (
-                    <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center gap-2 text-amber-400">
-                        <Sparkles className="w-4 h-4 shrink-0" />
-                        <span className="font-bold uppercase tracking-wider text-[10px]">Simulate Event Update (Judge Demo)</span>
-                      </div>
-                      <p className="text-slate-400 text-[11px] leading-relaxed">
-                        Clicking this triggers an asynchronous event update from the department. The status change will immediately propagate to all tabs.
-                      </p>
-                      <button
-                        onClick={() => {
-                          updateApplicationStatusAPI(selectedApp.application_id, "APPROVED", "Business Registration approved. Corporate Registration ID: MSINS-PUNE-88742 successfully issued.").then(() => {
-                            setSelectedApp(null);
-                            loadInteropData();
-                          });
-                        }}
-                        className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold py-2 rounded-lg text-xs hover:from-amber-400 hover:to-orange-400 transition"
-                      >
-                        Simulate Status Update: Approve Application
-                      </button>
-                    </div>
-                  )}
-
-                  {selectedApp.status === 'DOCUMENTS_REQUIRED' && (
-                    <div className="bg-red-500/5 border border-red-500/15 rounded-xl p-4 space-y-3">
-                      <div className="flex items-center gap-2 text-red-400 font-bold">
-                        <ShieldAlert className="w-4 h-4 shrink-0" />
-                        <span>Action Required: Missing Premises Document</span>
-                      </div>
-                      <p className="text-slate-400 text-[11px]">
-                        Please resolve the action item by simulating a document upload validation check.
-                      </p>
-                      <button
-                        onClick={() => {
-                          updateApplicationStatusAPI(selectedApp.application_id, "UNDER_VERIFICATION", "Fire NOC layout document uploaded. Re-initiating automated interoperability validation checklist.").then(() => {
-                            setSelectedApp(null);
-                            loadInteropData();
-                          });
-                        }}
-                        className="w-full bg-red-500 hover:bg-red-400 text-white font-bold py-2 rounded-lg text-xs transition"
-                      >
-                        Resolve & Upload Fire NOC
-                      </button>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <ApplicationTracker 
+          customApplications={mockApplications.map(a => ({
+            id: a.id,
+            title: a.title,
+            department: a.department,
+            status: (a.status === 'VERIFICATION' ? 'UNDER_VERIFICATION' : a.status as any),
+            submittedDate: a.submittedDate,
+            disbursementBank: 'State Bank of India (•••• •••• 4421)',
+            sanctionReference: `SANCTION/2026/BEN-${a.id.replace(/\D/g, '').slice(-4) || '8801'}`,
+            officerRemarks: 'Demographic and eligibility credentials successfully validated across state node.',
+            timeline: a.timeline as any
+          }))}
+        />
       )}
 
       {/* Consent Tab */}
@@ -1533,190 +1410,79 @@ export default function DashboardPage() {
 
       {/* Interop Tab */}
       {activeTab === 'interop' && (
-        <div className="space-y-6 animate-fadeIn max-w-3xl mx-auto mt-8">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-32 -left-32 w-64 h-64 bg-emerald-500/10 blur-3xl rounded-full" />
-            <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full" />
-            
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="w-20 h-20 bg-slate-950 border border-slate-800 rounded-full flex items-center justify-center mb-6 shadow-lg">
-                <Network className="w-10 h-10 text-emerald-400" />
-              </div>
-              
-              <h1 className="text-3xl font-extrabold text-white mb-4">
-                {t("interop.title")}
-              </h1>
-              
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 text-left w-full max-w-xl mx-auto my-6 space-y-4 shadow-inner">
-                <p className="text-slate-300 text-lg leading-relaxed text-center">
-                  Your data has been securely synced with <strong className="text-white">UIDAI</strong>, <strong className="text-white">Municipal Corporation</strong>, and the <strong className="text-white">Tax Department</strong>.
-                </p>
-                <div className="h-px w-full bg-slate-800/50 my-4" />
-                <p className="text-emerald-400 font-bold text-lg flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-6 h-6" />
-                  {t("interop.noFormFields")}
-                </p>
-              </div>
-              
-              <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-                {t("interop.secureRouting")}
-              </p>
-            </div>
-          </div>
-        </div>
+        <GovInteropHub />
       )}
 
       {/* Data Quality Tab */}
       {activeTab === 'conflicts' && (
-        <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto mt-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 blur-3xl rounded-full" />
-            
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-6">
-                <div>
-                  <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
-                    <ShieldCheck className="w-8 h-8 text-emerald-400" />
-                    {t("dataQuality.title")}
-                  </h1>
-                  <p className="text-sm text-slate-400 mt-2 max-w-xl">
-                    {t("dataQuality.description")}
-                  </p>
-                </div>
-                <div className="text-right hidden sm:block">
-                  <div className="text-3xl font-black text-emerald-400 flex items-center justify-end gap-2">
-                    <CheckCircle2 className="w-6 h-6" /> {t("dataQuality.match")}
-                  </div>
-                  <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t("dataQuality.consistency")}</div>
-                </div>
-              </div>
-              
-              <div className="grid gap-6">
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
-                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <UserCircle className="w-5 h-5 text-blue-400" /> {t("dataQuality.verifiedName")}
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Aadhaar (UIDAI)</p>
-                      <p className="text-lg font-bold text-white">{user?.full_name || 'Hriday Bardia'}</p>
-                    </div>
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">PAN (Income Tax)</p>
-                      <p className="text-lg font-bold text-white">{user?.full_name || 'Hriday Bardia'}</p>
-                    </div>
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Driving License</p>
-                      <p className="text-lg font-bold text-white">{user?.full_name || 'Hriday Bardia'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
-                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-amber-400" /> {t("dataQuality.registeredAddress")}
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Aadhaar (UIDAI)</p>
-                      <p className="text-sm font-bold text-white">{(user as any)?.address || 'Flat 402, Shivajinagar, Pune'}</p>
-                    </div>
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Property Tax (PMC)</p>
-                        <p className="text-sm font-bold text-white">{(user as any)?.address || 'Flat 402, Shivajinagar, Pune'}</p>
-                      </div>
-                      <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-center pt-4">
-                 <p className="text-xs text-slate-500 flex items-center gap-2">
-                   <ShieldCheck className="w-4 h-4 text-slate-400" /> {t("dataQuality.secureVaulted")}
-                 </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CheckMyInformation />
       )}
 
       {activeTab === 'journeys' && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-6 shadow-sm space-y-4">
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-amber-400" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[#133E87] dark:text-blue-400" />
                 <span>{t("journeys.yourWorkflows")}</span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 {t("journeys.monitorStatus")}
               </p>
             </div>
             
-            {realJourneys.length === 0 && mockJourneys.length === 0 ? (
-              <div className="bg-slate-950 border border-slate-900 p-8 rounded-xl text-center space-y-4 max-w-md mx-auto">
-                <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-400">
-                  <MapPin className="w-6 h-6 text-amber-500" />
+            {liveJourneys.length === 0 && realJourneys.length === 0 ? (
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-8 rounded-lg text-center space-y-4 max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-700 flex items-center justify-center mx-auto text-[#133E87] dark:text-blue-400">
+                  <MapPin className="w-6 h-6 text-[#133E87] dark:text-blue-400" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xs font-bold text-white">No active journeys found</h3>
-                  <p className="text-[11px] text-slate-500">Analyze a citizen goal to automatically generate a step-by-step journey.</p>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">No active journeys found</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Analyze a citizen goal to automatically generate a step-by-step journey.</p>
                 </div>
                 <button
                   onClick={() => setActiveTab('planner')}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs transition hover:opacity-90"
+                  className="px-4 py-2 rounded bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs transition shadow-xs cursor-pointer"
                 >
                   Go to Goal Planner
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Real backend journeys */}
-                {realJourneys.map((j: any) => (
-                  <div key={j.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                          {j.goal_category || 'general'}
-                        </span>
-                        <span className="text-xs text-slate-500">Progress: {j.progress_percentage || 0}%</span>
-                      </div>
-                      <h3 className="text-sm font-black text-white">{j.title}</h3>
-                      <p className="text-xs text-slate-400">{j.location_state || 'India'} {j.location_city ? `(${j.location_city})` : ''}</p>
-                    </div>
-                    <button
-                      onClick={() => router.push(`/journeys/${j.id}`)}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition shadow self-start sm:self-center"
+                {liveJourneys.map((j) => {
+                  const journeyUrl = `/journeys/${j.id}`;
+                  return (
+                    <div 
+                      key={j.id} 
+                      role="link"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter') router.push(journeyUrl); }}
+                      onClick={() => router.push(journeyUrl)}
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-2xs hover:shadow-md border-l-4 border-l-[#133E87] dark:border-l-blue-500 transition hover:border-[#133E87] dark:hover:border-blue-500 group cursor-pointer select-none"
                     >
-                      <span>{t("journeys.trackWorkflow")}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-                {/* Mock journeys (fallback) */}
-                {realJourneys.length === 0 && mockJourneys.map((j) => (
-                  <div key={j.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-                          {j.category}
-                        </span>
-                        <span className="text-xs text-slate-500">Progress: {j.progress}%</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#133E87] dark:text-blue-300 px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800">
+                              {j.category}
+                            </span>
+                            <span className="text-xs text-slate-500 font-mono font-medium">Progress: {j.progress}%</span>
+                            <span className="text-[10px] text-slate-400 font-mono">({j.location || 'India'})</span>
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#133E87] dark:group-hover:text-blue-400 transition-colors">{j.title}</h3>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">Current Stage: <strong className="text-[#133E87] dark:text-blue-400">{j.currentStage}</strong></p>
+                          <p className="text-[11px] text-slate-500">Next Action: {j.nextAction}</p>
+                        </div>
+                        <div
+                          className="bg-[#0B2545] group-hover:bg-[#133E87] dark:bg-blue-600 dark:group-hover:bg-blue-500 text-white font-bold px-4 py-2.5 rounded-lg text-xs flex items-center gap-1.5 transition shadow-xs self-start sm:self-center shrink-0"
+                        >
+                          <span>{t("journeys.trackWorkflow")}</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-amber-300 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </div>
-                      <h3 className="text-sm font-black text-white">{j.title}</h3>
-                      <p className="text-xs text-slate-400">{j.currentStage}</p>
                     </div>
-                    <button
-                      onClick={() => router.push(`/journeys/${j.id}`)}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 transition shadow self-start sm:self-center"
-                    >
-                      <span>{t("journeys.trackWorkflow")}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1726,29 +1492,42 @@ export default function DashboardPage() {
       {activeTab === 'documents' && (
         <div className="space-y-6 animate-fadeIn">
           {uploadingFile && (
-            <div className="bg-slate-900 border border-amber-500/20 rounded-xl p-4 space-y-2 animate-pulse text-xs">
-              <div className="flex justify-between font-bold text-slate-200">
+            <div className="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-blue-800 rounded-md p-4 space-y-2 text-xs">
+              <div className="flex justify-between font-bold text-slate-900 dark:text-slate-200">
                 <span>Uploading {uploadingFile}...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                <div className="bg-amber-500 h-full transition-all duration-100" style={{ width: `${uploadProgress}%` }} />
+              <div className="w-full bg-slate-200 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div className="bg-[#133E87] dark:bg-blue-500 h-full transition-all duration-100" style={{ width: `${uploadProgress}%` }} />
               </div>
               <p className="text-[10px] text-slate-500">Running OCR extraction and hashing cross-document consistency...</p>
             </div>
           )}
           <DocumentVault 
-            documents={mockDocs.map(d => ({
-              id: d.id,
-              document_type: d.type,
-              document_name: d.name,
-              file_name: d.name,
-              file_size: 100,
-              status: 'COMPLETED',
-              verification_status: d.status,
-              is_synthetic: d.isDemo,
-              issued_by: d.source
-            })) as any} 
+            documents={[
+              ...realDocuments.map(d => ({
+                id: d.id,
+                document_type: d.document_type || d.type,
+                document_name: d.document_name || d.name,
+                file_name: d.file_name || d.name,
+                file_size: d.file_size || 100,
+                status: 'COMPLETED',
+                verification_status: d.verification_status || d.status || 'VERIFIED',
+                is_synthetic: false,
+                issued_by: d.issued_by || d.source || 'Verified Source'
+              })),
+              ...mockDocs.map(d => ({
+                id: d.id,
+                document_type: d.type,
+                document_name: d.name,
+                file_name: d.name,
+                file_size: 100,
+                status: 'COMPLETED',
+                verification_status: d.status,
+                is_synthetic: d.isDemo,
+                issued_by: d.source
+              }))
+            ] as any} 
             goalCategory={journeyAnalysis?.intent?.primary === 'STUDY_ABROAD' ? 'education' : 'business'}
             consistencyStatus={
               mockDocs.length > 0 ? {
@@ -1758,6 +1537,7 @@ export default function DashboardPage() {
                 discrepancies: []
               } : undefined
             }
+            onRemove={removeDocument}
             onUpload={(file) => {
               setUploadingFile(file ? file.name : 'rent_agreement_signed.pdf');
               setUploadProgress(0);
@@ -1767,21 +1547,21 @@ export default function DashboardPage() {
                 setUploadProgress(progress);
                 if (progress >= 100) {
                   clearInterval(timer);
-                  setTimeout(() => {
-                    const mockDoc = {
-                      id: `doc-${Date.now()}`,
-                      name: file ? file.name : 'rent_agreement_signed.pdf',
-                      type: 'Rent Agreement',
-                      status: 'VERIFIED' as const,
+                  if (file) {
+                    addDocument({
+                      id: `doc_${Date.now()}`,
+                      name: file.name,
+                      type: file.type || 'application/pdf',
+                      status: 'AVAILABLE',
                       uploadDate: new Date().toLocaleDateString('en-GB'),
-                      fileType: 'PDF',
+                      fileType: file.type.includes('pdf') ? 'PDF' : file.type.includes('image') ? 'JPG' : 'DOC',
                       pageCount: 1,
-                      source: 'Uploaded by User',
-                      isDemo: true
-                    };
-                    addDocument(mockDoc);
-                    setUploadingFile(null);
-                  }, 300);
+                      source: 'Self Uploaded',
+                      isDemo: true,
+                      fileObject: file
+                    });
+                  }
+                  setTimeout(() => setUploadingFile(null), 500);
                 }
               }, 200);
             }}
@@ -1790,127 +1570,58 @@ export default function DashboardPage() {
       )}
 
       {activeTab === 'alerts' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeIn">
-          {/* Regulatory Policy Changes */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Bell className="w-5 h-5 text-amber-400" />
-                <span>{t("dashboard.alertsEvents")}</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Official regulatory policy triggers automatically mapped to your location and profile.
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">Karnataka Trade Policy</span>
-                  <span className="text-[10px] text-slate-500">Effective: 01 April 2026</span>
-                </div>
-                <h4 className="text-xs font-bold text-white">Karnataka Single Window Clearance Amendment</h4>
-                <p className="text-[11px] text-slate-400">Updates trade licensing rules for commercial food businesses in BBMP limits, reducing approval timelines from 15 to 7 days.</p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Central Indirect Taxes</span>
-                  <span className="text-[10px] text-slate-500">Effective: 15 Feb 2026</span>
-                </div>
-                <h4 className="text-xs font-bold text-white">GSTIN Validation Schema Change</h4>
-                <p className="text-[11px] text-slate-400">Requires multi-factor authentication for API-based registration, automatically managed by JanSetu OAuth adapters.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Event-driven Notifications */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Activity className="w-5 h-5 text-cyan-400" />
-                <span>Application-Status Event Feed</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Event-driven notification triggers tracking your registrations across departments.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {mockAlerts.length === 0 ? (
-                <div className="bg-slate-950 border border-slate-900 p-6 rounded-xl text-center text-slate-500 text-xs">
-                  No notifications yet. Submitted applications will post event feeds here.
-                </div>
-              ) : (
-                mockAlerts.map((n) => (
-                  <div key={n.id} className={`bg-slate-950 border border-slate-850 rounded-xl p-3.5 flex gap-3 text-xs ${n.isNew ? 'border-amber-500/50 bg-slate-900 animate-pulse' : ''}`}>
-                    <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-500 shrink-0">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <div className="space-y-1 flex-1">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-200">{n.category || 'Event Log'}</span>
-                        <span className="text-[9px] text-slate-500 font-mono">{n.timestamp}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400">{n.message}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        <AlertsEvents />
       )}
 
       {activeTab === 'official' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Header Stats Panel */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Beneficiaries</span>
-              <span className="text-lg font-black text-white">148,204 Citizens</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white">148,204 Citizens</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Approvals Rate</span>
-              <span className="text-lg font-black text-emerald-400">94.2% Success</span>
+              <span className="text-lg font-black text-emerald-700 dark:text-emerald-400">94.2% Success</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">SLA Compliance</span>
-              <span className="text-lg font-black text-cyan-400">{metrics?.sla_compliance_rate || '97.4'}% Target</span>
+              <span className="text-lg font-black text-[#133E87] dark:text-blue-400">{metrics?.sla_compliance_rate || '97.4'}% Target</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-0.5">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-4 space-y-0.5 shadow-2xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Failed Transactions</span>
-              <span className="text-lg font-black text-red-400 animate-pulse">{metrics?.failed_transactions_count || '8'} Events</span>
+              <span className="text-lg font-black text-red-600 dark:text-red-400 animate-pulse">{metrics?.failed_transactions_count || '8'} Events</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* System Health Telemetry */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl lg:col-span-1 space-y-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-6 shadow-sm lg:col-span-1 space-y-4">
               <div>
-                <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Telemetry Health Monitoring</span>
                 </h2>
                 <p className="text-[10px] text-slate-500">Live API response latency and connector uptime telemetry.</p>
               </div>
 
               <div className="space-y-4 text-xs">
-                <div className="flex justify-between items-center p-2.5 bg-slate-950 border border-slate-800 rounded-lg">
-                  <span className="text-slate-400">Core Gateway Latency</span>
-                  <span className="font-bold text-white font-mono">{metrics?.latency_average_ms || 118}ms</span>
+                <div className="flex justify-between items-center p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md">
+                  <span className="text-slate-600 dark:text-slate-400">Core Gateway Latency</span>
+                  <span className="font-bold text-slate-900 dark:text-white font-mono">{metrics?.latency_average_ms || 118}ms</span>
                 </div>
-                <div className="flex justify-between items-center p-2.5 bg-slate-950 border border-slate-800 rounded-lg">
-                  <span className="text-slate-400">Orchestrator Uptime</span>
-                  <span className="font-bold text-emerald-400 font-mono">{metrics?.uptime_percentage || 99.98}%</span>
+                <div className="flex justify-between items-center p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md">
+                  <span className="text-slate-600 dark:text-slate-400">Orchestrator Uptime</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">{metrics?.uptime_percentage || 99.98}%</span>
                 </div>
 
                 <div className="space-y-1.5 pt-2">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">State Nodes Response Uptime</span>
                   {metrics?.departments?.map((dept: any, idx: number) => (
                     <div key={idx} className="flex justify-between items-center text-[11px]">
-                      <span className="text-slate-400">{dept.name}</span>
-                      <span className="font-bold text-white font-mono">{dept.uptime}%</span>
+                      <span className="text-slate-600 dark:text-slate-400">{dept.name}</span>
+                      <span className="font-bold text-slate-900 dark:text-white font-mono">{dept.uptime}%</span>
                     </div>
                   ))}
                 </div>
@@ -1918,10 +1629,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Connector Registries Topology */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl lg:col-span-2 space-y-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md p-6 shadow-sm lg:col-span-2 space-y-4">
               <div>
-                <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#133E87] dark:text-blue-400" />
                   <span>GovTech Connector Registry & Protocols</span>
                 </h2>
                 <p className="text-[10px] text-slate-500">Connected middleware state adapters, caching nodes, and legacy protocols.</p>
@@ -1930,32 +1641,32 @@ export default function DashboardPage() {
               <div className="overflow-x-auto text-xs">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase font-bold">
+                    <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-500 text-[10px] uppercase font-bold">
                       <th className="pb-2">Registry Endpoint</th>
                       <th className="pb-2">Protocol</th>
                       <th className="pb-2 text-center">Status</th>
                       <th className="pb-2 text-right">Simulation</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    <tr className="hover:bg-slate-950/20">
-                      <td className="py-2.5 font-bold text-slate-200">DigiLocker Sandbox Endpoint</td>
-                      <td className="py-2.5 text-slate-400 font-mono">REST JSON API (Oauth2)</td>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 font-bold text-slate-900 dark:text-slate-200">DigiLocker Sandbox Endpoint</td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-400 font-mono">REST JSON API (Oauth2)</td>
                       <td className="py-2.5 text-center">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[9px] font-bold">HEALTHY</span>
+                        <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded text-[9px] font-bold">HEALTHY</span>
                       </td>
                       <td className="py-2.5 text-right">
                         <span className="text-slate-500 text-[10px]">Authoritative Node</span>
                       </td>
                     </tr>
-                    <tr className="hover:bg-slate-950/20">
-                      <td className="py-2.5 font-bold text-slate-200">Pune Municipal Corp (PMC)</td>
-                      <td className="py-2.5 text-slate-400 font-mono">SOAP 1.1 XML (Envelope)</td>
+                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 font-bold text-slate-900 dark:text-slate-200">Pune Municipal Corp (PMC)</td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-400 font-mono">SOAP 1.1 XML (Envelope)</td>
                       <td className="py-2.5 text-center">
                         <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
                           healthData?.services?.find((s: any) => s.service_id === 'srv_pmc_license')?.health_status === 'Failed' 
-                            ? 'bg-red-500/10 text-red-400 animate-pulse'
-                            : 'bg-emerald-500/10 text-emerald-400'
+                            ? 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 animate-pulse'
+                            : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
                         }`}>
                           {healthData?.services?.find((s: any) => s.service_id === 'srv_pmc_license')?.health_status === 'Failed' ? 'FAILED' : 'HEALTHY'}
                         </span>
@@ -1966,27 +1677,27 @@ export default function DashboardPage() {
                             const currentStatus = healthData?.services?.find((s: any) => s.service_id === 'srv_pmc_license')?.health_status === 'Failed' ? 'HEALTHY' : 'FAILED';
                             toggleConnectorHealthAPI('srv_pmc_license', currentStatus).then(() => loadInteropData());
                           }}
-                          className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold px-2 py-1 rounded text-[9px] transition"
+                          className="bg-blue-50 dark:bg-slate-800 hover:bg-blue-100 text-[#133E87] dark:text-blue-300 border border-blue-200 dark:border-slate-700 font-bold px-2 py-1 rounded text-[9px] transition cursor-pointer"
                         >
                           Toggle Outage
                         </button>
                       </td>
                     </tr>
-                    <tr className="hover:bg-slate-950/20">
-                      <td className="py-2.5 font-bold text-slate-200">BBMP Bangalore Municipal Node</td>
-                      <td className="py-2.5 text-slate-400 font-mono">SOAP 1.2 XML (RPC)</td>
+                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 font-bold text-slate-900 dark:text-slate-200">BBMP Bangalore Municipal Node</td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-400 font-mono">SOAP 1.2 XML (RPC)</td>
                       <td className="py-2.5 text-center">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[9px] font-bold">HEALTHY</span>
+                        <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded text-[9px] font-bold">HEALTHY</span>
                       </td>
                       <td className="py-2.5 text-right">
                         <span className="text-slate-500 text-[10px]">N/A</span>
                       </td>
                     </tr>
-                    <tr className="hover:bg-slate-950/20">
-                      <td className="py-2.5 font-bold text-slate-200">GSTN Central Taxes Registry</td>
-                      <td className="py-2.5 text-slate-400 font-mono">REST JSON (OAuth2)</td>
+                    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 font-bold text-slate-900 dark:text-slate-200">GSTN Central Taxes Registry</td>
+                      <td className="py-2.5 text-slate-600 dark:text-slate-400 font-mono">REST JSON (OAuth2)</td>
                       <td className="py-2.5 text-center">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[9px] font-bold">HEALTHY</span>
+                        <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded text-[9px] font-bold">HEALTHY</span>
                       </td>
                       <td className="py-2.5 text-right">
                         <span className="text-slate-500 text-[10px]">Authoritative Node</span>
@@ -1999,6 +1710,31 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Floating AI Assistant Navigator Trigger */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setIsAiDrawerOpen(true)}
+          className="px-4 py-2.5 rounded-full bg-[#133E87] hover:bg-[#0B2545] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs shadow-lg flex items-center gap-2 transition cursor-pointer hover:scale-105"
+        >
+          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+          <span>Ask JanSetu AI Navigator</span>
+        </button>
+      </div>
+
+      {/* AI Help Drawer */}
+      {isAiDrawerOpen && (
+        <AiHelpDrawer
+          onClose={() => setIsAiDrawerOpen(false)}
+          onOpenSource={(src) => {
+            alert(`Official Source: ${src.title}\nAuthority: ${src.authority}\nReference URL: ${src.url || 'National Portal'}`);
+          }}
+        />
+      )}
+
+      {/* Department e-KYC Pending Request Banner / Drawer */}
+      <PendingRequestBanner />
 
     </div>
     </div>

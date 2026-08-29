@@ -154,9 +154,9 @@ def seed_interop_data(db: Session):
             evidence=[{"field": "Name", "status": "Partial Match"}, {"field": "Date of Birth", "status": "Exact Match"}]
         ),
         EntityResolutionDB(
-            citizen_id="user_ayuh_789",
+            citizen_id="user_ayush_789",
             source_a="JanSetu Canonical",
-            record_a={"full_name": "Ayuh", "date_of_birth": "2000-11-15"},
+            record_a={"full_name": "Ayush Singh Chauhan", "date_of_birth": "2000-11-15"},
             source_b="Municipality Batch",
             record_b={"full_name": "Unknown", "date_of_birth": "2001-01-01"},
             match_confidence=42.1,

@@ -14,10 +14,11 @@ class APIResponse(BaseModel):
     error: Optional[ErrorDetail] = None
     request_id: Optional[str] = None
 
-# Authentication Schemas (Username + PIN)
+# Authentication Schemas (Username + PIN / Password)
 class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=4, max_length=30, description="Citizen login username")
-    pin: str = Field(..., min_length=6, max_length=6, description="6-digit numeric PIN")
+    username: str = Field(..., min_length=4, max_length=100, description="Citizen login username or officer ID")
+    pin: Optional[str] = Field(None, min_length=6, max_length=128, description="Numeric PIN or alphanumeric password")
+    password: Optional[str] = Field(None, min_length=6, max_length=128, description="Password alias")
 
 class UserSchema(BaseModel):
     id: str
@@ -148,7 +149,7 @@ class DocumentSchema(BaseModel):
     status: str # MISSING, AVAILABLE, EXPIRED, REVIEW_REQUIRED
     verification_status: str = "USER_PROVIDED" # USER_PROVIDED, DEMO_SYNTHETIC, OCR_EXTRACTED, FORMAT_VALIDATED, CONSISTENCY_CHECKED, SOURCE_VERIFIED, ISSUER_VERIFIED
     is_synthetic: bool = False
-    synthetic_notice: Optional[str] = "DEMO / SYNTHETIC DOCUMENT — NOT A GOVERNMENT RECORD"
+    synthetic_notice: Optional[str] = "DEMO / SYNTHETIC DOCUMENT - NOT A GOVERNMENT RECORD"
     is_digilocker: bool = False
     extracted_fields: Dict[str, Any] = Field(default_factory=dict)
     field_confidence: Dict[str, float] = Field(default_factory=dict)

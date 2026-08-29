@@ -63,7 +63,7 @@ export function DemoCitizenSelector({ onCitizenChange }: DemoCitizenSelectorProp
           </span>
           <div className="flex items-center gap-1.5 text-xs text-amber-200/90">
             <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="hidden sm:inline font-medium">DEMO DATA — Synthetic documents used for demonstration.</span>
+            <span className="hidden sm:inline font-medium">DEMO DATA - Synthetic documents used for demonstration.</span>
           </div>
         </div>
 

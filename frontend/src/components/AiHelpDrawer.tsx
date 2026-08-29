@@ -6,18 +6,18 @@ import { WorkflowStep, ChatMessage, SourceProvenance } from '@/types';
 import { askAiChatAPI } from '@/lib/api';
 
 interface AiHelpDrawerProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
-  step: WorkflowStep | null;
-  journeyId: string;
+  step?: WorkflowStep | null;
+  journeyId?: string;
   onOpenSource: (src: SourceProvenance) => void;
 }
 
 export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
-  step,
-  journeyId,
+  step = null,
+  journeyId = 'general_navigator',
   onOpenSource
 }) => {
   const [input, setInput] = useState('');
@@ -76,44 +76,44 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 dark:bg-slate-950/70 backdrop-blur-sm animate-fade-in">
       <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between">
+        <div className="w-screen max-w-md bg-white dark:bg-slate-900 border-l border-slate-300 dark:border-slate-800 shadow-2xl flex flex-col justify-between transition-colors">
           {/* Header */}
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/80">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-amber-500/10 border border-blue-200 dark:border-amber-500/30 flex items-center justify-center text-[#133E87] dark:text-amber-400">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   Contextual AI Help
-                  <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.2 rounded font-semibold">
+                  <span className="text-[10px] bg-emerald-50 dark:bg-amber-500/10 text-emerald-700 dark:text-amber-400 border border-emerald-200 dark:border-amber-500/20 px-1.5 py-0.2 rounded font-semibold">
                     Grounded
                   </span>
                 </h3>
-                <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
                   {step ? step.title : 'Journey Assistance'}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Messages Log */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-            {messages.map((m) => (
+            {messages.map((m, mIdx) => (
               <div
-                key={m.id}
+                key={m.id ? `${m.id}_${mIdx}` : `msg_${mIdx}`}
                 className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {m.sender === 'ai' && (
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-1">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-amber-500/10 border border-blue-200 dark:border-amber-500/30 flex items-center justify-center text-[#133E87] dark:text-amber-400 shrink-0 mt-1">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
@@ -121,24 +121,24 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                 <div
                   className={`max-w-[85%] rounded-2xl p-3 space-y-2 ${
                     m.sender === 'user'
-                      ? 'bg-amber-500 text-slate-950 font-medium rounded-tr-none'
-                      : 'bg-slate-950 border border-slate-800 text-slate-200 rounded-tl-none'
+                      ? 'bg-[#0B2545] dark:bg-blue-600 text-white font-medium rounded-tr-none shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none shadow-xs'
                   }`}
                 >
                   <p className="whitespace-pre-line leading-relaxed">{m.text}</p>
 
                   {/* Sources Grounding links */}
                   {m.sources && m.sources.length > 0 && (
-                    <div className="pt-2 border-t border-slate-800 text-[11px] space-y-1">
-                      <p className="text-slate-400 font-semibold text-[10px] flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px] space-y-1">
+                      <p className="text-slate-600 dark:text-slate-400 font-semibold text-[10px] flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                         Grounded Sources:
                       </p>
-                      {m.sources.map((src) => (
+                      {m.sources.map((src, sIdx) => (
                         <button
-                          key={src.id}
+                          key={src.id ? `${src.id}_${sIdx}` : `src_${mIdx}_${sIdx}`}
                           onClick={() => onOpenSource(src)}
-                          className="block text-amber-300 hover:underline font-medium truncate"
+                          className="block text-[#133E87] dark:text-amber-300 hover:underline font-medium truncate cursor-pointer"
                         >
                           ⓘ {src.title} ({src.authority})
                         </button>
@@ -151,9 +151,9 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                     <div className="pt-2 flex flex-wrap gap-1.5">
                       {m.suggested_followups.map((s, idx) => (
                         <button
-                          key={idx}
+                          key={`followup_${mIdx}_${idx}_${s.slice(0, 10)}`}
                           onClick={() => handleSend(s)}
-                          className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[10px] text-amber-300 hover:border-amber-500/50 transition"
+                          className="px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] text-[#133E87] dark:text-amber-300 hover:border-blue-400 dark:hover:border-amber-500/50 transition cursor-pointer shadow-2xs"
                         >
                           {s}
                         </button>
@@ -161,13 +161,13 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                     </div>
                   )}
 
-                  <span className="block text-[9px] text-slate-500 text-right">
+                  <span className={`block text-[9px] text-right ${m.sender === 'user' ? 'text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
                     {m.timestamp}
                   </span>
                 </div>
 
                 {m.sender === 'user' && (
-                  <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300 shrink-0 mt-1">
+                  <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0 mt-1">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -175,15 +175,15 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 text-slate-400 text-xs italic bg-slate-950 p-3 rounded-xl border border-slate-800">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs italic bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <Sparkles className="w-3.5 h-3.5 text-[#133E87] dark:text-amber-400 animate-spin" />
                 <span>Checking official government sources...</span>
               </div>
             )}
           </div>
 
           {/* Input Box */}
-          <div className="p-3 border-t border-slate-800 bg-slate-950">
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -196,12 +196,12 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about documents, rules, or fees..."
-                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#133E87] dark:focus:ring-blue-500"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || loading}
-                className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50 transition"
+                className="p-2 rounded-xl bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white disabled:opacity-50 transition cursor-pointer shadow-xs"
               >
                 <Send className="w-4 h-4" />
               </button>

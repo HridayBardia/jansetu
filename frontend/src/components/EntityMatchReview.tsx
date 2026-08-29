@@ -1,11 +1,14 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Activity, CheckCircle, AlertTriangle, Clock, Search, UserCheck, Merge } from 'lucide-react';
+import { Activity, CheckCircle, AlertTriangle, Clock, Search, UserCheck, Merge, ArrowRight } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export const EntityMatchReview = () => {
   const [tasks, setTasks] = useState<any[]>([]);
+  const { t } = useLanguage();
 
   useEffect(() => {
-    // In a real implementation, this would fetch from GET /api/v1/admin/entity-resolution
     const mockTasks = [
       {
         id: 'er_001',
@@ -39,9 +42,9 @@ export const EntityMatchReview = () => {
       },
       {
         id: 'er_003',
-        citizen_id: 'user_ayuh_789',
+        citizen_id: 'user_ayush_789',
         source_a: 'JanSetu Canonical',
-        record_a: { full_name: 'Ayuh', date_of_birth: '2000-11-15' },
+        record_a: { full_name: 'Ayush Singh Chauhan', date_of_birth: '2000-11-15' },
         source_b: 'Municipality Batch',
         record_b: { full_name: 'Unknown', date_of_birth: '2001-01-01' },
         match_confidence: 42.1,
@@ -64,110 +67,107 @@ export const EntityMatchReview = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       <div>
-        <h2 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
-          <Merge className="w-6 h-6 text-purple-400" />
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <Merge className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           <span>Entity Resolution Center</span>
         </h2>
-        <p className="text-sm text-slate-400 mt-1">Review deterministic and probabilistic identity matches across departments.</p>
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Review deterministic and probabilistic identity matches across departments.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="bg-amber-500/10 p-3 rounded-lg"><AlertTriangle className="w-6 h-6 text-amber-500" /></div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-4 rounded-xl shadow-2xs flex items-center gap-4">
+          <div className="bg-amber-100 dark:bg-amber-950/60 p-3 rounded-lg"><AlertTriangle className="w-5 h-5 text-amber-700 dark:text-amber-400" /></div>
           <div>
-            <div className="text-2xl font-black text-white">{pendingTasks.length}</div>
-            <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Pending Review</div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white">{pendingTasks.length}</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Pending Review</div>
           </div>
         </div>
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="bg-emerald-500/10 p-3 rounded-lg"><CheckCircle className="w-6 h-6 text-emerald-500" /></div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-4 rounded-xl shadow-2xs flex items-center gap-4">
+          <div className="bg-emerald-100 dark:bg-emerald-950/60 p-3 rounded-lg"><CheckCircle className="w-5 h-5 text-emerald-700 dark:text-emerald-400" /></div>
           <div>
-            <div className="text-2xl font-black text-white">{resolvedTasks.length}</div>
-            <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Auto-Resolved</div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white">{resolvedTasks.length}</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Auto-Resolved</div>
           </div>
         </div>
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="bg-blue-500/10 p-3 rounded-lg"><Activity className="w-6 h-6 text-blue-500" /></div>
+        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-4 rounded-xl shadow-2xs flex items-center gap-4">
+          <div className="bg-blue-100 dark:bg-blue-950/60 p-3 rounded-lg"><Activity className="w-5 h-5 text-[#133E87] dark:text-blue-400" /></div>
           <div>
-            <div className="text-2xl font-black text-white">88.5%</div>
-            <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Avg Confidence</div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white">88.5%</div>
+            <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Avg Confidence</div>
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2">Pending Resolution Tasks</h3>
+        <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">Pending Resolution Tasks</h3>
         {pendingTasks.map(task => (
-          <div key={task.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col md:flex-row gap-6 items-start">
-            <div className="flex-1 space-y-4 w-full">
+          <div key={task.id} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-5 shadow-2xs flex flex-col md:flex-row gap-6 items-start">
+            <div className="flex-1 space-y-4 w-full text-xs">
               <div className="flex items-center justify-between">
-                <span className="bg-amber-500/20 text-amber-400 border border-amber-500/20 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
+                <span className="bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
                   {task.confidence_category} ({task.match_confidence}%)
                 </span>
                 <span className="text-xs font-mono text-slate-500">{task.id}</span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+                <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800">
                   <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">{task.source_a}</div>
                   <div className="space-y-1">
                     {Object.entries(task.record_a).map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-sm">
-                        <span className="text-slate-400">{k}</span>
-                        <span className="text-white font-medium">{String(v)}</span>
+                      <div key={k} className="flex justify-between text-xs">
+                        <span className="text-slate-500">{k}:</span>
+                        <span className="text-slate-900 dark:text-white font-bold">{String(v)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
                 
-                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 relative">
-                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-800 p-1 rounded-full md:block hidden">
-                    <ArrowRightIcon />
-                  </div>
+                <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800">
                   <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">{task.source_b}</div>
                   <div className="space-y-1">
                     {Object.entries(task.record_b).map(([k, v]) => (
-                      <div key={k} className="flex justify-between text-sm">
-                        <span className="text-slate-400">{k}</span>
-                        <span className="text-white font-medium">{String(v)}</span>
+                      <div key={k} className="flex justify-between text-xs">
+                        <span className="text-slate-500">{k}:</span>
+                        <span className="text-slate-900 dark:text-white font-bold">{String(v)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {task.evidence.map((ev: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded text-xs whitespace-nowrap">
-                    <span className="text-slate-400">{ev.field}:</span>
-                    <span className={ev.status === 'Exact Match' ? 'text-emerald-400' : ev.status === 'Partial Match' ? 'text-amber-400' : 'text-rose-400'}>
+                  <div key={idx} className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-[11px] whitespace-nowrap">
+                    <span className="text-slate-600 dark:text-slate-400">{ev.field}:</span>
+                    <span className={`font-bold ${ev.status === 'Exact Match' ? 'text-emerald-700 dark:text-emerald-400' : ev.status === 'Partial Match' ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'}`}>
                       {ev.status}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-            
-            <div className="flex flex-col gap-2 w-full md:w-48 pt-8">
-              <button onClick={() => handleResolve(task.id, 'MERGE')} className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2 px-4 rounded-lg transition text-sm">
-                Confirm Match
+
+            <div className="flex md:flex-col gap-2 w-full md:w-36 shrink-0">
+              <button 
+                onClick={() => handleResolve(task.id, 'MERGE')}
+                className="flex-1 bg-[#0B2545] hover:bg-[#133E87] text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow-2xs cursor-pointer"
+              >
+                Approve Merge
               </button>
-              <button onClick={() => handleResolve(task.id, 'REJECT')} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded-lg transition text-sm">
-                Reject Match
+              <button 
+                onClick={() => handleResolve(task.id, 'REJECT')}
+                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold py-2 px-3 rounded-lg text-xs transition cursor-pointer"
+              >
+                Reject
               </button>
             </div>
           </div>
         ))}
-        {pendingTasks.length === 0 && (
-          <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-xl border border-slate-800 border-dashed">
-            No pending resolution tasks!
-          </div>
-        )}
       </div>
     </div>
   );
 };
-
-const ArrowRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
+export default EntityMatchReview;

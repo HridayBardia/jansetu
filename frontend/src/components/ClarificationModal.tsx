@@ -4,6 +4,7 @@ import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { HelpCircle, CheckCircle2, X } from 'lucide-react';
 import { GoalAnalysisResponse } from '@/types';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
 
 interface ClarificationModalProps {
   analysis: GoalAnalysisResponse;
@@ -19,6 +20,7 @@ export const ClarificationModal: React.FC<ClarificationModalProps> = ({
   const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <LockScroll />
       <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
         <button
           onClick={onClose}

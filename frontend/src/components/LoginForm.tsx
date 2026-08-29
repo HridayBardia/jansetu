@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { ShieldCheck, User, Lock, ArrowRight, Loader2, X, AlertCircle, Eye, EyeOff, FileText, CheckCircle2 } from 'lucide-react';
 import TermsConsentModal, { storeConsent } from '@/components/TermsConsentModal';
+import { LegalModal } from '@/components/LegalModal';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -25,7 +26,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
 
   // Consent state
   const [consentAccepted, setConsentAccepted] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [legalModalState, setLegalModalState] = useState<{
+    isOpen: boolean;
+    type: 'terms' | 'privacy';
+  }>({
+    isOpen: false,
+    type: 'terms',
+  });
 
   const pinRefs = [
     useRef<HTMLInputElement>(null),
@@ -36,7 +43,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
     useRef<HTMLInputElement>(null),
   ];
 
-  // Consent always starts as false for new login sessions — do NOT restore from localStorage
+  // Consent always starts as false for new login sessions - do NOT restore from localStorage
 
   const handlePinInput = (index: number, value: string) => {
     const digit = value.replace(/\D/g, '').slice(-1);
@@ -65,12 +72,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
     pinRefs[Math.min(pasted.length, 5)]?.current?.focus();
   };
 
-  // Terms consent acceptance handler — session-level only
+  // Terms consent acceptance handler - session-level only
   const handleTermsAccept = () => {
     storeConsent('citizen'); // Store for audit trail
     setConsentAccepted(true);
     setSessionConsent(true); // Mark session consent as accepted
-    setShowTermsModal(false);
+    setLegalModalState(prev => ({ ...prev, isOpen: false }));
   };
 
   const handleLogin = async () => {
@@ -146,17 +153,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
         <div className="mb-4">
           <label className="block text-slate-400 text-xs font-medium mb-2">{t('auth.username')}</label>
           <div className="relative">
-            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
             <input
               id="modal-login-username"
               type="text"
               value={username}
               onChange={e => { setUsername(e.target.value.toLowerCase()); setErrorMsg(null); }}
               onKeyDown={e => e.key === 'Enter' && pinRefs[0]?.current?.focus()}
-              placeholder="your_username"
+              placeholder={t('auth.username')}
               autoComplete="off"
               autoFocus
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-3 text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full bg-slate-900/80 border-[1.5px] border-blue-500/45 rounded-xl pl-9 pr-3 py-2.5 text-slate-100 text-sm placeholder-slate-500 shadow-[0_0_12px_rgba(59,130,246,0.15)] focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/40 focus:shadow-[0_0_16px_rgba(59,130,246,0.35)] transition-all"
             />
           </div>
         </div>
@@ -167,7 +174,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
             <label className="text-slate-400 text-xs font-medium">{t('auth.sixDigitPin')}</label>
             <button
               onClick={() => setShowPin(!showPin)}
-              className="text-slate-500 hover:text-slate-300 flex items-center gap-1 text-xs transition"
+              className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs font-medium transition"
             >
               {showPin ? <EyeOff size={12} /> : <Eye size={12} />}
               <span>{showPin ? t('auth.hide') : t('auth.show')}</span>
@@ -186,39 +193,63 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
                 onChange={e => handlePinInput(i, e.target.value)}
                 onKeyDown={e => handlePinKeyDown(i, e)}
                 onPaste={handlePinPaste}
-                className={`w-full max-w-[40px] min-w-0 h-11 text-center text-lg font-bold bg-slate-800 border rounded-lg text-slate-100 outline-none transition ${
-                  digit ? 'border-blue-500/60' : 'border-slate-700'
-                } focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20`}
+                className={`w-full max-w-[42px] min-w-0 h-11 text-center text-lg font-bold rounded-xl text-slate-100 outline-none transition-all border-[1.5px] ${
+                  digit
+                    ? 'border-blue-400 bg-blue-600/20 shadow-[0_0_14px_rgba(59,130,246,0.35)]'
+                    : 'border-blue-500/45 bg-slate-900/80 shadow-[0_0_10px_rgba(59,130,246,0.12)]'
+                } focus:border-blue-400 focus:ring-1 focus:ring-blue-400/40 focus:shadow-[0_0_18px_rgba(59,130,246,0.45)]`}
               />
             ))}
           </div>
         </div>
 
-        {/* ===== TERMS & CONDITIONS CONSENT LINE ===== */}
+        {/* ===== DYNAMIC TERMS & PRIVACY CONSENT CHECKBOX ===== */}
         <div className="mb-4">
-          <button
-            onClick={() => setShowTermsModal(true)}
-            className={`w-full flex items-center gap-2.5 p-3 rounded-xl border transition text-left ${
+          <div
+            onClick={() => setLegalModalState({ isOpen: true, type: 'terms' })}
+            className={`w-full p-3 rounded-xl border-2 transition-all flex items-start gap-2.5 cursor-pointer ${
               consentAccepted
-                ? 'border-green-500/25 bg-green-500/5'
-                : 'border-slate-700/50 bg-slate-800/30 hover:border-blue-500/20 hover:bg-blue-500/5'
+                ? 'border-emerald-500 bg-emerald-500/20 focus-within:ring-2 focus-within:ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                : 'border-red-500 bg-red-500/10 ring-1 ring-red-500/60 focus-within:ring-2 focus-within:ring-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.2)]'
             }`}
           >
-            {consentAccepted ? (
-              <CheckCircle2 size={15} className="text-green-400 shrink-0" />
-            ) : (
-              <FileText size={15} className="text-slate-500 shrink-0" />
-            )}
-            <span className={`text-xs font-medium leading-snug ${
-              consentAccepted ? 'text-green-400' : 'text-slate-400'
-            }`}>
-              {consentAccepted ? (
-                t('auth.termsAccepted')
-              ) : (
-                <>{t('auth.agreeToTerms')}</>
-              )}
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              readOnly
+              className={`mt-0.5 w-4.5 h-4.5 rounded pointer-events-none transition ${
+                consentAccepted 
+                  ? 'accent-emerald-500 text-emerald-500' 
+                  : 'accent-red-500'
+              }`}
+            />
+            <span className="text-slate-300 text-xs leading-relaxed select-none">
+              I agree to the{' '}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setLegalModalState({ isOpen: true, type: 'terms' });
+                }}
+                className="text-blue-400 hover:text-blue-300 font-medium underline underline-offset-4 decoration-blue-500/60 transition-colors cursor-pointer"
+              >
+                Terms and Conditions
+              </a>{' '}
+              and{' '}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setLegalModalState({ isOpen: true, type: 'privacy' });
+                }}
+                className="text-emerald-400 hover:text-emerald-300 font-medium underline underline-offset-4 decoration-emerald-500/60 transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </a>
             </span>
-          </button>
+          </div>
         </div>
 
         {/* Submit - DISABLED without consent */}
@@ -254,12 +285,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
         )}
       </div>
 
-      {/* Terms & Conditions Modal */}
-      <TermsConsentModal
-        isOpen={showTermsModal}
-        onClose={() => setShowTermsModal(false)}
-        onAccept={handleTermsAccept}
+      {/* Accessible Legal Policy Modal (Terms vs Privacy) */}
+      <LegalModal
+        isOpen={legalModalState.isOpen}
+        onClose={() => setLegalModalState(prev => ({ ...prev, isOpen: false }))}
+        type={legalModalState.type}
         role="citizen"
+        onAccept={() => {
+          storeConsent('citizen');
+          setConsentAccepted(true);
+          setSessionConsent(true);
+          setErrorMsg(null);
+        }}
       />
     </>
   );

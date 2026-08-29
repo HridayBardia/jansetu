@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { LanguageSelector } from './LanguageSelector';
+import { ThemeToggle } from './ThemeToggle';
 import { JanSetuLogo } from './JanSetuLogo';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +21,7 @@ import {
   User,
   LogOut,
   LogIn,
+  Landmark,
   Briefcase,
   Activity,
   Menu,
@@ -73,13 +75,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     } else {
       navItems = [
         { label: t('navigation.goalPlanner'), href: '/citizen/dashboard?tab=planner', icon: Compass },
+        { label: 'Schemes & Benefits', href: '/citizen/dashboard?tab=schemes', icon: Landmark },
         { label: t('navigation.myJourneys'), href: '/citizen/dashboard?tab=journeys', icon: MapPin },
         { label: t('navigation.documentsVault'), href: '/citizen/dashboard?tab=documents', icon: FileText },
         { label: t('navigation.myApplications'), href: '/citizen/dashboard?tab=applications', icon: Briefcase },
-        { label: t('navigation.privacyConsent'), href: '/citizen/dashboard?tab=consent', icon: ShieldCheck },
-        { label: t('navigation.interopHub'), href: '/citizen/dashboard?tab=interop', icon: Radio },
-        { label: t('navigation.dataQuality'), href: '/citizen/dashboard?tab=conflicts', icon: BarChart2 },
-        { label: t('navigation.alerts'), href: '/citizen/dashboard?tab=alerts', icon: Bell }
+        { label: 'Check My Information', href: '/citizen/dashboard?tab=conflicts', icon: BarChart2 },
+        { label: 'Your Data & Consent', href: '/citizen/dashboard?tab=consent', icon: ShieldCheck },
+        { label: 'Gov Interop Hub', href: '/citizen/dashboard?tab=interop', icon: Radio },
+        { label: 'Alerts & Events', href: '/citizen/dashboard?tab=alerts', icon: Bell }
       ];
     }
   }
@@ -88,72 +91,75 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
       {/* Top Header */}
 
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-slate-100">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/80 text-slate-900 dark:text-slate-100 shadow-sm dark:shadow-lg dark:shadow-black/40 transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-18 md:h-20 flex items-center justify-between">
           
           {/* Logo Section */}
-          <Link href="/" className="flex items-center gap-3 shrink-0">
+          <Link href="/" className="flex items-center gap-3.5 shrink-0 transition transform hover:scale-[1.02]">
             {/* Desktop Logo */}
             <div className="hidden md:block">
-              <JanSetuLogo size="md" variant="full" />
+              <JanSetuLogo size="lg" variant="full" />
             </div>
             {/* Mobile Logo */}
             <div className="md:hidden">
-              <JanSetuLogo size="sm" variant="compact" />
+              <JanSetuLogo size="md" variant="full" />
             </div>
           </Link>
 
           {/* Mobile Contextual Title */}
-          <div className="md:hidden flex-1 px-4 text-center">
-            <span className="text-xs font-bold text-slate-300 truncate block">
+          <div className="md:hidden flex-1 px-3 text-center">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate block">
               {navItems.find(item => isActive(item.href))?.label || t('appName')}
             </span>
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-3 shrink-0">
-            {/* Language Selector (Hidden on strict mobile to save space) */}
+          <div className="flex items-center gap-2.5 md:gap-3.5 shrink-0">
+            {/* Theme Toggle Switcher */}
+            <ThemeToggle />
+
+            {/* Language Selector */}
             <div className="hidden sm:block">
               <LanguageSelector />
             </div>
 
             {/* Authenticated User Controls */}
             {isAuthenticated && user ? (
-              <div className="flex items-center gap-2 bg-slate-950/50 md:bg-slate-950 md:border md:border-slate-800 px-1 md:px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2.5 bg-slate-100 dark:bg-slate-950/80 md:bg-slate-100 md:dark:bg-slate-900/90 md:border md:border-slate-200 md:dark:border-slate-800 px-2 md:px-3.5 py-2 rounded-2xl shadow-inner transition-colors">
                 
-                {/* Mobile Notification Icon (Only on mobile header, desktop has it in the dashboard) */}
+                {/* Mobile Notification Icon */}
                 <div className="md:hidden mr-1">
-                  <Bell className="w-5 h-5 text-slate-400" />
+                  <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 </div>
 
-                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center border border-amber-500/30 shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-300 font-black text-sm flex items-center justify-center border border-amber-500/40 shrink-0 shadow-sm">
                   {user.full_name.charAt(0).toUpperCase()}
                 </div>
                 
                 <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold text-slate-200 leading-none">{user.full_name}</p>
-                  <p className="text-[10px] text-slate-400 font-mono leading-none mt-0.5">@{user.username}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">{user.full_name}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono leading-none mt-0.5">@{user.username}</p>
                 </div>
 
-                {/* Role label instead of switcher */}
-                <div className="hidden md:block bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
-                  {(user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') ? t('navigation.systemOverview').split(' ')[0] : 'CITIZEN'}
+                {/* Role label badge */}
+                <div className="hidden md:block bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                  {(user.role === 'ADMIN' || user.role === 'admin' || user.role === 'SYSTEM_ADMIN') ? 'OFFICER' : 'CITIZEN'}
                 </div>
 
                 <button
                   onClick={logout}
                   title={t('navigation.signOut')}
-                  className="hidden md:flex ml-1 text-slate-400 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition shrink-0"
+                  className="hidden md:flex ml-1 text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800/80 transition shrink-0"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4.5 h-4.5" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={openAuthModal}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-xl text-xs shadow-md shadow-amber-500/20 transition"
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black px-4 md:px-5 py-2 md:py-2.5 rounded-2xl text-xs md:text-sm shadow-lg shadow-amber-500/25 transition transform hover:scale-[1.03] active:scale-[0.98]"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-4 h-4 text-slate-950 stroke-[2.5]" />
                 <span>{t('navigation.citizenLogin')}</span>
               </button>
             )}
@@ -161,9 +167,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </header>
 
-
       {/* Desktop Navigation Sub-Header */}
-      <nav className="hidden md:block bg-slate-950/80 border-b border-slate-800/80 text-xs font-medium">
+      <nav className="hidden md:block bg-slate-100/90 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800/80 text-xs font-medium transition-colors">
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-6 h-11">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -198,11 +203,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               let shortLabel = item.label;
               if (item.label.includes('Goal') || item.label.includes('Planner')) shortLabel = t('navigation.goalPlanner').split(' ')[0] || 'Home';
               if (item.label.includes('Application')) shortLabel = t('navigation.apps');
-              if (item.label.includes('Consent') || item.label.includes('Privacy')) shortLabel = t('navigation.consent');
+              if (item.label.includes('Consent') || item.label.includes('Privacy')) shortLabel = 'Consent';
               if (item.label.includes('Document') || item.label.includes('Vault')) shortLabel = t('navigation.docs');
               if (item.label.includes('System') || item.label.includes('Overview')) shortLabel = t('navigation.overview');
-              if (item.label.includes('Interop')) shortLabel = t('navigation.interop');
-              if (item.label.includes('Quality') || item.label.includes('Data')) shortLabel = t('navigation.quality');
+              if (item.label.includes('Interop')) shortLabel = 'Interop Hub';
+              if (item.label.includes('Information') || item.label.includes('Quality')) shortLabel = 'Check Info';
+              if (item.label.includes('Alerts')) shortLabel = 'Alerts';
 
               return (
                 <Link

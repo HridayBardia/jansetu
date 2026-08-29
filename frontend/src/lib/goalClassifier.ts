@@ -1,5 +1,5 @@
 /**
- * JANSETU — UNIVERSAL GOAL CLASSIFICATION ENGINE
+ * JANSETU - UNIVERSAL GOAL CLASSIFICATION ENGINE
  * 
  * Intent-based classification using keyword groups (not exact phrases).
  * Handles natural language queries of any form.
@@ -49,7 +49,7 @@ const CITY_TO_STATE: Record<string, string> = {
 };
 
 // ============================================================
-// INTENT CLASSIFICATION — keyword groups
+// INTENT CLASSIFICATION - keyword groups
 // ============================================================
 interface IntentCategory {
   id: string;
@@ -65,7 +65,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     label: 'Study Abroad / International Education',
     keywords: ['abroad', 'overseas', 'foreign university', 'international', 'australia', 'uk', 'united kingdom',
       'usa', 'united states', 'canada', 'germany', 'singapore', 'dubai', 'new zealand', 'ireland',
-      'masters abroad', 'study abroad', 'travel abroad', 'go abroad', 'foreign country'],
+      'masters abroad', 'study abroad', 'travel abroad', 'go abroad', 'foreign country',
+      'विदेश', 'परदेश', 'ऑस्ट्रेलिया', 'विदेशी', 'வெளிநாடு', 'విదేశీ', 'বিদেশ', 'ਵਿਦੇਸ਼', 'विदेशमा'],
     excludeKeywords: [],
     baseScore: 10,
   },
@@ -74,7 +75,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     label: 'Education / Scholarship',
     keywords: ['education', 'school', 'college', 'university', 'degree', 'bachelor', 'master', 'phd',
       'scholarship', 'stipend', 'fellowship', 'study', 'tuition', 'academic', 'engineering', 'medical college',
-      'student', 'exam', ' competitive exam', 'upsc', 'ssc', 'jee', 'neet', 'gate'],
+      'student', 'exam', 'competitive exam', 'upsc', 'ssc', 'jee', 'neet', 'gate',
+      'शिक्षा', 'पढ़ाई', 'छात्रवृत्ति', 'શિક્ષણ', 'கல்வி', 'విద్య', 'ਪੜ੍ਹਾਈ', 'শিক্ষাবৃত্তি', 'vidya', 'padhai', 'shiksha'],
     excludeKeywords: ['abroad', 'overseas', 'australia', 'uk', 'usa', 'canada', 'germany'],
     baseScore: 8,
   },
@@ -83,7 +85,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     label: 'Healthcare / Hospital / Medical',
     keywords: ['hospital', 'healthcare', 'health care', 'medical', 'clinic', 'nursing', 'pharmacy',
       'health facility', 'diagnostic', 'pathology', 'blood bank', 'dental', 'eye care',
-      'ambulance', 'health center', 'primary health', 'community health', 'ayurveda', 'yoga center'],
+      'ambulance', 'health center', 'primary health', 'community health', 'ayurveda', 'yoga center',
+      'स्वास्थ्य', 'अस्पताल', 'इलाज', 'आरोग्य', 'மருத்துவம்', 'వైద్యం', 'স্বাস্হ্য', 'sehat', 'chikitsa'],
     excludeKeywords: [],
     baseScore: 9,
   },
@@ -99,7 +102,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
       'encumbrance', 'title deed', 'sale deed', 'mutation', 'partition',
       'stamp duty', 'registration', 'sub registrar', 'khasra', 'khata',
       'land record', 'land ownership', 'land transfer', 'land deal', 'land purchase',
-      'buy a land', 'buy land', 'buy plot', 'purchase a land', 'acquire a property'],
+      'buy a land', 'buy land', 'buy plot', 'purchase a land', 'acquire a property',
+      'जमीन', 'मकान', 'घर', 'प्लॉट', 'જમીન', 'ઘર', 'நிலம்', 'భూమి', 'জমি', 'makan', 'zameen', 'ghar', 'dastavej'],
     excludeKeywords: [],
     baseScore: 10,
   },
@@ -114,7 +118,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
       'franchise', 'dealership', 'agency', 'distributor', 'supply',
       'register company', 'register business', 'start a business', 'open a business',
       'entrepreneur', 'entrepreneurship', 'sole proprietor', 'partnership firm',
-      'llp', 'private limited', 'pvt ltd', 'public limited', 'opc'],
+      'llp', 'private limited', 'pvt ltd', 'public limited', 'opc',
+      'व्यापार', 'व्यवसाय', 'दुकान', 'उद्योग', 'વેપાર', 'ધંધો', 'વ્યાપાર', 'தொழில்', 'వ్యాపారం', 'ব্যবসা', 'ਬਿਜ਼ਨਸ', 'dhandha', 'vyapar', 'karobar', 'dukan'],
     excludeKeywords: [],
     baseScore: 9,
   },
@@ -125,7 +130,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
       'irrigation', 'kisan', 'fasal', 'tractor', 'fertilizer', 'seed',
       'dairy', 'poultry', 'fishery', 'horticulture', 'sericulture',
       'food processing', 'cold storage', 'warehouse', 'mandi',
-      'land record', 'khasra', 'khatauni', 'jamabandi'],
+      'land record', 'khasra', 'khatauni', 'jamabandi',
+      'खेती', 'किसान', 'कृषि', 'ખેતી', 'விவசாயம்', 'రైతు', 'কৃষি', 'kheti', 'kisan', 'krishi'],
     excludeKeywords: [],
     baseScore: 8,
   },
@@ -135,7 +141,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     keywords: ['driving licence', 'driving license', 'dl', 'learner licence', 'learner license',
       'driving', 'vehicle', 'car', 'bike', 'two wheeler', 'four wheeler',
       'motor', 'rto', 'transport', 'rc', 'registration certificate',
-      'learner permit', ' driving test', 'traffic'],
+      'learner permit', 'driving test', 'traffic',
+      'लाइसेंस', 'गाड़ी', 'ड्राइविंग', 'વાહન', 'வாகனம்', 'లైసెన్స్'],
     excludeKeywords: [],
     baseScore: 8,
   },
@@ -143,7 +150,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     id: 'PASSPORT',
     label: 'Passport / Travel Documents',
     keywords: ['passport', 'travel document', 'visa', 'immigration',
-      'emigration', 'foreign travel', 'travel abroad'],
+      'emigration', 'foreign travel', 'travel abroad',
+      'पासपोर्ट', 'વીઝા', 'பாஸ்போர்ட்', 'పాస్‌పోర్ట్'],
     excludeKeywords: ['australia', 'uk', 'usa', 'canada', 'germany', 'abroad', 'overseas'],
     baseScore: 8,
   },
@@ -155,7 +163,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
       'recruitment', 'competitive', 'upsc', 'bpsc', 'mpsc', 'gpsc',
       'ssc', 'railway', 'banking', 'ibps', 'clerk', 'constable',
       'police', 'army', 'navy', 'air force', 'defence', 'defense',
-      'postal', 'post office', 'teacher', 'professor'],
+      'postal', 'post office', 'teacher', 'professor',
+      'सरकारी नौकरी', 'नौकरी', 'સરકારી નોકરી', 'அரசு வேலை', 'ఉద్యోగం', 'sarkari naukri'],
     excludeKeywords: [],
     baseScore: 8,
   },
@@ -165,8 +174,9 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     keywords: ['loan', 'home loan', 'business loan', 'education loan', 'personal loan',
       'car loan', 'gold loan', 'agriculture loan', 'kcc', 'kisan credit card',
       'mudra loan', 'credit', 'subsidy', 'interest subsidy', 'bank', 'banking',
-      'insurance', 'pension', ' provident fund', 'epf', 'esi', 'nps',
-      'mutual fund', 'investment', 'financial', 'microfinance', 'nbfc'],
+      'insurance', 'pension', 'provident fund', 'epf', 'esi', 'nps',
+      'mutual fund', 'investment', 'financial', 'microfinance', 'nbfc',
+      'लोन', 'ऋण', 'कर्ज', 'સબસિડી', 'கடன்', 'రుణం', 'rin', 'karz'],
     excludeKeywords: [],
     baseScore: 7,
   },
@@ -175,7 +185,7 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     label: 'NGO / Non-Profit / Social Enterprise',
     keywords: ['ngo', 'non profit', 'non-profit', 'charity', 'trust', 'society',
       'foundation', 'social enterprise', 'social work', 'voluntary organization',
-      'section 8', 'not for profit', 'community organization'],
+      'section 8', 'not for profit', 'community organization', 'संस्था', 'ट्रस्ट'],
     excludeKeywords: [],
     baseScore: 8,
   },
@@ -187,7 +197,8 @@ const INTENT_CATEGORIES: IntentCategory[] = [
       'food security', 'ration', 'bpl', 'below poverty', 'sc scheme',
       'st scheme', 'obc scheme', 'minority scheme', 'handicap',
       'divyang', 'disabled', 'social security', 'old age',
-      'maternity', 'child welfare', 'women welfare'],
+      'maternity', 'child welfare', 'women welfare',
+      'कल्याण', 'योजना', 'पेंशन', 'राशन', 'યોજના', 'திட்டம்', 'పథకం'],
     excludeKeywords: [],
     baseScore: 6,
   },
@@ -204,7 +215,7 @@ export function classifyIntent(query: string): { primary: string; label: string;
   for (const cat of INTENT_CATEGORIES) {
     let score = 0;
     
-    // Check exclude keywords first — penalize
+    // Check exclude keywords first - penalize
     const hasExclude = cat.excludeKeywords.some(ek => q.includes(ek));
     if (hasExclude) continue; // skip this category entirely if exclude keywords match
     
@@ -474,7 +485,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
       official_source_url: 'https://nosmsje.gov.in', eligibility_summary: 'SC/ST/DNT category with family income below threshold'
     },
     {
-      id: 'pm-vidyalaxmi', name: 'PM Vidyalaxmi — Education Loan & Interest Subvention',
+      id: 'pm-vidyalaxmi', name: 'PM Vidyalaxmi - Education Loan & Interest Subvention',
       description: 'Full interest subvention during moratorium for education loans up to ₹10 lakhs.',
       level: 'CENTRAL', department: 'Ministry of Education', category: 'education',
       official_source_url: 'https://www.vidyalakshmi.co.in', eligibility_summary: 'Family income below ₹8 lakh'
@@ -488,7 +499,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
       official_source_url: 'https://scholarships.gov.in', eligibility_summary: 'Students from SC/ST/OBC/Minority with income below threshold'
     },
     {
-      id: 'pm-vidya', name: 'PM Vidya — Digital Learning Initiative',
+      id: 'pm-vidya', name: 'PM Vidya - Digital Learning Initiative',
       description: 'Free digital learning resources and platforms for students.',
       level: 'CENTRAL', department: 'Ministry of Education', category: 'education',
       official_source_url: 'https://www.education.gov.in', eligibility_summary: 'All enrolled students'
@@ -496,47 +507,47 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   HEALTHCARE: [
     {
-      id: 'pmjay', name: 'Ayushman Bharat — PM-JAY',
+      id: 'pmjay', name: 'Ayushman Bharat - PM-JAY',
       description: 'Health insurance coverage up to ₹5 lakh per family per year for secondary and tertiary hospitalization.',
       level: 'CENTRAL', department: 'Ministry of Health & Family Welfare', category: 'health',
       official_source_url: 'https://pmjay.gov.in', eligibility_summary: 'Families in deprivation categories as per SECC database'
     },
     {
-      id: 'ab-hwc', name: 'Ayushman Bharat — Health & Wellness Centres',
+      id: 'ab-hwc', name: 'Ayushman Bharat - Health & Wellness Centres',
       description: 'Comprehensive primary healthcare services at upgraded health centres.',
       level: 'CENTRAL', department: 'Ministry of Health & Family Welfare', category: 'health',
-      official_source_url: 'https://abdm.gov.in', eligibility_summary: 'All citizens — free primary healthcare services'
+      official_source_url: 'https://abdm.gov.in', eligibility_summary: 'All citizens - free primary healthcare services'
     },
   ],
   PROPERTY_LAND: [
     {
       id: 'pmay', name: 'Pradhan Mantri Awas Yojana (PMAY)',
-      description: 'Housing for All — credit-linked subsidy for construction/purchase of house.',
+      description: 'Housing for All - credit-linked subsidy for construction/purchase of house.',
       level: 'CENTRAL', department: 'Ministry of Housing & Urban Affairs', category: 'housing',
       official_source_url: 'https://pmaymis.gov.in', eligibility_summary: 'EWS/LIG/MIG families without pucca house'
     },
     {
-      id: 'swayam', name: 'Swaminathan Research Foundation — Land Records Digitization',
+      id: 'swayam', name: 'Swaminathan Research Foundation - Land Records Digitization',
       description: 'Digital India Land Records Modernization Programme for transparent land records.',
       level: 'CENTRAL', department: 'Department of Land Resources', category: 'land',
-      official_source_url: 'https://dilr.gov.in', eligibility_summary: 'All landowners — free digital access to land records'
+      official_source_url: 'https://dilr.gov.in', eligibility_summary: 'All landowners - free digital access to land records'
     },
   ],
   BUSINESS: [
     {
-      id: 'udyam', name: 'Udyam Registration — MSME Recognition',
+      id: 'udyam', name: 'Udyam Registration - MSME Recognition',
       description: 'Free MSME registration unlocking priority lending, credit guarantee, and government tender preferences.',
       level: 'CENTRAL', department: 'Ministry of MSME', category: 'business',
       official_source_url: 'https://udyamregistration.gov.in', eligibility_summary: 'All micro, small, and medium enterprises'
     },
     {
-      id: 'startup-india', name: 'Startup India — Tax & Regulatory Benefits',
+      id: 'startup-india', name: 'Startup India - Tax & Regulatory Benefits',
       description: '3-year income tax exemption, fast-track patent examination, and self-certification for DPIIT-recognized startups.',
       level: 'CENTRAL', department: 'DPIIT', category: 'business',
       official_source_url: 'https://www.startupindia.gov.in', eligibility_summary: 'Startups under 10 years with turnover < ₹100 crore'
     },
     {
-      id: 'mudra', name: 'Mudra Loan — Pradhan Mantri Mudra Yojana',
+      id: 'mudra', name: 'Mudra Loan - Pradhan Mantri Mudra Yojana',
       description: 'Collateral-free loans up to ₹10 lakh for non-farm micro enterprises.',
       level: 'CENTRAL', department: 'Ministry of Finance', category: 'finance',
       official_source_url: 'https://www.mudra.org.in', eligibility_summary: 'Non-farm micro enterprises and small businesses'
@@ -544,14 +555,14 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   AGRICULTURE: [
     {
-      id: 'pm-kisan', name: 'PM-KISAN — Direct Income Support for Farmers',
+      id: 'pm-kisan', name: 'PM-KISAN - Direct Income Support for Farmers',
       description: '₹6,000/year in 3 instalments of ₹2,000 directly to eligible farmer families\' bank accounts.',
       level: 'CENTRAL', department: 'Ministry of Agriculture & Farmers Welfare', category: 'agriculture',
       official_source_url: 'https://pmkisan.gov.in', eligibility_summary: 'Small/marginal farmer families with cultivable land'
     },
     {
-      id: 'pmfby', name: 'PMFBY — Pradhan Mantri Fasal Bima Yojana',
-      description: 'Comprehensive crop insurance at 2% (Kharif) / 1.5% (Rabi) premium — government pays the rest.',
+      id: 'pmfby', name: 'PMFBY - Pradhan Mantri Fasal Bima Yojana',
+      description: 'Comprehensive crop insurance at 2% (Kharif) / 1.5% (Rabi) premium - government pays the rest.',
       level: 'CENTRAL', department: 'Ministry of Agriculture & Farmers Welfare', category: 'agriculture',
       official_source_url: 'https://pmfby.gov.in', eligibility_summary: 'All farmers including sharecroppers and tenant farmers'
     },
@@ -564,7 +575,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   DRIVING_LICENCE: [
     {
-      id: 'sarathi', name: 'Sarathi Parivahan — Driving Licence Service',
+      id: 'sarathi', name: 'Sarathi Parivahan - Driving Licence Service',
       description: 'Online portal for learner licence, permanent DL, renewal, and international DL.',
       level: 'CENTRAL', department: 'Ministry of Road Transport & Highways', category: 'documents',
       official_source_url: 'https://sarathi.parivahan.gov.in', eligibility_summary: 'All Indian residents above 18 years'
@@ -572,7 +583,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   PASSPORT: [
     {
-      id: 'passport-seva', name: 'Passport Seva — Official Passport Issuance',
+      id: 'passport-seva', name: 'Passport Seva - Official Passport Issuance',
       description: 'Online passport issuance with PSK appointment, document verification, and home delivery.',
       level: 'CENTRAL', department: 'Ministry of External Affairs', category: 'documents',
       official_source_url: 'https://passportindia.gov.in', eligibility_summary: 'All Indian citizens'
@@ -580,7 +591,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   GOVERNMENT_JOB: [
     {
-      id: 'upsc', name: 'UPSC — Civil Services Examination',
+      id: 'upsc', name: 'UPSC - Civil Services Examination',
       description: 'Annual recruitment for IAS, IPS, IFS, and other Central Services.',
       level: 'CENTRAL', department: 'Union Public Service Commission', category: 'employment',
       official_source_url: 'https://www.upsc.gov.in', eligibility_summary: 'Indian citizens aged 21-32 with graduation'
@@ -594,7 +605,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   FINANCE_LOAN: [
     {
-      id: 'pm-swanidhi', name: 'PM SVANidhi — Street Vendor Support',
+      id: 'pm-swanidhi', name: 'PM SVANidhi - Street Vendor Support',
       description: 'Working capital loan up to ₹50,000 for street vendors with interest subsidy.',
       level: 'CENTRAL', department: 'Ministry of Housing & Urban Affairs', category: 'finance',
       official_source_url: 'https://pmsvanidhi.mohua.gov.in', eligibility_summary: 'Street vendors with certificate of vending'
@@ -608,7 +619,7 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   NGO: [
     {
-      id: 'csr', name: 'CSR Funding — Corporate Social Responsibility',
+      id: 'csr', name: 'CSR Funding - Corporate Social Responsibility',
       description: 'Access CSR funds from corporates for social development projects.',
       level: 'CENTRAL', department: 'Ministry of Corporate Affairs', category: 'social',
       official_source_url: 'https://www.mca.gov.in', eligibility_summary: 'Registered NGOs with track record'
@@ -616,13 +627,13 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
   ],
   WELFARE: [
     {
-      id: 'pm-uday', name: 'PM UDAY — Ujala LED Distribution',
+      id: 'pm-uday', name: 'PM UDAY - Ujala LED Distribution',
       description: 'Free LED bulb distribution to reduce electricity bills.',
       level: 'CENTRAL', department: 'Ministry of Power', category: 'welfare',
       official_source_url: 'https://www.jagardishti.gov.in', eligibility_summary: 'All BPL families'
     },
     {
-      id: 'pm-svanidhi-w', name: 'PM SVANidhi — Street Vendor Support',
+      id: 'pm-svanidhi-w', name: 'PM SVANidhi - Street Vendor Support',
       description: 'Working capital loan up to ₹50,000 for street vendors.',
       level: 'CENTRAL', department: 'Ministry of Housing & Urban Affairs', category: 'finance',
       official_source_url: 'https://pmsvanidhi.mohua.gov.in', eligibility_summary: 'Street vendors'
@@ -633,8 +644,8 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
 // State-specific scheme templates (applied when domicile matches)
 const STATE_SCHEME_TEMPLATES: Record<string, SchemeInfo[]> = {
   Rajasthan: [
-    { id: 'raj-rgs', name: 'Rajiv Gandhi Scholarship for Academic Excellence', description: 'Full scholarship for top QS universities — tuition, living, travel, visa.', level: 'STATE', department: 'Higher Education Dept, Rajasthan', category: 'education', official_source_url: 'https://hte.rajasthan.gov.in', eligibility_summary: 'Rajasthan domicile, top 200 QS university admission' },
-    { id: 'raj-mlupy', name: 'MLUPY — Mukhyamantri Laghu Udyog Protsahan Yojana', description: 'Interest subsidy of 5–8% per annum for 5 years on bank loans for new micro/small enterprises.', level: 'STATE', department: 'Rajasthan MSME & Industries Dept', category: 'business', official_source_url: 'https://industries.rajasthan.gov.in', eligibility_summary: 'New MSMEs in Rajasthan' },
+    { id: 'raj-rgs', name: 'Rajiv Gandhi Scholarship for Academic Excellence', description: 'Full scholarship for top QS universities - tuition, living, travel, visa.', level: 'STATE', department: 'Higher Education Dept, Rajasthan', category: 'education', official_source_url: 'https://hte.rajasthan.gov.in', eligibility_summary: 'Rajasthan domicile, top 200 QS university admission' },
+    { id: 'raj-mlupy', name: 'MLUPY - Mukhyamantri Laghu Udyog Protsahan Yojana', description: 'Interest subsidy of 5-8% per annum for 5 years on bank loans for new micro/small enterprises.', level: 'STATE', department: 'Rajasthan MSME & Industries Dept', category: 'business', official_source_url: 'https://industries.rajasthan.gov.in', eligibility_summary: 'New MSMEs in Rajasthan' },
     { id: 'raj-kisan', name: 'Mukhyamantri Krishak Saathi Yojana', description: 'Financial compensation to farmers in case of death/disability during agricultural work.', level: 'STATE', department: 'Agriculture Dept, Rajasthan', category: 'agriculture', official_source_url: 'https://agriculture.rajasthan.gov.in', eligibility_summary: 'Farmers in Rajasthan' },
   ],
   Gujarat: [
@@ -642,8 +653,8 @@ const STATE_SCHEME_TEMPLATES: Record<string, SchemeInfo[]> = {
     { id: 'gj-kutir', name: 'Gujarat Cottage & Rural Industries', description: 'Subsidies for cottage industries and rural enterprise development.', level: 'STATE', department: 'Industries Dept, Gujarat', category: 'business', official_source_url: 'https://industries.gujarat.gov.in', eligibility_summary: 'Rural enterprises in Gujarat' },
   ],
   Karnataka: [
-    { id: 'ka-fssai', name: 'FSSAI Food License — Karnataka (FoSCoS)', description: 'Mandatory food license for all restaurant/food businesses.', level: 'STATE', department: 'FSSAI Karnataka', category: 'business', official_source_url: 'https://foscos.fssai.gov.in', eligibility_summary: 'All food businesses in Karnataka' },
-    { id: 'ka-msme', name: 'Karnataka MSME & Entrepreneurship Policy 2020', description: '15–20% capital investment subsidy and ₹50,000 per Kannadiga employee for new MSMEs.', level: 'STATE', department: 'Dept of Industries & Commerce, Karnataka', category: 'business', official_source_url: 'https://investkarnataka.com/policies', eligibility_summary: 'New MSMEs in Karnataka' },
+    { id: 'ka-fssai', name: 'FSSAI Food License - Karnataka (FoSCoS)', description: 'Mandatory food license for all restaurant/food businesses.', level: 'STATE', department: 'FSSAI Karnataka', category: 'business', official_source_url: 'https://foscos.fssai.gov.in', eligibility_summary: 'All food businesses in Karnataka' },
+    { id: 'ka-msme', name: 'Karnataka MSME & Entrepreneurship Policy 2020', description: '15-20% capital investment subsidy and ₹50,000 per Kannadiga employee for new MSMEs.', level: 'STATE', department: 'Dept of Industries & Commerce, Karnataka', category: 'business', official_source_url: 'https://investkarnataka.com/policies', eligibility_summary: 'New MSMEs in Karnataka' },
   ],
   Maharashtra: [
     { id: 'mh-startup', name: 'Maharashtra Startup Policy', description: 'Seed funding, stamp duty exemption, and electricity duty exemption for startups.', level: 'STATE', department: 'Industries Dept, Maharashtra', category: 'business', official_source_url: 'https://startup.maharashtra.gov.in', eligibility_summary: 'DPIIT-registered startups in Maharashtra' },
@@ -655,7 +666,7 @@ const STATE_SCHEME_TEMPLATES: Record<string, SchemeInfo[]> = {
     { id: 'ap-msme', name: 'AP MSME Subsidy & Incentive Scheme', description: 'Capital and interest subsidies for new enterprises in AP.', level: 'STATE', department: 'Industries Dept, AP', category: 'business', official_source_url: 'https://www.apindustries.gov.in', eligibility_summary: 'New MSMEs in Andhra Pradesh' },
   ],
   Telangana: [
-    { id: 'ts-msme', name: 'TS — TS-iPASS / MSME Subsidies', description: 'Single-window clearance and subsidies for new enterprises in Telangana.', level: 'STATE', department: 'Industries & Commerce Dept, Telangana', category: 'business', official_source_url: 'https://tsipass.telangana.gov.in', eligibility_summary: 'New enterprises in Telangana' },
+    { id: 'ts-msme', name: 'TS - TS-iPASS / MSME Subsidies', description: 'Single-window clearance and subsidies for new enterprises in Telangana.', level: 'STATE', department: 'Industries & Commerce Dept, Telangana', category: 'business', official_source_url: 'https://tsipass.telangana.gov.in', eligibility_summary: 'New enterprises in Telangana' },
   ],
   'Uttar Pradesh': [
     { id: 'up-startup', name: 'UP Startup Policy & Implementation Scheme', description: 'Seed funding, tax incentives, and mentoring for startups in UP.', level: 'STATE', department: 'IT & Electronics Dept, UP', category: 'business', official_source_url: 'https://invest.up.gov.in', eligibility_summary: 'Startups registered in Uttar Pradesh' },
@@ -891,7 +902,7 @@ function generateGoalTitle(intentId: string, query: string, locationInfo: any): 
     WELFARE: `Government Welfare / Support${loc}`,
   };
   
-  return titles[intentId] || `Citizen Goal — ${query.substring(0, 50)}`;
+  return titles[intentId] || `Citizen Goal - ${query.substring(0, 50)}`;
 }
 
 // ============================================================
@@ -1030,7 +1041,7 @@ function generateSources(intentId: string): { name: string; url: string; last_ve
   
   const sources: Record<string, { name: string; url: string; last_verified: string }[]> = {
     STUDY_ABROAD: [
-      { name: 'Passport Seva — Ministry of External Affairs', url: 'https://passportindia.gov.in', last_verified: verified },
+      { name: 'Passport Seva - Ministry of External Affairs', url: 'https://passportindia.gov.in', last_verified: verified },
       { name: 'National Overseas Scholarship Portal', url: 'https://nosmsje.gov.in', last_verified: verified },
       { name: 'PM Vidyalaxmi Education Loan', url: 'https://www.vidyalakshmi.co.in', last_verified: verified },
     ],
@@ -1039,11 +1050,11 @@ function generateSources(intentId: string): { name: string; url: string; last_ve
       { name: 'Ministry of Education', url: 'https://www.education.gov.in', last_verified: verified },
     ],
     HEALTHCARE: [
-      { name: 'Ayushman Bharat — PM-JAY', url: 'https://pmjay.gov.in', last_verified: verified },
+      { name: 'Ayushman Bharat - PM-JAY', url: 'https://pmjay.gov.in', last_verified: verified },
       { name: 'National Health Authority', url: 'https://nha.gov.in', last_verified: verified },
     ],
     PROPERTY_LAND: [
-      { name: 'DILRMP — Digital India Land Records', url: 'https://dilr.gov.in', last_verified: verified },
+      { name: 'DILRMP - Digital India Land Records', url: 'https://dilr.gov.in', last_verified: verified },
       { name: 'PM Awas Yojana', url: 'https://pmaymis.gov.in', last_verified: verified },
     ],
     BUSINESS: [
@@ -1060,7 +1071,7 @@ function generateSources(intentId: string): { name: string; url: string; last_ve
       { name: 'Sarathi Parivahan Portal', url: 'https://sarathi.parivahan.gov.in', last_verified: verified },
     ],
     PASSPORT: [
-      { name: 'Passport Seva — Ministry of External Affairs', url: 'https://passportindia.gov.in', last_verified: verified },
+      { name: 'Passport Seva - Ministry of External Affairs', url: 'https://passportindia.gov.in', last_verified: verified },
     ],
     GOVERNMENT_JOB: [
       { name: 'UPSC Portal', url: 'https://www.upsc.gov.in', last_verified: verified },
