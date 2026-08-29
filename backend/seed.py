@@ -1234,7 +1234,7 @@ def seed_database(drop_tables: bool = False):
             ),
             ApplicationDB(
                 application_id="APP-2026-006",
-                user_id="user_ayuh_chauhan",
+                user_id="user_ayush_chauhan",
                 service_id="svc_edu_scholarship",
                 department_id="dept_education_rj",
                 department_name="Industries Department, Rajasthan",
@@ -1270,7 +1270,7 @@ def seed_database(drop_tables: bool = False):
             NotificationDB(user_id="user_varad_kanade", title="Application Under Review", message="Your Higher Education Assistance application is being reviewed by the department.", category="application_update"),
             NotificationDB(user_id="user_satwik_guru", title="Application Submitted", message="Your Property Registration application has been submitted successfully.", category="application_update"),
             NotificationDB(user_id="user_satwik_guru", title="Action Required", message="Please upload your Property Tax Receipt for application APP-2026-005.", category="application_update"),
-            NotificationDB(user_id="user_ayuh_chauhan", title="Documents Needed", message="Please upload Income Certificate and Caste Certificate for your Business Support Scheme application.", category="application_update"),
+            NotificationDB(user_id="user_ayush_chauhan", title="Documents Needed", message="Please upload Income Certificate and Caste Certificate for your Business Support Scheme application.", category="application_update"),
             NotificationDB(user_id="user_hriday_bardia", title="New Scheme Alert", message="PM SVANidhi street vendor loan scheme is now available. Check your eligibility.", category="scheme_alert", is_read=True),
             NotificationDB(user_id="user_varad_kanade", title="Scholarship Update", message="NSP scholarship application window opens next month. Prepare your documents.", category="scheme_alert", is_read=True),
         ]
@@ -1298,7 +1298,7 @@ def seed_database(drop_tables: bool = False):
             AuditLogDB(actor="user_varad_kanade", action="DOCUMENT_UPLOAD", resource="Marksheets uploaded via DigiLocker", status="SUCCESS"),
             AuditLogDB(actor="user_satwik_guru", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
             AuditLogDB(actor="user_satwik_guru", action="APPLICATION_SUBMITTED", resource="Property Registration", status="SUCCESS"),
-            AuditLogDB(actor="user_ayuh_chauhan", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
+            AuditLogDB(actor="user_ayush_chauhan", action="LOGIN", resource="Citizen Portal", status="SUCCESS"),
             AuditLogDB(actor="user_system_admin", action="ADMIN_LOGIN", resource="Admin Portal", status="SUCCESS"),
             AuditLogDB(actor="user_system_admin", action="ADMIN_ACCESS", resource="System Diagnostics", status="SUCCESS"),
             AuditLogDB(actor="user_jyoti_admin", action="ADMIN_LOGIN", resource="Admin Portal", status="SUCCESS"),

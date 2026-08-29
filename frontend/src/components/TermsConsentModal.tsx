@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { X, FileText, CheckCircle2, Shield, AlertTriangle } from 'lucide-react';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
 
 // ============================================================
 // TERMS VERSION CONSTANTS
@@ -103,7 +104,7 @@ To provide personalised assistance, JANSETU may process the following categories
 
 - **Personal details:** Name, date of birth, gender, age, and contact information.
 - **Financial information:** Annual income range, income category, and occupation details.
-- **Location information:** State, district, city, and pincode — used to identify relevant state-level schemes and services.
+- **Location information:** State, district, city, and pincode - used to identify relevant state-level schemes and services.
 - **Goal and query information:** Life goals, service requests, and questions you submit through the platform.
 - **Document-related information:** Types of documents you reference or upload for matching and eligibility analysis.
 - **Profile data:** Education, social category, and other demographic fields provided during onboarding.
@@ -209,7 +210,7 @@ Any use of administrative access for personal, unauthorised, or malicious purpos
 
 ### 3. Citizen Data Confidentiality
 
-All citizen information accessible through administrative functions — including personal details, documents, financial data, application information, workflow status, and journey history — is **strictly confidential**. You must treat citizen data with the same level of care as regulated personal information.
+All citizen information accessible through administrative functions - including personal details, documents, financial data, application information, workflow status, and journey history - is **strictly confidential**. You must treat citizen data with the same level of care as regulated personal information.
 
 ### 4. Least-Privilege & Role-Based Access
 
@@ -285,32 +286,31 @@ function renderMarkdown(text: string): string {
   let html = text;
 
   // Handle the styled div block for admin warning
-  html = html.replace(/<div style="([^"]*)">([\s\S]*?)<\/div>/g, (_match, style, content) => {
-    // Process inner content
+  html = html.replace(/<div style="([^"]*)">([\s\S]*?)<\/div>/g, (_match, _style, content) => {
     let inner = content
-      .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fbbf24;">$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-700 dark:text-amber-400">$1</strong>')
       .replace(/\n/g, '<br/>');
-    return `<div style="${style}">${inner}</div>`;
+    return `<div class="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-300 text-xs my-3">${inner}</div>`;
   });
 
   // Headers
-  html = html.replace(/^### (.*$)/gm, '<h3 style="color: #e2e8f0; font-size: 15px; font-weight: 600; margin: 20px 0 8px 0; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08);">$1</h3>');
-  html = html.replace(/^## (.*$)/gm, '<h2 style="color: #f1f5f9; font-size: 18px; font-weight: 700; margin: 0 0 6px 0;">$1</h2>');
+  html = html.replace(/^### (.*$)/gm, '<h3 class="text-slate-900 dark:text-slate-100 text-sm font-bold mt-5 mb-2 pb-1 border-b border-slate-200 dark:border-slate-800">$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2 class="text-slate-900 dark:text-white text-base font-extrabold mb-2">$1</h2>');
 
   // Horizontal rule
-  html = html.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 16px 0;" />');
+  html = html.replace(/^---$/gm, '<hr class="border-none border-t border-slate-200 dark:border-slate-800 my-4" />');
 
   // Bold
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #e2e8f0;">$1</strong>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900 dark:text-white font-semibold">$1</strong>');
 
   // Bullet points
-  html = html.replace(/^- (.*$)/gm, '<li style="color: #cbd5e1; margin: 4px 0; line-height: 1.6; font-size: 14px;">$1</li>');
+  html = html.replace(/^- (.*$)/gm, '<li class="text-slate-700 dark:text-slate-300 my-1 leading-relaxed text-xs md:text-sm">$1</li>');
 
   // Wrap consecutive <li> in <ul>
-  html = html.replace(/((?:<li[^>]*>.*?<\/li>\n?)+)/g, '<ul style="margin: 8px 0; padding-left: 24px; list-style-type: disc;">$1</ul>');
+  html = html.replace(/((?:<li[^>]*>.*?<\/li>\n?)+)/g, '<ul class="my-2 pl-6 list-disc space-y-1">$1</ul>');
 
   // Paragraphs for non-tagged lines
-  html = html.replace(/^(?!<[hulo]|<div|<hr|<li|<ul|<strong)(.*[^\n].*)$/gm, '<p style="color: #94a3b8; font-size: 14px; line-height: 1.7; margin: 8px 0;">$1</p>');
+  html = html.replace(/^(?!<[hulo]|<div|<hr|<li|<ul|<strong)(.*[^\n].*)$/gm, '<p class="text-slate-600 dark:text-slate-300 text-xs md:text-sm leading-relaxed my-2">$1</p>');
 
   return html;
 }
@@ -350,10 +350,8 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
       setConsentChecked(false);
       setShowReachedEnd(false);
       previousFocusRef.current = document.activeElement as HTMLElement;
-      // Focus close button after a tick
       setTimeout(() => closeButtonRef.current?.focus(), 100);
     } else {
-      // Restore focus
       previousFocusRef.current?.focus();
     }
   }, [isOpen, role]);
@@ -376,7 +374,7 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
     if (!container) return;
 
     const { scrollTop, scrollHeight, clientHeight } = container;
-    const tolerance = 8;
+    const tolerance = 12;
     const atBottom = scrollTop + clientHeight >= scrollHeight - tolerance;
 
     if (atBottom && !hasReachedBottom) {
@@ -407,106 +405,41 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
       role="dialog"
       aria-modal="true"
       aria-label={termsTitle}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
     >
+      <LockScroll />
       {/* Backdrop */}
       <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
-        }}
+        className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Modal Container */}
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: '640px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'rgba(15, 23, 42, 0.95)',
-          backdropFilter: 'blur(24px)',
-          borderRadius: '20px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.08)',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-300 dark:border-slate-700 shadow-2xl overflow-hidden transition-colors">
         {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '20px 24px',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                background: role === 'citizen'
-                  ? 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2))'
-                  : 'linear-gradient(135deg, rgba(234,179,8,0.2), rgba(245,158,11,0.2))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800">
               {role === 'citizen'
-                ? <FileText size={18} color="#60a5fa" />
-                : <Shield size={18} color="#fbbf24" />
+                ? <FileText size={18} className="text-[#133E87] dark:text-blue-400" />
+                : <Shield size={18} className="text-amber-600 dark:text-amber-400" />
               }
             </div>
-            <h2
-              style={{
-                color: '#f1f5f9',
-                fontSize: '16px',
-                fontWeight: 700,
-                margin: 0,
-                lineHeight: 1.3,
-              }}
-            >
-              {termsTitle}
-            </h2>
+            <div>
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider block">
+                {role === 'citizen' ? 'Citizen Gateway' : 'Officer Portal'}
+              </span>
+              <h2 className="text-sm md:text-base font-bold text-slate-900 dark:text-white leading-tight">
+                {termsTitle}
+              </h2>
+            </div>
           </div>
           <button
             ref={closeButtonRef}
             onClick={onClose}
             aria-label="Close terms modal"
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              padding: '6px',
-              cursor: 'pointer',
-              color: '#94a3b8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.15s',
-              flexShrink: 0,
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; e.currentTarget.style.color = '#ef4444'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#94a3b8'; }}
+            className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-red-600 dark:bg-slate-800 dark:hover:bg-red-950/50 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -516,69 +449,25 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '20px 24px',
-            maxHeight: '55vh',
-            scrollBehavior: 'smooth',
-          }}
+          className="flex-1 overflow-y-auto p-6 max-h-[55vh] text-slate-700 dark:text-slate-300 space-y-3 custom-scrollbar"
         >
           <div
             dangerouslySetInnerHTML={{ __html: renderMarkdown(termsContent) }}
-            style={{
-              fontSize: '14px',
-              lineHeight: '1.7',
-              color: '#94a3b8',
-            }}
           />
         </div>
 
         {/* Bottom Consent Area */}
-        <div
-          style={{
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            padding: '16px 24px',
-            flexShrink: 0,
-            background: 'rgba(0, 0, 0, 0.2)',
-          }}
-        >
+        <div className="border-t border-slate-200 dark:border-slate-800 p-5 shrink-0 bg-slate-50 dark:bg-slate-950/40 space-y-3">
           {/* Scroll instruction / reached end message */}
           {!hasReachedBottom ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                background: 'rgba(59,130,246,0.08)',
-                border: '1px solid rgba(59,130,246,0.15)',
-              }}
-            >
-              <span style={{ fontSize: '14px' }}>↓</span>
-              <span style={{ color: '#60a5fa', fontSize: '13px', fontWeight: 500 }}>
-                {t('auth.scrollToContinue')}
-              </span>
+            <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs font-semibold">
+              <span className="text-sm">↓</span>
+              <span>{t('auth.scrollToContinue')}</span>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '12px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                background: 'rgba(34,197,94,0.08)',
-                border: '1px solid rgba(34,197,94,0.15)',
-              }}
-            >
-              <CheckCircle2 size={14} color="#22c55e" />
-              <span style={{ color: '#22c55e', fontSize: '13px', fontWeight: 500 }}>
-                {t('auth.reachedEnd')}
-              </span>
+            <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+              <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+              <span>{t('auth.reachedEnd')}</span>
             </div>
           )}
 
@@ -589,64 +478,27 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
             disabled={!hasReachedBottom}
             aria-checked={consentChecked}
             role="checkbox"
-            aria-label="{t('auth.readAndAgree')}"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '12px 14px',
-              borderRadius: '10px',
-              border: `1px solid ${consentChecked ? 'rgba(34,197,94,0.3)' : hasReachedBottom ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
-              background: consentChecked
-                ? 'rgba(34,197,94,0.08)'
-                : 'rgba(255,255,255,0.03)',
-              cursor: hasReachedBottom ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s',
-              marginBottom: '12px',
-              textAlign: 'left',
-            }}
-            onMouseOver={(e) => {
-              if (hasReachedBottom) {
-                e.currentTarget.style.background = consentChecked ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)';
-              }
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = consentChecked ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)';
-            }}
+            aria-label="Read and agree to terms"
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left text-xs md:text-sm font-medium transition cursor-pointer ${
+              !hasReachedBottom
+                ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-400'
+                : consentChecked
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 shadow-xs'
+                : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 hover:border-slate-400 text-slate-800 dark:text-slate-200'
+            }`}
           >
-            {/* Custom checkbox indicator */}
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '6px',
-                border: `2px solid ${consentChecked ? '#22c55e' : hasReachedBottom ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'}`,
-                background: consentChecked ? '#22c55e' : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-                flexShrink: 0,
-                opacity: hasReachedBottom ? 1 : 0.5,
-              }}
-            >
+            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition shrink-0 ${
+              consentChecked
+                ? 'bg-emerald-600 border-emerald-600 text-white'
+                : 'border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-700'
+            }`}>
               {consentChecked && (
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </div>
-            <span
-              style={{
-                color: hasReachedBottom ? '#e2e8f0' : '#475569',
-                fontSize: '14px',
-                fontWeight: 500,
-                userSelect: 'none',
-              }}
-            >
-              {t('auth.readAndAgree')}
-            </span>
+            <span>{t('auth.readAndAgree')}</span>
           </button>
 
           {/* Accept Button */}
@@ -654,49 +506,17 @@ const TermsConsentModal: React.FC<TermsConsentModalProps> = ({ isOpen, onClose, 
             onClick={handleAccept}
             disabled={!loginAllowed}
             aria-label="Accept terms and continue"
-            style={{
-              width: '100%',
-              padding: '13px',
-              borderRadius: '12px',
-              border: 'none',
-              background: loginAllowed
-                ? 'linear-gradient(135deg, #2563eb, #4f46e5)'
-                : 'rgba(255,255,255,0.05)',
-              color: loginAllowed ? 'white' : '#475569',
-              fontSize: '15px',
-              fontWeight: 600,
-              cursor: loginAllowed ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: loginAllowed ? '0 4px 14px rgba(37, 99, 235, 0.3)' : 'none',
-              transition: 'all 0.2s',
-            }}
+            className={`w-full py-3 px-4 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition shadow-sm ${
+              loginAllowed
+                ? 'bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white cursor-pointer shadow-md'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+            }`}
           >
             <CheckCircle2 size={16} />
-            I Agree & Continue
+            <span>I Agree & Continue</span>
           </button>
         </div>
       </div>
-
-      {/* Global styles for scroll */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        [role="dialog"] [style*="overflow-y: auto"]::-webkit-scrollbar {
-          width: 6px;
-        }
-        [role="dialog"] [style*="overflow-y: auto"]::-webkit-scrollbar-track {
-          background: rgba(255,255,255,0.03);
-          border-radius: 3px;
-        }
-        [role="dialog"] [style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.12);
-          border-radius: 3px;
-        }
-        [role="dialog"] [style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
-          background: rgba(255,255,255,0.2);
-        }
-      `}} />
     </div>
   );
 };

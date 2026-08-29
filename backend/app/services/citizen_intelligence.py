@@ -1029,8 +1029,8 @@ class SchemeMatcher:
                 "category": s.category,
                 "benefits": s.benefits,
                 "match_status": match_status,
-                "eligibilityStatus": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
-                "eligibility_status": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant — additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
+                "eligibilityStatus": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant - additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
+                "eligibility_status": "Appears eligible based on the information provided." if match_status == "HIGH_MATCH" else "Potentially relevant - additional eligibility information required." if match_status == "POSSIBLE_MATCH" else "Does not appear eligible",
                 "eligibilitySummary": "All eligibility constraints satisfied." if match_status == "HIGH_MATCH" else "Missing profile parameters to fully verify eligibility.",
                 "why_matches": why_match,
                 "whyRelevant": "; ".join([r.replace("✓ ", "").replace("⚠ ", "").replace("✗ ", "").replace("x ", "") for r in why_match]),
@@ -1317,7 +1317,7 @@ class CitizenIntelligenceEngine:
         if legacy_intent_primary == "STUDY_ABROAD":
             next_steps = [
                 "Apply for passport immediately at passportindia.gov.in if not already available",
-                "Register and prepare for English proficiency exam (IELTS/PTE/TOEFL) — allow 2–3 months",
+                "Register and prepare for English proficiency exam (IELTS/PTE/TOEFL) - allow 2-3 months",
                 "Shortlist universities in destination country with your target program",
                 "Prepare Statement of Purpose (SOP), academic transcripts, and Letters of Recommendation (LOR)",
                 "Obtain family income certificate from Mamlatdar/Tahsildar office",
@@ -1326,8 +1326,8 @@ class CitizenIntelligenceEngine:
                 "Apply for student visa after receiving university offer letter"
             ]
             sources = [
-                {"name": "Passport Seva — Ministry of External Affairs", "url": "https://passportindia.gov.in", "last_verified": "19 August 2026"},
-                {"name": "Rajiv Gandhi Scholarship — Rajasthan HTE", "url": "https://hte.rajasthan.gov.in/scholarship/rgs", "last_verified": "19 August 2026"},
+                {"name": "Passport Seva - Ministry of External Affairs", "url": "https://passportindia.gov.in", "last_verified": "19 August 2026"},
+                {"name": "Rajiv Gandhi Scholarship - Rajasthan HTE", "url": "https://hte.rajasthan.gov.in/scholarship/rgs", "last_verified": "19 August 2026"},
                 {"name": "National Overseas Scholarship Portal", "url": "https://nosmsje.gov.in", "last_verified": "19 August 2026"}
             ]
         elif legacy_intent_primary == "LAND_PURCHASE":
@@ -1340,8 +1340,8 @@ class CitizenIntelligenceEngine:
                 "Apply for land mutation (ownership transfer) in revenue records"
             ]
             sources = [
-                {"name": "Kaveri Online Services — Karnataka Department of Stamps and Registration", "url": "https://kaverionline.karnataka.gov.in", "last_verified": "19 August 2026"},
-                {"name": "Apna Khata — Rajasthan Revenue Department", "url": "https://apnakhata.rajasthan.gov.in", "last_verified": "19 August 2026"}
+                {"name": "Kaveri Online Services - Karnataka Department of Stamps and Registration", "url": "https://kaverionline.karnataka.gov.in", "last_verified": "19 August 2026"},
+                {"name": "Apna Khata - Rajasthan Revenue Department", "url": "https://apnakhata.rajasthan.gov.in", "last_verified": "19 August 2026"}
             ]
         elif legacy_intent_primary == "HEALTHCARE_FACILITY":
             next_steps = [
@@ -1378,7 +1378,7 @@ class CitizenIntelligenceEngine:
                 "Pay renewal fee online and track application status"
             ]
             sources = [
-                {"name": "Sarathi Parivahan Portal — MoRTH", "url": "https://sarathi.parivahan.gov.in", "last_verified": "19 August 2026"}
+                {"name": "Sarathi Parivahan Portal - MoRTH", "url": "https://sarathi.parivahan.gov.in", "last_verified": "19 August 2026"}
             ]
         elif legacy_intent_primary == "FARMER_BENEFITS":
             next_steps = [

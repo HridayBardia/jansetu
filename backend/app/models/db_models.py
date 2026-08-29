@@ -255,6 +255,7 @@ class ServiceRegistryDB(Base):
     authentication = Column(String, default="OAuth2")
     endpoint = Column(String, nullable=True)
     version = Column(String, default="v1")
+    api_version = Column(String, default="v1")
     sync_mode = Column(String, default="REAL-TIME") # REAL-TIME, BATCH, POLLING
     mapping_version = Column(String, default="v1.0")
     last_sync = Column(DateTime, default=datetime.utcnow)

@@ -904,7 +904,7 @@ class ApplicationTracker:
                         {"status": "UNDER_VERIFICATION", "title": "Bank Verification", "description": "SBI is verifying the application.", "timestamp": "2026-08-20T14:30:00Z"}
                     ], [])
                 ]
-            elif user_id == "user_ayuh_citizen":
+            elif user_id in ("user_ayush_chauhan", "user_ayush_citizen", "user_ayuh_citizen", "user_ayuh_chauhan"):
                 defaults = [
                     ("srv_rto_dl", "UNDER_VERIFICATION", "Ministry of Road Transport", "Driving Licence Learner", [
                         {"status": "SUBMITTED", "title": "Application Submitted", "description": "Application submitted.", "timestamp": "2026-08-19T10:00:00Z"},

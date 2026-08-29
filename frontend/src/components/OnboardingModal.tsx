@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Sparkles, MapPin, Briefcase, Calendar, DollarSign, ArrowRight, Loader2, X } from 'lucide-react';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
 
 export const OnboardingModal: React.FC = () => {
   const { user, profile, updateProfile, isOnboardingModalOpen, closeOnboardingModal } = useAuth();
@@ -40,6 +41,7 @@ export const OnboardingModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <LockScroll />
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-6 relative animate-fade-in">
         <button
           onClick={closeOnboardingModal}

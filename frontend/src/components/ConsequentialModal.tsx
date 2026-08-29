@@ -3,6 +3,8 @@
 import React from 'react';
 import { AlertTriangle, ShieldCheck, X, ArrowRight } from 'lucide-react';
 import { WorkflowStep } from '@/types';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ConsequentialModalProps {
   step: WorkflowStep | null;
@@ -15,10 +17,12 @@ export const ConsequentialModal: React.FC<ConsequentialModalProps> = ({
   onConfirm,
   onClose
 }) => {
+  const { t } = useLanguage();
   if (!step) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+      <LockScroll />
       <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
         <button
           onClick={onClose}
@@ -47,12 +51,12 @@ export const ConsequentialModal: React.FC<ConsequentialModalProps> = ({
 
         <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs">
           <div>
-            <p className="text-slate-400 font-semibold uppercase text-[10px]">Action</p>
+            <p className="text-slate-400 font-semibold uppercase text-[10px]">{t('adminApplications.colNextAction', 'Action')}</p>
             <p className="font-bold text-slate-100">{step.title}</p>
           </div>
           <div>
-            <p className="text-slate-400 font-semibold uppercase text-[10px]">Destination Department</p>
-            <p className="font-medium text-amber-300">{step.department}</p>
+            <p className="text-slate-400 font-semibold uppercase text-[10px]">{t('adminDataQuality.destinationDept', 'Destination Department')}</p>
+            <p className="font-medium text-amber-300">{t(`adminData.${step.department}`, step.department)}</p>
           </div>
           <div>
             <p className="text-slate-400 font-semibold uppercase text-[10px]">Information & Proofs Included</p>
@@ -82,7 +86,7 @@ export const ConsequentialModal: React.FC<ConsequentialModalProps> = ({
             className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-xs font-extrabold hover:brightness-110 active:scale-95 transition shadow-lg shadow-amber-500/20 flex items-center gap-1.5"
           >
             <ShieldCheck className="w-4 h-4 text-slate-950" />
-            <span>Confirm & Continue</span>
+            <span>{t('adminDataQuality.confirmContinue', 'Confirm & Continue')}</span>
             <ArrowRight className="w-4 h-4 text-slate-950" />
           </button>
         </div>

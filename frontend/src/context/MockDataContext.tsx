@@ -87,6 +87,8 @@ export interface MockDataState {
   governmentConnections: GovConnection[];
   alerts: Alert[];
   addDocument: (doc: DocumentRecord) => void;
+  removeDocument: (id: string) => void;
+  addApplication: (app: any) => void;
   updateApplicationStatus: (id: string, status: Application['status']) => void;
   revokeConsent: (id: string) => void;
 }
@@ -119,7 +121,7 @@ const initialDocuments: DocumentRecord[] = [
 ];
 
 const initialJourneys: Journey[] = [
-  { id: 'jrn_001', title: 'Study in Australia — Master\'s', category: 'Education', status: 'PLANNING', progress: 35, currentStage: 'Document Preparation', documentsReady: 6, documentsTotal: 11, nextAction: 'Upload passport and academic transcripts', lastUpdated: 'Just now', isDemo: true },
+  { id: 'jrn_001', title: 'Study in Australia - Master\'s', category: 'Education', status: 'PLANNING', progress: 35, currentStage: 'Document Preparation', documentsReady: 6, documentsTotal: 11, nextAction: 'Upload passport and academic transcripts', lastUpdated: 'Just now', isDemo: true },
   { id: 'jrn_002', title: 'Apply for Government Scholarship', category: 'Education', status: 'ACTION_REQUIRED', progress: 60, currentStage: 'Income Verification', documentsReady: 3, documentsTotal: 4, nextAction: 'Upload renewed income certificate', lastUpdated: '2 hours ago', isDemo: true },
   { id: 'jrn_003', title: 'Driving Licence', category: 'Transport', status: 'IN_PROGRESS', progress: 75, currentStage: 'Learner Verification', documentsReady: 2, documentsTotal: 2, nextAction: 'Complete learner\'s licence verification', lastUpdated: '1 day ago', isDemo: true },
   { id: 'jrn_004', title: 'Domicile Certificate', category: 'Revenue', status: 'READY_TO_APPLY', progress: 90, currentStage: 'Final Review', documentsReady: 3, documentsTotal: 3, nextAction: 'Review and submit application', lastUpdated: '3 days ago', isDemo: true }
@@ -227,7 +229,14 @@ export const MockDataProvider = ({ children }: { children: ReactNode }) => {
 
   const addDocument = (doc: DocumentRecord) => {
     setDocuments(prev => [doc, ...prev]);
-    // Adding a document might update a journey automatically in a real app
+  };
+
+  const removeDocument = (id: string) => {
+    setDocuments(prev => prev.filter(d => d.id !== id));
+  };
+
+  const addApplication = (app: any) => {
+    setApplications(prev => [app, ...prev]);
   };
 
   const updateApplicationStatus = (id: string, status: Application['status']) => {
@@ -241,7 +250,7 @@ export const MockDataProvider = ({ children }: { children: ReactNode }) => {
   return (
     <MockDataContext.Provider value={{
       profile, familyMembers, documents, journeys, applications, consents, governmentConnections, alerts,
-      addDocument, updateApplicationStatus, revokeConsent
+      addDocument, removeDocument, addApplication, updateApplicationStatus, revokeConsent
     }}>
       {children}
     </MockDataContext.Provider>

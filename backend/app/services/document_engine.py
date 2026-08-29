@@ -3,7 +3,7 @@ import uuid
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, date
 
-SYNTHETIC_WATERMARK = "DEMO / SYNTHETIC DOCUMENT — NOT A GOVERNMENT RECORD"
+SYNTHETIC_WATERMARK = "DEMO / SYNTHETIC DOCUMENT - NOT A GOVERNMENT RECORD"
 
 class DigiLockerMockConnector:
     """
@@ -220,8 +220,8 @@ class DocumentExtractor:
             elif "Varad Kanade" in raw_text:
                 fields["full_name"] = "Varad Kanade"
                 confidences["full_name"] = 0.99
-            elif "Ayuh Chauhan" in raw_text:
-                fields["full_name"] = "Ayuh Chauhan"
+            elif "Ayush Singh Chauhan" in raw_text or "Ayush Chauhan" in raw_text or "Ayuh Chauhan" in raw_text:
+                fields["full_name"] = "Ayush Singh Chauhan"
                 confidences["full_name"] = 0.99
             elif "Satwik Guru" in raw_text:
                 fields["full_name"] = "Satwik Guru"
@@ -239,8 +239,8 @@ class DocumentExtractor:
                 fields["full_name"] = "Hriday Bardia"
                 fields["father_name"] = "Rajesh Bardia"
                 confidences["full_name"] = 0.99
-            elif "Ayuh Chauhan" in raw_text:
-                fields["full_name"] = "Ayuh Chauhan"
+            elif "Ayush Singh Chauhan" in raw_text or "Ayush Chauhan" in raw_text or "Ayuh Chauhan" in raw_text:
+                fields["full_name"] = "Ayush Singh Chauhan"
                 confidences["full_name"] = 0.99
             elif "Satwik Guru" in raw_text:
                 fields["full_name"] = "Satwik Guru"

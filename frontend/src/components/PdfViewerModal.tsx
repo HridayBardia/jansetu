@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, FileText, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, FileText, AlertTriangle, CheckCircle2, ShieldAlert, Lock } from 'lucide-react';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
+import { useAuth } from '@/context/AuthContext';
+import { useLiveSync } from '@/context/LiveSyncContext';
 
 interface PdfViewerModalProps {
   documentData: {
@@ -19,24 +22,40 @@ interface PdfViewerModalProps {
 }
 
 export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ documentData, onClose }) => {
+  const { user } = useAuth();
+  const { revokedDepartments } = useLiveSync();
   const [zoom, setZoom] = useState(100);
 
   if (!documentData) return null;
+
+  const fields = documentData.extracted_fields || {};
+  const holderName = documentData.citizen_name || fields.full_name || fields.account_holder || user?.full_name || 'Citizen';
+  const issuedBy = documentData.issued_by || 'Government Authority';
+
+  // Check if consent has been revoked by citizen under DPDP Act
+  const safeIssued = (issuedBy || '').toLowerCase();
+  const isRevoked = revokedDepartments.some(
+    d => {
+      const dLower = (d || '').toLowerCase();
+      return dLower && safeIssued && (dLower.includes(safeIssued) || safeIssued.includes(dLower));
+    }
+  );
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 25, 200));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 25, 75));
   const handleResetZoom = () => setZoom(100);
 
   const handleDownload = () => {
+    if (isRevoked) return;
     const textContent = `
 =================================================================
-DEMO DOCUMENT — NOT A GOVERNMENT-ISSUED RECORD — FOR DEMO ONLY
+DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED RECORD - FOR DEMO ONLY
 =================================================================
 Document Title: ${documentData.document_name}
 Document Type: ${documentData.document_type}
 Document Number: ${documentData.document_number_masked || 'XXXX XXXX 1234'}
-Citizen Name: ${documentData.citizen_name || 'Citizen'}
-Issued By: ${documentData.issued_by || 'Government Authority'}
+Citizen Name: ${holderName}
+Issued By: ${issuedBy}
 Extracted Fields: ${JSON.stringify(documentData.extracted_fields || {}, null, 2)}
 Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
 =================================================================
@@ -50,29 +69,36 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
     URL.revokeObjectURL(url);
   };
 
-  const fields = documentData.extracted_fields || {};
-
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      <LockScroll />
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden animate-fade-in">
         
         {/* Header */}
         <div className="bg-slate-950 px-4 sm:px-6 py-3.5 border-b border-slate-800 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5" />
+            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+              isRevoked 
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}>
+              {isRevoked ? <ShieldAlert className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-bold text-white truncate">
                   {documentData.document_name}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
-                  DEMO DATA
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                  isRevoked
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                }`}>
+                  {isRevoked ? 'CONSENT REVOKED' : 'DEMO DATA'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 truncate">
-                {documentData.document_number_masked || 'XXXX XXXX 1234'} • {documentData.issued_by || 'Govt Department'}
+                {documentData.document_number_masked || 'XXXX XXXX 1234'} • {issuedBy}
               </p>
             </div>
           </div>
@@ -82,7 +108,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
             <div className="hidden sm:flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
               <button
                 onClick={handleZoomOut}
-                disabled={zoom <= 75}
+                disabled={zoom <= 75 || isRevoked}
                 title="Zoom Out"
                 className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded transition"
               >
@@ -91,7 +117,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               <span className="text-xs font-mono text-slate-300 w-10 text-center">{zoom}%</span>
               <button
                 onClick={handleZoomIn}
-                disabled={zoom >= 200}
+                disabled={zoom >= 200 || isRevoked}
                 title="Zoom In"
                 className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded transition"
               >
@@ -99,8 +125,9 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               </button>
               <button
                 onClick={handleResetZoom}
+                disabled={isRevoked}
                 title="Reset Zoom"
-                className="p-1 text-slate-400 hover:text-white rounded transition ml-1"
+                className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded transition ml-1"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -108,10 +135,16 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
 
             <button
               onClick={handleDownload}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition shadow"
+              disabled={isRevoked}
+              title={isRevoked ? 'Access Revoked under DPDP Act' : 'Download Document'}
+              className={`font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition shadow ${
+                isRevoked
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+              }`}
             >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Download</span>
+              {isRevoked ? <Lock className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{isRevoked ? 'Access Revoked' : 'Download'}</span>
             </button>
 
             <button
@@ -123,17 +156,42 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
           </div>
         </div>
 
-        {/* Demo Watermark Banner Top */}
-        <div className="bg-rose-500/20 border-b border-rose-500/40 px-4 py-2 flex items-center justify-center gap-2 text-center text-rose-300 text-xs font-black uppercase tracking-wider">
-          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-          <span>DEMO DOCUMENT — NOT A GOVERNMENT-ISSUED DOCUMENT — FOR DEMONSTRATION ONLY</span>
-        </div>
+        {/* DPDP Revocation Warning Banner or Demo Notice */}
+        {isRevoked ? (
+          <div className="bg-rose-950/90 border-b-2 border-rose-600 px-4 py-3 flex items-center justify-center gap-2.5 text-center text-rose-200 text-xs font-bold animate-pulse">
+            <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+            <span>⚠️ Access Revoked by Citizen under DPDP Act 2023. e-KYC Token Terminated. Access to this record is strictly blocked.</span>
+          </div>
+        ) : (
+          <div className="bg-rose-500/20 border-b border-rose-500/40 px-4 py-2 flex items-center justify-center gap-2 text-center text-rose-300 text-xs font-black uppercase tracking-wider">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY</span>
+          </div>
+        )}
 
         {/* PDF Viewer Canvas Container */}
-        <div className="flex-1 bg-slate-950 p-4 sm:p-8 overflow-auto flex items-center justify-center min-h-[360px]">
+        <div className="flex-1 bg-slate-950 p-4 sm:p-8 overflow-auto flex items-center justify-center min-h-[360px] relative">
+          
+          {/* Revoked Overlay */}
+          {isRevoked && (
+            <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center space-y-3">
+              <div className="w-14 h-14 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+                <Lock className="w-7 h-7" />
+              </div>
+              <h4 className="text-base font-black text-rose-300">
+                Encrypted Data Access Denied
+              </h4>
+              <p className="text-xs text-slate-400 max-w-md">
+                The citizen has actively revoked data sharing consent with <strong className="text-white">{issuedBy}</strong>. Under Section 6 of the Digital Personal Data Protection (DPDP) Act 2023, decryption tokens have been wiped.
+              </p>
+            </div>
+          )}
+
           <div
             style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-            className="transition-transform duration-150 w-full max-w-xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+            className={`transition-all duration-150 w-full max-w-xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden ${
+              isRevoked ? 'opacity-30 grayscale pointer-events-none' : ''
+            }`}
           >
             {/* Background Diagonal Watermark Overlay */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center rotate-[-30deg] opacity-10 select-none">
@@ -155,7 +213,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
                     {(documentData.document_name || '').toUpperCase()}
                   </h4>
                   <p className="text-xs text-amber-400 font-semibold">
-                    {documentData.issued_by || 'Government of India'}
+                    {issuedBy}
                   </p>
                 </div>
               </div>
@@ -170,7 +228,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               <div className="space-y-1">
                 <span className="text-slate-400 font-medium block">Document Holder</span>
                 <span className="text-sm font-bold text-white block">
-                  {fields.full_name || fields.account_holder || documentData.citizen_name || 'Hriday Bardia'}
+                  {holderName}
                 </span>
               </div>
 
@@ -220,7 +278,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
             {/* Synthetic Document Footer Watermark */}
             <div className="mt-8 pt-4 border-t border-slate-800/80 text-center space-y-1 relative z-10">
               <p className="text-[11px] font-black text-rose-400 uppercase tracking-wider">
-                DEMO DOCUMENT — NOT A GOVERNMENT-ISSUED DOCUMENT — FOR DEMONSTRATION ONLY
+                DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY
               </p>
               <p className="text-[10px] text-slate-500">
                 Generated by AI Citizen Journey Engine Sandbox • Issued for Demonstration Purposes
@@ -233,3 +291,5 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
     </div>
   );
 };
+
+export default PdfViewerModal;

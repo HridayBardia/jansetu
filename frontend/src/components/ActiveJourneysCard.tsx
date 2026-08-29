@@ -17,11 +17,11 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-amber-400" />
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-[#133E87] dark:text-blue-400" />
           <span>{t("journeys.activeJourneys")}</span>
         </h2>
-        <span className="text-xs text-slate-400 font-medium">
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
           {journeys.length} {t("journeys.journeysInProgress")}
         </span>
       </div>
@@ -44,42 +44,42 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
           return (
             <div
               key={jrn.id}
-              className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-lg transition flex flex-col justify-between"
+              className="bg-white dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 hover:border-[#133E87] dark:hover:border-blue-500 rounded-lg p-5 shadow-sm transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800">
                       {jrn.life_event ? jrn.life_event.replace('_', ' ') : 'GENERAL'}
                     </span>
-                    <h3 className="text-base font-bold text-slate-100 mt-1">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
                       {title}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                       📍 {location} {city ? `(${city})` : ''}
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-amber-400 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800 shrink-0">
+                  <span className="text-xs font-bold text-[#133E87] dark:text-blue-300 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 shrink-0 font-mono">
                     {jrn.progress_percentage}%
                   </span>
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden mb-4 border border-slate-800">
+                <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-2 overflow-hidden mb-4 border border-slate-200 dark:border-slate-700">
                   <div
-                    className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-[#133E87] to-emerald-600 dark:from-amber-500 dark:to-emerald-500 h-full rounded-full transition-all duration-500"
                     style={{ width: `${jrn.progress_percentage}%` }}
                   />
                 </div>
 
                 {/* Active Step preview */}
                 {activeStep && (
-                  <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/80 mb-4 text-xs">
-                    <div className="flex items-center gap-1.5 text-amber-400 font-semibold mb-1">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 rounded-md p-3 border border-slate-200 dark:border-slate-700 mb-4 text-xs">
+                    <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-semibold mb-1">
                       <AlertCircle className="w-3.5 h-3.5" />
                       <span>{t("journeys.currentStep")}</span>
                     </div>
-                    <p className="text-slate-200 font-medium">
+                    <p className="text-slate-800 dark:text-slate-200 font-medium">
                       {activeStep.title}
                     </p>
                   </div>
@@ -88,10 +88,10 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
 
               <Link
                 href={`/journeys/${jrn.id}`}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition flex items-center justify-center gap-2 group border border-slate-700"
+                className="w-full py-2 px-4 rounded bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white text-xs font-semibold transition flex items-center justify-center gap-2 group shadow-xs"
               >
                 <span>{t("journeys.viewFullWorkflow")}</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition text-amber-400" />
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition text-amber-300" />
               </Link>
             </div>
           );

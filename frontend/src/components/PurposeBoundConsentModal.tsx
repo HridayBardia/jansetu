@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Info, X, Check, ArrowRight } from 'lucide-react';
+import { LockScroll } from '@/hooks/useLockBodyScroll';
 
 interface PurposeBoundConsentModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const PurposeBoundConsentModal: React.FC<PurposeBoundConsentModalProps> =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+      <LockScroll />
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
