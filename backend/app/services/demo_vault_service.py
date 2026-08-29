@@ -756,40 +756,56 @@ class DemoVaultService:
             expected_state = "Rajasthan"
             expected_city = "Jaipur"
 
-        # Check if user exists
+        # Check if user exists by ID or username
         from app.models.db_models import CitizenProfileDB
         user_id_expected = f"demo_citizen_{raw_key}"
-        user = db.query(UserDB).filter(UserDB.id == user_id_expected).first()
-        if not user:
-            from app.core.security import hash_pin
-            user = UserDB(
-                id=user_id_expected,
-                username=alias_key,
-                pin_hash=hash_pin("123456"),  # default demo PIN
-                full_name=expected_name,
-                mobile_number=demo_info["mobile_number"],
-                role=demo_info.get("role", "citizen")
-            )
-            db.add(user)
-            db.commit()
-            
-            profile = CitizenProfileDB(
-                user_id=user.id,
-                full_name=user.full_name,
-                location_state=expected_state,
-                location_city=expected_city
-            )
-            db.add(profile)
-            db.commit()
-        else:
-            user.full_name = expected_name
-            db.commit()
-            profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == user.id).first()
-            if profile:
-                profile.location_state = expected_state
-                profile.location_city = expected_city
-                profile.full_name = expected_name
+        user = db.query(UserDB).filter(
+            (UserDB.id == user_id_expected) | 
+            (UserDB.username == alias_key) | 
+            (UserDB.username == raw_key)
+        ).first()
+
+        try:
+            if not user:
+                from app.core.security import hash_pin
+                user = UserDB(
+                    id=user_id_expected,
+                    username=alias_key,
+                    pin_hash=hash_pin("123456"),  # default demo PIN
+                    full_name=expected_name,
+                    mobile_number=demo_info["mobile_number"],
+                    role=demo_info.get("role", "citizen")
+                )
+                db.add(user)
                 db.commit()
+                
+                profile = CitizenProfileDB(
+                    user_id=user.id,
+                    full_name=user.full_name,
+                    location_state=expected_state,
+                    location_city=expected_city
+                )
+                db.add(profile)
+                db.commit()
+            else:
+                user.full_name = expected_name
+                db.commit()
+                profile = db.query(CitizenProfileDB).filter(CitizenProfileDB.user_id == user.id).first()
+                if profile:
+                    profile.location_state = expected_state
+                    profile.location_city = expected_city
+                    profile.full_name = expected_name
+                    db.commit()
+        except Exception as e:
+            db.rollback()
+            # If commit failed, try to retrieve existing user
+            user = db.query(UserDB).filter(
+                (UserDB.id == user_id_expected) | 
+                (UserDB.username == alias_key) | 
+                (UserDB.username == raw_key)
+            ).first()
+            if not user:
+                raise e
         
         # Clear existing docs and re-seed
         db.query(UserDocumentDB).filter(UserDocumentDB.user_id == user.id).delete()

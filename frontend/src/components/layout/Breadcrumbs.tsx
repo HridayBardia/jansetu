@@ -10,9 +10,9 @@ export const Breadcrumbs: React.FC = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
-  const activeTab = searchParams.get('tab');
+  const activeTab = searchParams?.get('tab');
 
-  if (pathname === '/') return null;
+  if (!pathname || pathname === '/') return null;
 
   const TAB_NAME_MAP: Record<string, string> = {
     planner: t('Goal & Welfare Navigator', 'Goal & Welfare Navigator'),
@@ -34,7 +34,15 @@ export const Breadcrumbs: React.FC = () => {
     login: t('Unified Sign In', 'Unified Sign In'),
     help: t('Helpdesk & FAQ', 'Helpdesk & FAQ'),
     privacy: t('Website Policies & DPDP Terms', 'Website Policies & DPDP Terms'),
-    alerts: t('National Alerts', 'National Alerts')
+    alerts: t('National Alerts', 'National Alerts'),
+    legal: t('Legal & Compliance', 'Legal & Compliance'),
+    'website-policies': t('Website Policies', 'Website Policies'),
+    'terms-of-use': t('Terms of Use', 'Terms of Use'),
+    'privacy-policy': t('Privacy Statement (DPDP Act)', 'Privacy Statement (DPDP Act)'),
+    'hyperlinking-policy': t('Hyperlinking Policy', 'Hyperlinking Policy'),
+    'copyright-policy': t('Copyright Policy', 'Copyright Policy'),
+    rti: t('Right to Information (RTI)', 'Right to Information (RTI)'),
+    'help-faq': t('Help & FAQ', 'Help & FAQ')
   };
 
   const segments = pathname.split('/').filter(Boolean);

@@ -46,6 +46,7 @@ import { YourDataConsent } from '@/components/citizen/YourDataConsent';
 import { AlertsEvents } from '@/components/citizen/AlertsEvents';
 import { GovInteropHub } from '@/components/citizen/GovInteropHub';
 import { AiHelpDrawer } from '@/components/AiHelpDrawer';
+import { FloatingAiButton } from '@/components/FloatingAiButton';
 import { PendingRequestBanner } from '@/components/citizen/PendingRequestBanner';
 import { ActiveAlertBanner } from '@/components/citizen/ActiveAlertBanner';
 import { useLanguage } from '@/context/LanguageContext';
@@ -230,7 +231,7 @@ export default function DashboardPage() {
   };
 
   const searchParams = useSearchParams();
-  const queryTab = searchParams.get('tab');
+  const queryTab = searchParams?.get('tab');
 
   useEffect(() => {
     if (queryTab) {
@@ -1645,19 +1646,10 @@ export default function DashboardPage() {
       )}
 
       {/* Floating AI Assistant Navigator Trigger */}
-      <div className="fixed bottom-6 right-6 z-50 pointer-events-auto">
-        <button
-          type="button"
-          onClick={() => setIsAiDrawerOpen(true)}
-          className="group px-4 py-2.5 rounded-full bg-[#133E87] hover:bg-[#0B2545] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs shadow-2xl hover:shadow-blue-500/30 flex items-center gap-2.5 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 border border-white/20 dark:border-blue-400/30"
-          aria-label="Ask JanSetu AI Navigator"
-        >
-          <div className="w-5 h-5 rounded-full bg-amber-400/20 flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-          </div>
-          <span className="tracking-wide">Ask JanSetu AI Navigator</span>
-        </button>
-      </div>
+      <FloatingAiButton
+        isOpen={isAiDrawerOpen}
+        onClick={() => setIsAiDrawerOpen(true)}
+      />
 
       {/* AI Help Drawer */}
       {isAiDrawerOpen && (
