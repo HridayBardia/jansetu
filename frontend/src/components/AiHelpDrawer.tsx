@@ -71,7 +71,7 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
       const context = {
         activeScheme: journeyId.replace(/_/g, ' ').toUpperCase(),
         currentStep: step?.title || 'Document & Verification Step',
-        requiredDocuments: step?.required_documents || []
+        requiredDocuments: (step?.required_documents || []).map((doc: any) => typeof doc === 'string' ? doc : (doc.name || doc.title || doc.id || 'Document'))
       };
 
       await streamCivicHelp(query, context, (streamedText) => {

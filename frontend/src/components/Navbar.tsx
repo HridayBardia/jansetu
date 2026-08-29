@@ -41,7 +41,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab');
+  const currentTab = searchParams?.get('tab');
   const { t } = useLanguage();
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 

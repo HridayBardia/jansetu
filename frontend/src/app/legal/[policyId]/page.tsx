@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { PolicyView } from '@/pages/legal/PolicyView';
+import { PolicyView } from '@/components/legal/PolicyView';
 import { getPolicyById, POLICY_SLUGS } from '@/data/legalContent';
 
 interface PageProps {

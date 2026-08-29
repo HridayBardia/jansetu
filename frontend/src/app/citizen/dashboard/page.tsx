@@ -230,7 +230,7 @@ export default function DashboardPage() {
   };
 
   const searchParams = useSearchParams();
-  const queryTab = searchParams.get('tab');
+  const queryTab = searchParams?.get('tab');
 
   useEffect(() => {
     if (queryTab) {

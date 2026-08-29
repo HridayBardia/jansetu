@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
 
   // Also sync when searchParams change (initial load)
   useEffect(() => {
-    const urlTab = searchParams.get('tab');
+    const urlTab = searchParams?.get('tab');
     if (urlTab && ['official', 'applications', 'citizens', 'interop', 'data_quality', 'workflow'].includes(urlTab)) {
       _setActiveTab(urlTab);
     }

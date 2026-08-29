@@ -10,9 +10,9 @@ export const Breadcrumbs: React.FC = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
-  const activeTab = searchParams.get('tab');
+  const activeTab = searchParams?.get('tab');
 
-  if (pathname === '/') return null;
+  if (!pathname || pathname === '/') return null;
 
   const TAB_NAME_MAP: Record<string, string> = {
     planner: t('Goal & Welfare Navigator', 'Goal & Welfare Navigator'),
