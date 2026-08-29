@@ -1,3 +1,41 @@
+- **Cross-Browser & Incognito Mode Real-Time Event Relay (`backend/app/api/v1/router.py`, `src/utils/eventBus.ts`, `AlertsEvents.tsx`, `npm run test:incognito`)**:
+  - **Incognito Sandbox Bridging**: Browser security prevents `localStorage` and `BroadcastChannel` from crossing between Private/Incognito and Regular windows. Implemented high-throughput event relay endpoints `POST /api/v1/events/broadcast` and `GET /api/v1/events/poll` in FastAPI with an in-memory queue.
+  - **Hybrid Universal Event Bus (`eventBus.ts`)**: Upgraded `SafeEventBus` to simultaneously dispatch over `BroadcastChannel` (0ms same-profile tabs) and the FastAPI backend relay with background polling (800ms intervals) for Incognito, multi-browser (Chrome + Firefox/Edge), and multi-device support.
+  - **Citizen Target Matching Enhancement (`AlertsEvents.tsx`)**: Updated `handleBusMessage` in `AlertsEvents.tsx` to resolve citizen identity from `sessionStorage` (with fallbacks) and validate beneficiaries with `isCitizenMatching` from `@/lib/vaultDetection`.
+  - **Automated Verification (`verify_incognito_cross_window_relay.js`)**: Verified cross-window event delivery from Incognito Admin to Regular Citizen (8/8 tests passed).
+
+- **Supabase Cloud Interlinking Schema Audit & Verification (`npm run test:supabase`, `LiveSyncContext.tsx`, `verify_supabase_interlinking.js`)**:
+  - **Schema Alignment**: Aligned all Supabase write, update, and upsert operations in [`LiveSyncContext.tsx`](file:///c:/Users/HP/Desktop/SIH%20Final/jansetu/frontend/src/context/LiveSyncContext.tsx) with the active PostgreSQL cloud schema (`applications`, `notifications`, `consents`, `journeys`), supporting UUID generation and snake_case column mapping (`citizen_name`, `scheme_name`, `dept_id`, `dept_name`).
+  - **Automated Interlinking Suite (`verify_supabase_interlinking.js`)**: Created and verified end-to-end cloud audit suite testing live read, write/upsert, status transition lifecycle, notification webhooks, and DPDP consent syncing (7/7 tests passed).
+
+- **Root Workspace Runner & Cloud Diagnostic Script (`package.json`, `npm run check:cloud`, `CLOUD_CONNECTIVITY_GUIDE.txt`)**:
+  - Created root-level [`package.json`](file:///c:/Users/HP/Desktop/SIH%20Final/jansetu/package.json) allowing `npm run check:cloud`, `npm run build`, `npm run test:session`, and `npm run test:isolation` to run directly from `jansetu/` or `jansetu/frontend/`.
+  - Added dedicated diagnostic guide [`CLOUD_CONNECTIVITY_GUIDE.txt`](file:///c:/Users/HP/Desktop/SIH%20Final/jansetu/CLOUD_CONNECTIVITY_GUIDE.txt) detailing methods to verify Supabase cloud database health and environment configurations.
+
+- **Floating AI Navigator Viewport Alignment (`globals.css`, `citizen/dashboard/page.tsx`)**:
+  - **Resolved Containing-Block Trap**: Removed `transform: scale(...)` from `.animate-fade-in` in `globals.css`, which was unintentionally trapping `position: fixed` elements inside the max-width centered container.
+  - **True Viewport Fixed Positioning**: Re-anchored `<div className="fixed bottom-6 right-6 z-50 pointer-events-auto">` directly to the bottom-right corner of the viewport window with enhanced micro-interactions, pulse badge, and shadow glow (`shadow-2xl hover:shadow-blue-500/30 hover:scale-105 active:scale-95`).
+
+- **Strict Tab Session Isolation, Reload Confirmation & Session Break (`AuthContext.tsx`, `SessionBreakModal.tsx`, `verify_session_break.js`)**:
+  - **Browser Reload & Navigation Confirmation (`beforeunload`)**: Registered a native browser `beforeunload` confirmation prompt whenever an authenticated session is active. If the user hits F5, Ctrl+R, or browser reload/back, the browser displays a confirmation modal (*"You have an active government session. Reloading or leaving this page will terminate your session and log you out. Are you sure you want to proceed?"*).
+  - **Immediate Logout on Confirmed Reload**: On page reload execution (detected via `PerformanceNavigationTiming.type === 'reload'` and session flag `jansetu_page_reloaded`), the tab's credentials and consent state in `sessionStorage` are wiped, immediately redirecting the user to `/login`.
+  - **Per-Tab Isolated Session Storage**: Scoped active authentication sessions strictly to `sessionStorage` (`jansetu_citizen_session`, `jansetu_admin_session`, `jansetu_session_consent_accepted`, `jansetu_tab_session_id`). Opening a new browser tab or navigating directly to `/citizen/dashboard` or `/admin/dashboard` evaluates `isAuthenticated = false` and automatically redirects to the `/login` page rather than silently bypassing authentication from `localStorage`.
+  - **Single-Active-Session Conflict Detection (Session Break)**: On every login, the tab registers its unique `tabSessionId` in `localStorage.setItem('jansetu_active_account_' + accountKey, tabSessionId)` and broadcasts `SESSION_TAKEN_OVER` over `eventBus` (`JANSETU_SHARED_BUS`) and storage triggers.
+  - **Concurrent Login Invalidation**: If the user logs into the **same** citizen or admin account on Tab 2 while Tab 1 is active, Tab 1 immediately detects the takeover, purges its local tab session, and displays the **`SessionBreakModal`** (*"⚠️ Session Terminated: Concurrent Login Detected - DPDP Act 2023"*).
+  - **Multi-Persona Isolation Maintained**: Logging into *different* accounts on separate tabs (e.g. Hriday on Tab 1 and Ayush or Admin on Tab 2) does not trigger session break and maintains multi-tab workflow isolation.
+  - **Automated Verification**: Created `src/tests/verify_session_break.js` verifying tab isolation, different-persona coexistence, and same-account takeover invalidation (10/10 tests passed).
+
+- **Dashboard Layout & Dual-Theme Optimization (`citizen/dashboard/page.tsx`, `admin/dashboard/page.tsx`, `CitizenNavTabs.tsx`)**:
+  - **Eliminated Black Patch Wrapper (`citizen/dashboard/page.tsx`)**: Removed hardcoded `bg-slate-950` wrapper container and duplicate legacy header (`JS ONE CITIZEN...`) in the Citizen Dashboard, aligning with the official GIGW light/dark background standards (`bg-slate-50 dark:bg-slate-950`).
+  - **Clean Dual-Theme Nav Tabs (`CitizenNavTabs.tsx`)**: Enhanced tab pill styling with high-contrast active states (`border-amber-500 text-amber-700 dark:text-amber-400 font-bold bg-amber-50/60 dark:bg-amber-950/30`), eliminating dark text-on-dark issues.
+  - **Deduplicated Admin Dashboard Breadcrumbs (`admin/dashboard/page.tsx`)**: Removed redundant nested breadcrumb component to let the universal `<Breadcrumbs />` handle hierarchy seamlessly.
+
+- **Production Build & Syntax Resolution (`admin/dashboard/page.tsx`, `citizen/dashboard/page.tsx`, `AdminInteropView.tsx`)**:
+  - **Resolved JSX Syntax Error in Admin Dashboard (`admin/dashboard/page.tsx`)**: Cleaned up dangling `<main>` and `<header>` tags from prior layout wrappers, resolving the Turbopack build failure on line 160.
+  - **Fixed Citizen Dashboard Imports & Types (`citizen/dashboard/page.tsx`)**: Added missing imports for `CitizenHero`, `SchemeExplorer`, and `ApplicationTracker`, and typed `newApp: any` callback.
+  - **Fixed Duplicate Imports & Typings in Admin Interop (`AdminInteropView.tsx`)**: Resolved duplicate `ExceptionCenter` import, imported `useMemo`, and added type annotations for node filters.
+  - **Verified Production Bundle**: `npm run build` completed with 0 errors across all 14 routes.
+
 - **Real-Time Admin-to-Citizen Webhook Dispatch & Document Vault Auto-Inspection (`AdminApplicationsView.tsx`, `AlertsEvents.tsx`)**:
   - **Admin Request Dispatcher (`AdminApplicationsView.tsx`)**: Clicking **"Request Citizen e-KYC (Polytechnic Marksheet)"** or **"Request Docs"** dispatches `{ type: 'NEW_WEBHOOK_ALERT', payload: newNotification }` and `{ type: 'DOC_KYC_REQUEST', payload: newNotification }` on `JANSETU_SHARED_BUS` and persists to `localStorage.getItem('jansetu_webhook_notifications')`.
   - **Dynamic "Event-Driven Webhook Notifications" Feed (`AlertsEvents.tsx`)**: Replaced static list with reactive `webhookAlerts` state synchronized via `eventBus` (`JANSETU_SHARED_BUS`) with target validation for Hriday Bardia (`targetUidLast4: '1405'`).

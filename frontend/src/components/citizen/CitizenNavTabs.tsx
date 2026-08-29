@@ -88,8 +88,8 @@ export const CitizenNavTabs: React.FC<CitizenNavTabsProps> = ({ activeTab, setAc
   const getTabClass = (tabName: TabState) => {
     return `flex items-center gap-2 px-4 py-2.5 text-xs uppercase tracking-wider border-b-2 transition whitespace-nowrap cursor-pointer ${
       activeTab === tabName
-        ? 'border-amber-400 text-amber-400 font-semibold'
-        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+        ? 'border-amber-500 text-amber-700 dark:text-amber-400 font-bold bg-amber-50/60 dark:bg-amber-950/30'
+        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/40 rounded-t'
     }`;
   };
 
