@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Radio, Database, Shield, Server, ArrowRight, Activity, ArrowRightLeft, ArrowDownCircle, Network } from 'lucide-react';
 import { ExceptionCenter } from './ExceptionCenter';
 import { InteroperabilityDataFlow } from './InteroperabilityDataFlow';
 import { useLanguage } from '@/context/LanguageContext';
-import { ExceptionCenter } from './ExceptionCenter';
 
 interface Props {}
 
@@ -85,7 +84,7 @@ export const AdminInteropView = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockNodes.filter(n => n.type === 'external').map(node => (
+            {mockNodes.filter((n: any) => n.type === 'external').map((node: any) => (
               <div key={node.id} className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-5 rounded-xl space-y-3 shadow-2xs">
                 <div className="flex justify-between items-start">
                   <div>

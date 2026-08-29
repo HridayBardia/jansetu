@@ -34,6 +34,9 @@ import {
 } from '@/lib/api';
 import { StateSelector } from '@/components/StateSelector';
 import { SchemeCard } from '@/components/SchemeCard';
+import { CitizenHero } from '@/components/citizen/CitizenHero';
+import { SchemeExplorer } from '@/components/citizen/SchemeExplorer';
+import { ApplicationTracker } from '@/components/citizen/ApplicationTracker';
 import { ConsentLedger } from '@/components/ConsentLedger';
 import { analyzeGoalUniversal } from '@/lib/goalClassifier';
 import { DocumentVault } from '@/components/DocumentVault';
@@ -662,7 +665,7 @@ export default function DashboardPage() {
 
       {activeTab === 'schemes' && (
         <SchemeExplorer 
-          onApplicationCreated={(newApp) => {
+          onApplicationCreated={(newApp: any) => {
             addApplication(newApp);
           }} 
         />
