@@ -46,6 +46,7 @@ import { YourDataConsent } from '@/components/citizen/YourDataConsent';
 import { AlertsEvents } from '@/components/citizen/AlertsEvents';
 import { GovInteropHub } from '@/components/citizen/GovInteropHub';
 import { AiHelpDrawer } from '@/components/AiHelpDrawer';
+import { FloatingAiButton } from '@/components/FloatingAiButton';
 import { PendingRequestBanner } from '@/components/citizen/PendingRequestBanner';
 import { ActiveAlertBanner } from '@/components/citizen/ActiveAlertBanner';
 import { useLanguage } from '@/context/LanguageContext';
@@ -1715,17 +1716,10 @@ export default function DashboardPage() {
       )}
 
       {/* Floating AI Assistant Navigator Trigger */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          type="button"
-          onClick={() => setIsAiDrawerOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-full shadow-lg transition cursor-pointer hover:scale-105"
-          aria-label="Open SetuSahayak"
-        >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span className="font-semibold text-sm">Ask SetuSahayak</span>
-        </button>
-      </div>
+      <FloatingAiButton
+        isOpen={isAiDrawerOpen}
+        onClick={() => setIsAiDrawerOpen(true)}
+      />
 
       {/* AI Help Drawer */}
       {isAiDrawerOpen && (
