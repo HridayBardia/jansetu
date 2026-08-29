@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Send, Sparkles, ShieldCheck, ExternalLink, Bot, User } from 'lucide-react';
 import { WorkflowStep, ChatMessage, SourceProvenance } from '@/types';
 import { askAiChatAPI } from '@/lib/api';
+import { streamCivicHelp } from '@/services/aiHelpService';
 
 interface AiHelpDrawerProps {
   isOpen?: boolean;
@@ -27,8 +28,8 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
       id: 'm1',
       sender: 'ai',
       text: step
-        ? `Hello! I am your Contextual AI Assistant for **${step.title}**. Ask me why this step is required, what alternative documents are accepted, or how official guidelines apply to your context.`
-        : 'Hello! Ask me any question about your active journey requirements, official sources, or steps.',
+        ? `Hello! I am SetuSahayak for **${step.title}**. Ask me why this step is required, what alternative documents are accepted, or how official guidelines apply to your context.`
+        : 'Hello! I am SetuSahayak. Ask me any question about your active journey requirements, official documents, or government schemes.',
       sources: step?.official_sources || [],
       suggested_followups: [
         'Why do I need this document?',
@@ -52,24 +53,62 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const aiMsgId = `ai_${Date.now()}`;
+    const initialAiMsg: ChatMessage = {
+      id: aiMsgId,
+      sender: 'ai',
+      text: '...',
+      sources: step?.official_sources || [],
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages((prev) => [...prev, userMsg, initialAiMsg]);
     if (!textToSend) setInput('');
     setLoading(true);
 
     try {
-      const res = await askAiChatAPI(query, journeyId, step?.id);
-      const aiMsg: ChatMessage = {
-        id: `ai_${Date.now()}`,
-        sender: 'ai',
-        text: res.reply,
-        sources: (res.sources as any) || [],
-        suggested_followups: res.suggested_followups || [],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      // Build context for streaming service
+      const context = {
+        activeScheme: journeyId.replace(/_/g, ' ').toUpperCase(),
+        currentStep: step?.title || 'Document & Verification Step',
+        requiredDocuments: step?.required_documents || []
       };
 
-      setMessages((prev) => [...prev, aiMsg]);
+      await streamCivicHelp(query, context, (streamedText) => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMsgId ? { ...msg, text: streamedText } : msg
+          )
+        );
+      });
     } catch (e) {
-      console.error(e);
+      console.error('Error in AiHelpDrawer stream:', e);
+      try {
+        const res = await askAiChatAPI(query, journeyId, step?.id);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMsgId
+              ? {
+                  ...msg,
+                  text: res.reply,
+                  sources: (res.sources as any) || [],
+                  suggested_followups: res.suggested_followups || []
+                }
+              : msg
+          )
+        );
+      } catch (fallbackErr) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMsgId
+              ? {
+                  ...msg,
+                  text: 'Unable to connect to AI help service. Please check network connection and try again.'
+                }
+              : msg
+          )
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -87,13 +126,13 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                  Contextual AI Help
+                  SetuSahayak
                   <span className="text-[10px] bg-emerald-50 dark:bg-amber-500/10 text-emerald-700 dark:text-amber-400 border border-emerald-200 dark:border-amber-500/20 px-1.5 py-0.2 rounded font-semibold">
                     Grounded
                   </span>
                 </h3>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
-                  {step ? step.title : 'Journey Assistance'}
+                  {step ? step.title : 'Citizen Journey & Scheme Copilot'}
                 </p>
               </div>
             </div>
@@ -119,17 +158,32 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                 )}
 
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3 space-y-2 ${
+                  className={`p-3.5 rounded-2xl leading-relaxed max-w-[85%] ${
                     m.sender === 'user'
-                      ? 'bg-[#0B2545] dark:bg-blue-600 text-white font-medium rounded-tr-none shadow-xs'
-                      : 'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none shadow-xs'
+                      ? 'bg-blue-600 text-white rounded-br-none'
+                      : 'bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 rounded-tl-none'
                   }`}
                 >
-                  <p className="whitespace-pre-line leading-relaxed">{m.text}</p>
+                  <p className="whitespace-pre-wrap">{m.text}</p>
+
+                  {/* Follow-up suggestions on initial greeting */}
+                  {mIdx === 0 && m.suggested_followups && m.suggested_followups.length > 0 && (
+                    <div className="mt-3 flex flex-col gap-1.5">
+                      {m.suggested_followups.map((f, fIdx) => (
+                        <button
+                          key={fIdx}
+                          onClick={() => handleSend(f)}
+                          className="text-left px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg text-[11px] font-medium transition cursor-pointer"
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Sources Grounding links */}
                   {m.sources && m.sources.length > 0 && (
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px] space-y-1">
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px] space-y-1 mt-2">
                       <p className="text-slate-600 dark:text-slate-400 font-semibold text-[10px] flex items-center gap-1">
                         <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                         Grounded Sources:
@@ -146,22 +200,7 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                     </div>
                   )}
 
-                  {/* Suggested Followups */}
-                  {m.suggested_followups && m.suggested_followups.length > 0 && (
-                    <div className="pt-2 flex flex-wrap gap-1.5">
-                      {m.suggested_followups.map((s, idx) => (
-                        <button
-                          key={`followup_${mIdx}_${idx}_${s.slice(0, 10)}`}
-                          onClick={() => handleSend(s)}
-                          className="px-2 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] text-[#133E87] dark:text-amber-300 hover:border-blue-400 dark:hover:border-amber-500/50 transition cursor-pointer shadow-2xs"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <span className={`block text-[9px] text-right ${m.sender === 'user' ? 'text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <span className={`block mt-1.5 text-[9px] text-right ${m.sender === 'user' ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'}`}>
                     {m.timestamp}
                   </span>
                 </div>
@@ -195,7 +234,7 @@ export const AiHelpDrawer: React.FC<AiHelpDrawerProps> = ({
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about documents, rules, or fees..."
+                placeholder="Ask SetuSahayak about documents, rules, or fees..."
                 className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#133E87] dark:focus:ring-blue-500"
               />
               <button

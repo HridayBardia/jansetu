@@ -181,7 +181,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> UserDB:
             if user:
                 return user
         except Exception:
-            pass
+            db.rollback()
 
     # 3. Direct user ID / username lookup fallback
     user = db.query(UserDB).filter(

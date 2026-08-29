@@ -13,31 +13,31 @@ export const GovFooter: React.FC = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Tier: Official Mandatory Policy Links */}
         <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 border-b border-slate-200 dark:border-slate-800 pb-5 font-medium text-slate-700 dark:text-slate-300">
-          <Link href="/privacy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/website-policies" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.websitePolicies', 'Website Policies')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <Link href="/privacy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/terms-of-use" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.termsOfUse', 'Terms of Use')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <Link href="/privacy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/privacy-policy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.privacyStatement', 'Privacy Statement (DPDP Act)')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <Link href="/privacy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/hyperlinking-policy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.hyperlinkPolicy', 'Hyperlinking Policy')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <Link href="/privacy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/copyright-policy" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.copyrightPolicy', 'Copyright Policy')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <Link href="/help" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/rti" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.rti', 'Right to Information (RTI)')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <Link href="/help" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline">
+          <Link href="/legal/help-faq" className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5">
             {t('footer.helpFaq', 'Help & FAQ')}
           </Link>
           <span className="text-slate-300 dark:text-slate-700">|</span>
@@ -45,7 +45,7 @@ export const GovFooter: React.FC = () => {
             href="https://india.gov.in" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline inline-flex items-center gap-1"
+            className="hover:text-blue-800 dark:hover:text-blue-400 transition hover:underline inline-flex items-center gap-1 focus:outline-hidden focus:ring-2 focus:ring-blue-600 rounded-sm py-0.5"
           >
             <span>{t('footer.nationalPortal', 'National Portal of India')}</span>
             <ExternalLink className="w-3 h-3 text-slate-400" />

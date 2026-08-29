@@ -1719,10 +1719,11 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={() => setIsAiDrawerOpen(true)}
-          className="px-4 py-2.5 rounded-full bg-[#133E87] hover:bg-[#0B2545] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs shadow-lg flex items-center gap-2 transition cursor-pointer hover:scale-105"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-full shadow-lg transition cursor-pointer hover:scale-105"
+          aria-label="Open SetuSahayak"
         >
-          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-          <span>Ask JanSetu AI Navigator</span>
+          <Sparkles className="w-4 h-4 text-amber-300" />
+          <span className="font-semibold text-sm">Ask SetuSahayak</span>
         </button>
       </div>
 
