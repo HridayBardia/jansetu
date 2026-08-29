@@ -656,7 +656,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
           
           setPendingKycRequests(prev => {
             const pendingFromRemote = remoteData.map(fromSupabaseDocRequest)
-              .filter(r => r.status === 'PENDING' || r.status === 'PENDING_CITIZEN_ACTION')
+              .filter(r => r.status === 'PENDING')
               .map(r => ({
                 requestId: r.id,
                 appId: r.appId || r.id,
@@ -668,8 +668,8 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
                 type: 'DOC_KYC_REQUEST' as const
               }));
             
-            const newIds = new Set(pendingFromRemote.map(r => r.requestId));
-            return [...pendingFromRemote, ...prev.filter(p => !newIds.has(p.requestId))];
+            const newIds = new Set(pendingFromRemote.map(r => r.requestId).filter(Boolean));
+            return [...pendingFromRemote, ...prev.filter(p => !p.requestId || !newIds.has(p.requestId))];
           });
         }
       } catch {
@@ -757,7 +757,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
               setDocRequests(prev => prev.map(r => r.id === mapped.id ? { ...r, ...mapped } : r));
               if (mapped.status === 'FULFILLED') {
                 setPendingKycRequests(prev => prev.filter(r => r.requestId !== mapped.id));
-              } else if (mapped.status === 'PENDING' || mapped.status === 'PENDING_CITIZEN_ACTION') {
+              } else if (mapped.status === 'PENDING') {
                 setPendingKycRequests(prev => {
                   const updated = [...prev.filter(r => r.appId !== pendingReq.appId), pendingReq];
                   if (typeof window !== 'undefined') {

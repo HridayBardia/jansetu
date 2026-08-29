@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -201,33 +201,7 @@ export const AlertsEvents: React.FC = () => {
     setIsProcessing(true);
 
     setTimeout(() => {
-      // 1. Mark notification as resolved on Citizen side
-      setWebhookAlerts(prev => {
-        const updated = prev.map(n => 
-          (n.id === alertItem.id || n.appId === targetAppId)
-            ? { ...n, status: 'RESOLVED', resolvedText: `✓ Verified ${docName} shared via DigiLocker Vault` }
-            : n
-        );
-        if (typeof window !== 'undefined') {
-          try { localStorage.setItem('jansetu_webhook_notifications', JSON.stringify(updated)); } catch (e) {}
-        }
-        return updated;
-      });
-
-      // 2. Broadcast fulfillment back to Admin over JANSETU_SHARED_BUS
-      eventBus.postMessage({
-        type: 'DOC_KYC_FULFILLED',
-        payload: {
-          appId: targetAppId,
-          docName: docName,
-          docTitle: docName,
-          citizenName: profile?.full_name || 'Hriday Bardia',
-          dept: targetDept,
-          verifiedAt: new Date().toLocaleTimeString()
-        }
-      });
-
-      // 3. Update global LiveSync state
+      // 1. Update global LiveSync state (Supabase will handle real-time sync across devices)
       authorizeCitizenDoc({
         appId: targetAppId,
         docName: docName,
@@ -244,7 +218,6 @@ export const AlertsEvents: React.FC = () => {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const docName = pendingKycRequest?.docName || webhookAlerts.find(a => a.type === 'DOC_KYC_REQUEST')?.requestedDoc || 'Document';
     const targetAppId = pendingKycRequest?.appId || webhookAlerts.find(a => a.type === 'DOC_KYC_REQUEST')?.appId || 'JS-2026-8802';
     const targetDept = pendingKycRequest?.dept || webhookAlerts.find(a => a.type === 'DOC_KYC_REQUEST')?.deptName || 'Ministry of Education';
@@ -253,32 +226,7 @@ export const AlertsEvents: React.FC = () => {
     setIsUploading(true);
 
     setTimeout(() => {
-      // 1. Mark notification as resolved on Citizen side
-      setWebhookAlerts(prev => {
-        const updated = prev.map(n => 
-          (n.appId === targetAppId)
-            ? { ...n, status: 'RESOLVED', resolvedText: `✓ Uploaded ${file.name} shared with department` }
-            : n
-        );
-        if (typeof window !== 'undefined') {
-          try { localStorage.setItem('jansetu_webhook_notifications', JSON.stringify(updated)); } catch (e) {}
-        }
-        return updated;
-      });
-
-      // 2. Broadcast fulfillment back to Admin
-      eventBus.postMessage({
-        type: 'DOC_KYC_FULFILLED',
-        payload: {
-          appId: targetAppId,
-          docName: `${docName} (${file.name})`,
-          docTitle: `${docName} (${file.name})`,
-          citizenName: profile?.full_name || 'Hriday Bardia',
-          dept: targetDept,
-          verifiedAt: new Date().toLocaleTimeString()
-        }
-      });
-
+      // 1. Update global LiveSync state
       authorizeCitizenDoc({
         appId: targetAppId,
         docName: `${docName} (${file.name})`,
