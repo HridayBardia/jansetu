@@ -974,7 +974,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
         };
 
         // Only register if we are the target citizen or an admin
-        if (isTargetCitizen || isAdmin) {
+        if (isTargetCitizen || isAdminPortal) {
           setPendingKycRequests(prev => {
             const updated = [...prev.filter(r => r.appId !== targetAppId), pendingReq];
             if (typeof window !== 'undefined') {
@@ -1009,7 +1009,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
           });
         }
 
-        if (isTargetCitizen || isAdmin) {
+        if (isTargetCitizen || isAdminPortal) {
           const safeDept = targetDept.toLowerCase();
           setConsents(prev => {
             const exists = prev.find(c => {
