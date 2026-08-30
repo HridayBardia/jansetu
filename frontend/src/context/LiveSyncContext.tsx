@@ -428,7 +428,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     if (typeof window !== 'undefined') {
       try {
-        const rawCit = localStorage.getItem('jansetu_citizen_session') || sessionStorage.getItem('jansetu_citizen_session');
+        const rawCit = sessionStorage.getItem('jansetu_citizen_session') || localStorage.getItem('jansetu_citizen_session');
         if (rawCit) {
           const parsed = JSON.parse(rawCit);
           const prof = parsed.profile || parsed.user || {};
@@ -452,7 +452,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
 
         if (!currentCitName && !currentCitUsername) {
-          const rawEkyc = localStorage.getItem('jansetu_ekyc_profile') || sessionStorage.getItem('jansetu_ekyc_profile');
+          const rawEkyc = sessionStorage.getItem('jansetu_ekyc_profile') || localStorage.getItem('jansetu_ekyc_profile');
           if (rawEkyc) {
             const parsed = JSON.parse(rawEkyc);
             currentCitName = (parsed.full_name || parsed.name || '').toLowerCase().trim();
@@ -462,7 +462,7 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
 
         if (!currentCitName && !currentCitUsername) {
-          const rawLegacy = localStorage.getItem('jansetu_session') || sessionStorage.getItem('jansetu_session');
+          const rawLegacy = sessionStorage.getItem('jansetu_session') || localStorage.getItem('jansetu_session');
           if (rawLegacy) {
             const parsed = JSON.parse(rawLegacy);
             const prof = parsed.profile || parsed.user || {};

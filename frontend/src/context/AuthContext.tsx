@@ -169,6 +169,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('citizen_token');
       sessionStorage.removeItem('admin_token');
       sessionStorage.removeItem('jansetu_session_consent_accepted');
+      sessionStorage.removeItem('demo_citizen');
+      sessionStorage.removeItem('demo_admin');
+      
+      localStorage.removeItem(CITIZEN_STORAGE_KEY);
+      localStorage.removeItem(ADMIN_STORAGE_KEY);
+      localStorage.removeItem('demo_citizen');
+      localStorage.removeItem('demo_admin');
+      localStorage.removeItem('jansetu_ekyc_profile');
+      localStorage.removeItem('jansetu_pending_kyc_requests');
+      localStorage.removeItem('jansetu_pending_kyc_request');
+      localStorage.removeItem('jansetu_session');
     }
   }, []);
 
@@ -412,6 +423,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('citizen_token');
       sessionStorage.removeItem('demo_citizen');
       sessionStorage.removeItem('jansetu_session_consent_accepted');
+
+      localStorage.removeItem(CITIZEN_STORAGE_KEY);
+      localStorage.removeItem('demo_citizen');
+      localStorage.removeItem('jansetu_ekyc_profile');
+      localStorage.removeItem('jansetu_pending_kyc_requests');
+      localStorage.removeItem('jansetu_pending_kyc_request');
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
   }, []);
 
@@ -435,6 +453,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('admin_token');
       sessionStorage.removeItem('demo_admin');
       sessionStorage.removeItem('jansetu_session_consent_accepted');
+
+      localStorage.removeItem(ADMIN_STORAGE_KEY);
+      localStorage.removeItem('demo_admin');
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
   }, []);
 
