@@ -150,11 +150,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <title>JanSetu — Citizen AI Platform</title>
           <meta name="description" content="JanSetu - AI-powered National Citizen Welfare & Scheme Delivery Gateway by Government of India." />
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-          <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
-          <link rel="icon" type="image/png" href="/icon?v=3" />
-          <link rel="alternate icon" href="/favicon.svg?v=3" />
-          <link rel="shortcut icon" href="/favicon.svg?v=3" />
-          <link rel="apple-touch-icon" href="/icon?v=3" />
+          <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+          <link rel="icon" type="image/png" href="/icon.png" />
+          <link rel="alternate icon" href="/favicon.ico" sizes="any" />
+          <link rel="shortcut icon" href="/favicon.ico" />
+          <link rel="apple-touch-icon" href="/favicon.png" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         </head>
@@ -175,11 +176,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>JanSetu — Citizen AI Platform</title>
         <meta name="description" content="JanSetu - AI-powered National Citizen Welfare & Scheme Delivery Gateway by Government of India." />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
-        <link rel="icon" type="image/png" href="/icon?v=3" />
-        <link rel="alternate icon" href="/favicon.svg?v=3" />
-        <link rel="shortcut icon" href="/favicon.svg?v=3" />
-        <link rel="apple-touch-icon" href="/icon?v=3" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+        <link rel="icon" type="image/png" href="/icon.png" />
+        <link rel="alternate icon" href="/favicon.ico" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link 
