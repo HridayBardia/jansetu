@@ -151,6 +151,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <meta name="description" content="JanSetu - AI-powered National Citizen Welfare & Scheme Delivery Gateway by Government of India." />
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <link rel="alternate icon" href="/favicon.svg" />
+          <link rel="shortcut icon" href="/favicon.svg" />
+          <link rel="apple-touch-icon" href="/icon.svg" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         </head>
@@ -172,6 +175,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="description" content="JanSetu - AI-powered National Citizen Welfare & Scheme Delivery Gateway by Government of India." />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="alternate icon" href="/favicon.svg" />
+        <link rel="shortcut icon" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link 
