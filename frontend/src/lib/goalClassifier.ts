@@ -190,16 +190,52 @@ const INTENT_CATEGORIES: IntentCategory[] = [
     baseScore: 8,
   },
   {
+    id: 'VOTER_ID',
+    label: 'Electoral Registration / Voter ID (EPIC)',
+    keywords: ['voter id', 'voter card', 'epic', 'epic card', 'voter', 'election card', 'chunav card', 'matdata',
+      'nvsp', 'voters.eci.gov.in', 'form 6', 'electoral roll', 'voting card', 'voter id apply', 'voter helpline',
+      'मतदाता पहचान पत्र', 'वोटर कार्ड', 'मतदाता', 'ચૂંટણી કાર્ડ', 'வாக்காளர் அட்டை', 'ఓటరు కార్డు', 'ভোটার কার্ড'],
+    excludeKeywords: [],
+    baseScore: 15,
+  },
+  {
+    id: 'PAN_CARD',
+    label: 'PAN Card Issuance & Updation',
+    keywords: ['pan card', 'pan card apply', 'pan application', 'new pan', 'instant pan', 'e-pan', 'nsdl pan', 'utiitsl pan',
+      'form 49a', 'pan correction', 'pan aadhaar link', 'tax identification',
+      'पैन कार्ड', 'पैन', 'પાન કાર્ડ', 'பான் கார்டு', 'పాన్ కార్డు', 'প্যান কার্ড'],
+    excludeKeywords: [],
+    baseScore: 15,
+  },
+  {
+    id: 'RATION_CARD',
+    label: 'Ration Card / Food Security (NFSA)',
+    keywords: ['ration card', 'ration card apply', 'rashan card', 'nfsa', 'pds', 'food card', 'ration',
+      'bpl ration', 'apl ration', 'antyodaya', 'aay card', 'food grains card', 'epds',
+      'राशन कार्ड', 'राशन', 'રેશન કાર્ડ', 'ரேஷன் கார்டு', 'రేషన్ కార్డు', 'রেশন কার্ড'],
+    excludeKeywords: [],
+    baseScore: 14,
+  },
+  {
+    id: 'VISA',
+    label: 'Visa & Consular Services',
+    keywords: ['visa', 'student visa', 'tourist visa', 'work visa', 'schengen visa', 'vfs', 'consular',
+      'visa application', 'visa appointment', 'immigration visa', 'visa interview',
+      'वीज़ा', 'વીઝા', 'விசா', 'వీసా', 'ভিসা'],
+    excludeKeywords: ['pan', 'ration', 'voter'],
+    baseScore: 12,
+  },
+  {
     id: 'WELFARE',
     label: 'Government Welfare / Social Security',
     keywords: ['welfare', 'pension', 'disability', 'senior citizen', 'widow',
       'benefit', 'subsidy', 'scheme', 'yojana', 'annadatta',
-      'food security', 'ration', 'bpl', 'below poverty', 'sc scheme',
+      'food security', 'bpl', 'below poverty', 'sc scheme',
       'st scheme', 'obc scheme', 'minority scheme', 'handicap',
       'divyang', 'disabled', 'social security', 'old age',
       'maternity', 'child welfare', 'women welfare',
-      'कल्याण', 'योजना', 'पेंशन', 'राशन', 'યોજના', 'திட்டம்', 'పథకం'],
-    excludeKeywords: [],
+      'कल्याण', 'योजना', 'पेंशन', 'યોજના', 'திட்டம்', 'పథకం'],
+    excludeKeywords: ['voter', 'election', 'pan card', 'passport', 'driving licence', 'ration card'],
     baseScore: 6,
   },
 ];
@@ -210,6 +246,20 @@ const INTENT_CATEGORIES: IntentCategory[] = [
 export function classifyIntent(query: string): { primary: string; label: string; score: number } {
   const q = query.toLowerCase().trim();
   
+  // Strict Instant Overrides for Legal Identity Documents
+  if (q.includes('voter') || q.includes('epic') || q.includes('matdata') || q.includes('nvsp') || q.includes('election card') || q.includes('chunav')) {
+    return { primary: 'VOTER_ID', label: 'Electoral Registration / Voter ID (EPIC)', score: 30 };
+  }
+  if (q.includes('pan card') || q.includes('e-pan') || q.includes('nsdl pan') || q.includes('utiitsl') || q.includes('form 49a') || q === 'pan') {
+    return { primary: 'PAN_CARD', label: 'PAN Card Issuance & Updation', score: 30 };
+  }
+  if (q.includes('ration card') || q.includes('rashan') || q.includes('nfsa') || q.includes('food security card') || q.includes('epds')) {
+    return { primary: 'RATION_CARD', label: 'Ration Card / Food Security (NFSA)', score: 30 };
+  }
+  if ((q.includes('visa') || q.includes('vfs')) && !q.includes('pan') && !q.includes('ration')) {
+    return { primary: 'VISA', label: 'Visa & Consular Services', score: 25 };
+  }
+
   const scores: Record<string, number> = {};
   
   for (const cat of INTENT_CATEGORIES) {
@@ -436,6 +486,33 @@ const DOCUMENT_REQUIREMENTS: Record<string, DocRequirement[]> = {
     { name: 'FCRA Registration (if accepting foreign funds)', status: 'Conditional', reason: 'Required for receiving foreign contributions', priority: 'Conditional' },
     { name: 'Annual Audit Reports', status: 'Required', reason: 'Mandatory for compliance and transparency', priority: 'Required' },
   ],
+  VOTER_ID: [
+    { name: 'Proof of Date of Birth (Aadhaar / 10th Marksheet / Birth Certificate)', status: 'Required', reason: 'To verify age eligibility (18+ years) under ECI norms', priority: 'Required' },
+    { name: 'Proof of Ordinary Residence / Address (Electricity Bill / Aadhaar / Rent Agreement)', status: 'Required', reason: 'To determine your Assembly Constituency and Polling Part Number', priority: 'Required' },
+    { name: 'Passport-size Photograph (White Background)', status: 'Required', reason: 'For digital printing on the physical EPIC smart card', priority: 'Required' },
+    { name: 'Family Member EPIC / Voter ID (Optional)', status: 'Conditional', reason: 'Helps in automatic grouping with same polling booth / part', priority: 'Conditional' },
+    { name: 'Aadhaar Card (Form 6B Seeding)', status: 'Conditional', reason: 'For voluntary biometric authentication with Electoral Roll', priority: 'Conditional' },
+  ],
+  PAN_CARD: [
+    { name: 'Proof of Identity (Aadhaar Card / Voter ID / Passport)', status: 'Required', reason: 'Primary identity verification for CBDT tax database', priority: 'Required' },
+    { name: 'Proof of Date of Birth (Aadhaar / Birth Certificate / Marksheet)', status: 'Required', reason: 'Mandatory DOB record for Income Tax Department', priority: 'Required' },
+    { name: 'Proof of Address (Aadhaar / Utility Bill / Bank Statement)', status: 'Required', reason: 'For physical PAN card dispatch via India Post Speed Post', priority: 'Required' },
+    { name: 'Digital Passport-size Photo & Signature', status: 'Required', reason: 'Required for Form 49A physical card printing', priority: 'Required' },
+  ],
+  RATION_CARD: [
+    { name: 'Aadhaar Cards of All Family Members', status: 'Required', reason: 'Mandatory seeding for One Nation One Ration Card (ONORC)', priority: 'Required' },
+    { name: 'Income Certificate / BPL Certificate', status: 'Required', reason: 'Determines NFSA Priority Household (PHH) or Antyodaya (AAY) category', priority: 'Required' },
+    { name: 'Current Residence Proof / Electricity Bill', status: 'Required', reason: 'To assign designated Fair Price Shop (FPS) in your ward/village', priority: 'Required' },
+    { name: 'Bank Passbook (Head of Household)', status: 'Required', reason: 'For direct food subsidy transfer and DBTL schemes', priority: 'Required' },
+    { name: 'Family Group Photograph', status: 'Required', reason: 'Required for State Food & Civil Supplies departmental card record', priority: 'Required' },
+  ],
+  VISA: [
+    { name: 'Valid Indian Passport (Min. 6 months validity)', status: 'Required', reason: 'Primary international travel document', priority: 'Required' },
+    { name: 'Visa Application Form & Confirmation Page', status: 'Required', reason: 'Official consular application record (DS-160 / VFS / E-Visa)', priority: 'Required' },
+    { name: 'Proof of Financial Means / Bank Statements (6 Months)', status: 'Required', reason: 'Proof of sufficient funds to cover foreign stay', priority: 'Required' },
+    { name: 'Invitation Letter / University Offer / Travel Itinerary', status: 'Required', reason: 'Purpose of visit verification', priority: 'Required' },
+    { name: 'Travel Medical Insurance', status: 'Required', reason: 'Mandatory for Schengen, UK, and overseas territories', priority: 'Required' },
+  ],
   WELFARE: [
     { name: 'Aadhaar Card', status: 'Required', reason: 'Primary identity document for welfare schemes', priority: 'Required' },
     { name: 'Income Certificate', status: 'Required', reason: 'Required for eligibility assessment for BPL/EWS schemes', priority: 'Required' },
@@ -456,6 +533,10 @@ const AVAILABLE_DOCS_BY_INTENT: Record<string, typeof EXTENDED_AVAILABLE_DOCS> =
   AGRICULTURE: BASE_AVAILABLE_DOCS,
   DRIVING_LICENCE: BASE_AVAILABLE_DOCS,
   PASSPORT: BASE_AVAILABLE_DOCS,
+  VOTER_ID: BASE_AVAILABLE_DOCS,
+  PAN_CARD: BASE_AVAILABLE_DOCS,
+  RATION_CARD: BASE_AVAILABLE_DOCS,
+  VISA: EXTENDED_AVAILABLE_DOCS,
   GOVERNMENT_JOB: EXTENDED_AVAILABLE_DOCS,
   FINANCE_LOAN: BASE_AVAILABLE_DOCS,
   NGO: BASE_AVAILABLE_DOCS,
@@ -637,6 +718,56 @@ const CENTRAL_SCHEMES: Record<string, SchemeInfo[]> = {
       description: 'Working capital loan up to ₹50,000 for street vendors.',
       level: 'CENTRAL', department: 'Ministry of Housing & Urban Affairs', category: 'finance',
       official_source_url: 'https://pmsvanidhi.mohua.gov.in', eligibility_summary: 'Street vendors'
+    },
+  ],
+  VOTER_ID: [
+    {
+      id: 'eci-epic', name: 'ECI Form 6 - New Voter Registration & EPIC Issuance',
+      description: 'Official Election Commission of India digital enrollment for first-time voters (18+) with electronic e-EPIC download and doorstep speed post delivery.',
+      level: 'CENTRAL', department: 'Election Commission of India (ECI)', category: 'documents',
+      official_source_url: 'https://voters.eci.gov.in', eligibility_summary: 'All Indian citizens aged 18 years or above'
+    },
+    {
+      id: 'eci-form8', name: 'ECI Form 8 - Electoral Roll Correction & Shifting',
+      description: 'Online correction of name, photo, address, or constituency transfer on national voter register.',
+      level: 'CENTRAL', department: 'Election Commission of India (ECI)', category: 'documents',
+      official_source_url: 'https://voters.eci.gov.in', eligibility_summary: 'Existing registered electors in India'
+    },
+  ],
+  PAN_CARD: [
+    {
+      id: 'nsdl-pan', name: 'Protean NSDL - Form 49A Online PAN Card Service',
+      description: 'Central Board of Direct Taxes (CBDT) online PAN issuance with Paperless Aadhaar e-KYC and digital e-PAN delivery within 2 hours.',
+      level: 'CENTRAL', department: 'Income Tax Department / Ministry of Finance', category: 'documents',
+      official_source_url: 'https://onlineservices.nsdl.com/paam/endUserRegisterContact.html', eligibility_summary: 'All Indian citizens and tax entities'
+    },
+    {
+      id: 'utiitsl-pan', name: 'UTIITSL National PAN Portal',
+      description: 'Alternate official Government gateway for physical and digital PAN card processing.',
+      level: 'CENTRAL', department: 'UTI Infrastructure Technology And Services Limited', category: 'documents',
+      official_source_url: 'https://www.pan.utiitsl.com', eligibility_summary: 'All Indian residents'
+    },
+  ],
+  RATION_CARD: [
+    {
+      id: 'onorc-nfsa', name: 'One Nation One Ration Card (ONORC) - NFSA',
+      description: 'National food security entitlement scheme enabling subsidized food grains from any Fair Price Shop across India via biometric authentication.',
+      level: 'CENTRAL', department: 'Department of Food & Public Distribution', category: 'welfare',
+      official_source_url: 'https://nfsa.gov.in', eligibility_summary: 'Eligible households identified under NFSA criteria'
+    },
+    {
+      id: 'state-pds-card', name: 'State PDS Digital Ration Card Issuance',
+      description: 'State Food & Civil Supplies online portal for new ration card issuance and member addition.',
+      level: 'CENTRAL', department: 'Ministry of Consumer Affairs, Food & Public Distribution', category: 'welfare',
+      official_source_url: 'https://nfsa.gov.in/portal/State_UT_Portals', eligibility_summary: 'Households residing in respective state jurisdiction'
+    },
+  ],
+  VISA: [
+    {
+      id: 'mea-visa-consular', name: 'Ministry of External Affairs - Consular & Visa Guidance',
+      description: 'National consular clearance advisory and document attestation for overseas visa processing.',
+      level: 'CENTRAL', department: 'Ministry of External Affairs (MEA)', category: 'documents',
+      official_source_url: 'https://www.mea.gov.in', eligibility_summary: 'Indian passport holders traveling abroad'
     },
   ],
 };
@@ -896,6 +1027,10 @@ function generateGoalTitle(intentId: string, query: string, locationInfo: any): 
     AGRICULTURE: `Agricultural Activity${loc}`,
     DRIVING_LICENCE: `Driving Licence Application${loc}`,
     PASSPORT: `Passport Application${loc}`,
+    VOTER_ID: `Electoral Registration & Voter ID (EPIC)${loc}`,
+    PAN_CARD: `PAN Card Application & Digital e-PAN Issuance${loc}`,
+    RATION_CARD: `NFSA Ration Card & Food Subsidy Enrollment${loc}`,
+    VISA: `International Visa & Consular Application${dest}`,
     GOVERNMENT_JOB: `Government Employment${loc}`,
     FINANCE_LOAN: `Financial Services / Loan${loc}`,
     NGO: `NGO / Non-Profit Organization${loc}`,
@@ -920,6 +1055,10 @@ function generateGoalDescription(intentId: string, query: string, locationInfo: 
     AGRICULTURE: `Agricultural support and scheme eligibility mapping for ${state}. This covers farm subsidies, insurance, and land-related documentation.`,
     DRIVING_LICENCE: `Driving licence application roadmap for ${state}. This covers learner licence, permanent licence, and RTO requirements.`,
     PASSPORT: `Passport application and document roadmap. This covers identity verification, address proof, and passport issuance process.`,
+    VOTER_ID: `Official Election Commission of India (ECI) voter registration roadmap for ${state}. This covers Form 6 submission, Assembly Constituency mapping, Booth Level Officer (BLO) physical verification, and digital e-EPIC card generation.`,
+    PAN_CARD: `Central Board of Direct Taxes (CBDT) permanent tax identifier issuance roadmap. This covers Form 49A submission via NSDL/UTIITSL, instant Aadhaar e-KYC paperless allotment, and physical card dispatch.`,
+    RATION_CARD: `National Food Security Act (NFSA) ration card enrollment for ${state}. This covers family unit Aadhaar seeding, fair price shop (FPS) allocation, and One Nation One Ration Card (ONORC) portability.`,
+    VISA: `International visa application and consular document roadmap for ${locationInfo.destination || 'overseas travel'}. Covers visa scheduling, biometric appointment at VFS Global / Embassy, and fund verification.`,
     GOVERNMENT_JOB: `Government employment preparation roadmap for ${state}. This covers eligibility documents, competitive exam preparation, and application requirements.`,
     FINANCE_LOAN: `Financial services and loan eligibility mapping for ${state}. This covers loan documents, credit requirements, and government financing schemes.`,
     NGO: `Non-profit organization setup roadmap for ${state}. This covers trust/society registration, compliance, and funding mechanisms.`,
@@ -933,8 +1072,6 @@ function generateGoalDescription(intentId: string, query: string, locationInfo: 
 // HELPER: Generate next steps
 // ============================================================
 function generateNextSteps(intentId: string, locationInfo: any): string[] {
-  const loc = locationInfo.location;
-  
   const steps: Record<string, string[]> = {
     STUDY_ABROAD: [
       'Apply for or renew passport at passportindia.gov.in',
@@ -998,6 +1135,35 @@ function generateNextSteps(intentId: string, locationInfo: any): string[] {
       'Book appointment at nearest Passport Seva Kendra',
       'Visit PSK with original documents and photocopies',
       'Complete police verification at registered address',
+    ],
+    VOTER_ID: [
+      'Visit Election Commission of India Voters Portal (voters.eci.gov.in)',
+      'Fill Form 6 for New Voter Registration (18+ age qualification)',
+      'Upload Age Proof (Aadhaar/10th Marksheet) and Current Residence Proof',
+      'Submit form to receive 12-digit Application Reference Number (ARN)',
+      'Booth Level Officer (BLO) performs field verification at your doorstep',
+      'Download digital e-EPIC from Voters Portal and receive physical Smart Card via Speed Post',
+    ],
+    PAN_CARD: [
+      'Open Protean NSDL / UTIITSL Form 49A Portal',
+      'Authenticate identity via Aadhaar Paperless OTP e-KYC',
+      'Verify name, father name, and date of birth details',
+      'Pay statutory processing fee (₹107 for physical card, ₹72 for e-PAN)',
+      'Download digitally signed e-PAN within 2 hours and receive plastic card via India Post',
+    ],
+    RATION_CARD: [
+      'Access State Food & Civil Supplies / NFSA Portal (nfsa.gov.in)',
+      'Submit Form for New Family Ration Card or Member Addition',
+      'Seed Aadhaar numbers of all family members for ONORC deduplication',
+      'Upload Income Certificate to establish Priority Household (PHH) or Antyodaya status',
+      'Collect digitized Smart Ration Card from Local Supply Office / Fair Price Shop',
+    ],
+    VISA: [
+      'Verify passport validity (at least 6 months with 2 blank visa pages)',
+      'Complete official Online Visa Application (DS-160 / VFS / Consular Portal)',
+      'Pay consular visa processing fee and schedule biometric & interview appointment',
+      'Compile flight itinerary, hotel booking, and 6-month certified bank statements',
+      'Attend consular interview / VFS biometric appointment and track passport return',
     ],
     GOVERNMENT_JOB: [
       'Check eligibility for UPSC/SSC/Banking exams',
@@ -1072,6 +1238,24 @@ function generateSources(intentId: string): { name: string; url: string; last_ve
     ],
     PASSPORT: [
       { name: 'Passport Seva - Ministry of External Affairs', url: 'https://passportindia.gov.in', last_verified: verified },
+    ],
+    VOTER_ID: [
+      { name: 'Election Commission of India - Voters Portal', url: 'https://voters.eci.gov.in', last_verified: verified },
+      { name: 'ECI National Voter Services (NVSP)', url: 'https://www.nvsp.in', last_verified: verified },
+      { name: 'ECI Voter Helpline Services', url: 'https://eci.gov.in', last_verified: verified },
+    ],
+    PAN_CARD: [
+      { name: 'Protean NSDL e-PAN Portal', url: 'https://onlineservices.nsdl.com/paam/endUserRegisterContact.html', last_verified: verified },
+      { name: 'UTIITSL Pan Services Portal', url: 'https://www.pan.utiitsl.com', last_verified: verified },
+      { name: 'Income Tax e-Filing Portal', url: 'https://www.incometax.gov.in', last_verified: verified },
+    ],
+    RATION_CARD: [
+      { name: 'National Food Security Portal (NFSA)', url: 'https://nfsa.gov.in', last_verified: verified },
+      { name: 'Department of Food & Public Distribution', url: 'https://dfpd.gov.in', last_verified: verified },
+    ],
+    VISA: [
+      { name: 'Ministry of External Affairs Consular Portal', url: 'https://www.mea.gov.in', last_verified: verified },
+      { name: 'VFS Global India Center', url: 'https://www.vfsglobal.com', last_verified: verified },
     ],
     GOVERNMENT_JOB: [
       { name: 'UPSC Portal', url: 'https://www.upsc.gov.in', last_verified: verified },

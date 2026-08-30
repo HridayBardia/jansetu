@@ -35,6 +35,7 @@ export interface JourneyRecord {
   citizenName?: string;
   status: 'Planning' | 'In Progress' | 'Action Required' | 'Completed' | 'Ready to Apply';
   progress: number;
+  progress_percentage?: number;
   currentStage: string;
   documentsReady: number;
   documentsTotal: number;
@@ -42,6 +43,10 @@ export interface JourneyRecord {
   lastUpdated: string;
   timestamp: number;
   location?: string;
+  steps?: any[];
+  eligibility_criteria?: any[];
+  required_documents?: any[];
+  [key: string]: any;
 }
 
 export interface ConsentRecord {
@@ -128,7 +133,10 @@ interface LiveSyncContextType {
   
   // Methods
   startJourney: (journeyData: Partial<JourneyRecord>) => void;
+  updateJourney: (journeyId: string, updates: Partial<JourneyRecord>) => void;
+  removeJourney: (id: string) => void;
   submitApplication: (appData: ApplicationRecord) => void;
+  removeApplication: (id: string) => void;
   requestDocument: (deptName: string, docType: string, citizenId?: string, citizenName?: string) => void;
   requestCitizenDoc: (payload: { appId: string; citizenName?: string; citizenId?: string; docName: string; dept?: string; schemeName?: string; }) => void;
   authorizeCitizenDoc: (payload: { appId: string; docName: string; dept?: string; citizenName?: string; }) => void;
@@ -354,10 +362,34 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const [journeys, setJourneys] = useState<JourneyRecord[]>(() => {
     if (typeof window !== 'undefined') {
+      let removedIds = new Set<string>();
+      try {
+        const removed = JSON.parse(localStorage.getItem('jansetu_removed_journey_ids') || '[]');
+        if (Array.isArray(removed)) removedIds = new Set(removed);
+      } catch (e) {}
+
+      const activeSaved = localStorage.getItem('jansetu_active_journeys');
       const saved = localStorage.getItem('jansetu_journeys');
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) {}
+      const listToParse = activeSaved || saved;
+      if (listToParse) {
+        try {
+          const parsed = JSON.parse(listToParse);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const unique: JourneyRecord[] = [];
+            const seenTitles = new Set<string>();
+            for (const j of parsed) {
+              if (removedIds.has(j.id)) continue;
+              const titleKey = (j.title || j.id || '').trim().toLowerCase();
+              if (!seenTitles.has(titleKey)) {
+                seenTitles.add(titleKey);
+                unique.push(j);
+              }
+            }
+            return unique;
+          }
+        } catch (e) {}
       }
+      return DEFAULT_JOURNEYS.filter(j => !removedIds.has(j.id));
     }
     return DEFAULT_JOURNEYS;
   });
@@ -555,7 +587,17 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('jansetu_journeys', JSON.stringify(journeys));
+      const unique: JourneyRecord[] = [];
+      const seenTitles = new Set<string>();
+      for (const j of journeys) {
+        const titleKey = (j.title || j.id || '').trim().toLowerCase();
+        if (!seenTitles.has(titleKey)) {
+          seenTitles.add(titleKey);
+          unique.push(j);
+        }
+      }
+      localStorage.setItem('jansetu_journeys', JSON.stringify(unique));
+      localStorage.setItem('jansetu_active_journeys', JSON.stringify(unique));
     }
   }, [journeys]);
 
@@ -621,10 +663,17 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         if (jrnRes.status === 'fulfilled' && jrnRes.value?.data && jrnRes.value.data.length > 0) {
           const remoteData = jrnRes.value.data;
+          let removedIds = new Set<string>();
+          if (typeof window !== 'undefined') {
+            try {
+              const removed = JSON.parse(localStorage.getItem('jansetu_removed_journey_ids') || '[]');
+              if (Array.isArray(removed)) removedIds = new Set(removed);
+            } catch (e) {}
+          }
           setJourneys(prev => {
-            const remote = remoteData.map(fromSupabaseJourney);
+            const remote = remoteData.map(fromSupabaseJourney).filter(r => !removedIds.has(r.id));
             const ids = new Set(remote.map(r => r.id));
-            return [...remote, ...prev.filter(p => !ids.has(p.id))];
+            return [...remote, ...prev.filter(p => !ids.has(p.id) && !removedIds.has(p.id))];
           });
         }
 
@@ -697,12 +746,25 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
         .on('postgres_changes', { event: '*', schema: 'public', table: 'journeys' }, (payload: any) => {
           if (payload.eventType === 'INSERT' && payload.new) {
             const mapped = fromSupabaseJourney(payload.new);
-            setJourneys(prev => [mapped, ...prev.filter(j => j.id !== mapped.id)]);
+            setJourneys(prev => {
+              const exists = prev.some(j => 
+                j.id === mapped.id || 
+                (j.title && mapped.title && j.title.trim().toLowerCase() === mapped.title.trim().toLowerCase())
+              );
+              if (exists) {
+                return prev.map(j => 
+                  (j.id === mapped.id || (j.title && mapped.title && j.title.trim().toLowerCase() === mapped.title.trim().toLowerCase()))
+                    ? { ...j, ...mapped, id: j.id }
+                    : j
+                );
+              }
+              return [mapped, ...prev];
+            });
             setRecentlyAddedJourneyId(mapped.id);
             setTimeout(() => setRecentlyAddedJourneyId(null), 5000);
           } else if (payload.eventType === 'UPDATE' && payload.new) {
             const mapped = fromSupabaseJourney(payload.new);
-            setJourneys(prev => prev.map(j => j.id === mapped.id ? { ...j, ...mapped } : j));
+            setJourneys(prev => prev.map(j => (j.id === mapped.id || (j.title && mapped.title && j.title.trim().toLowerCase() === mapped.title.trim().toLowerCase())) ? { ...j, ...mapped } : j));
           }
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'consents' }, (payload: any) => {
@@ -809,7 +871,17 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
       case 'JOURNEY_STARTED': {
         const newJourney = event.payload as JourneyRecord;
         setJourneys(prev => {
-          if (prev.some(j => j.id === newJourney.id)) return prev;
+          const exists = prev.some(j => 
+            j.id === newJourney.id || 
+            (j.title && newJourney.title && j.title.trim().toLowerCase() === newJourney.title.trim().toLowerCase())
+          );
+          if (exists) {
+            return prev.map(j => 
+              (j.id === newJourney.id || (j.title && newJourney.title && j.title.trim().toLowerCase() === newJourney.title.trim().toLowerCase()))
+                ? { ...j, ...newJourney, id: j.id }
+                : j
+            );
+          }
           return [newJourney, ...prev];
         });
         setRecentlyAddedJourneyId(newJourney.id);
@@ -1455,21 +1527,55 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Specific Action Methods
   const startJourney = (journeyData: Partial<JourneyRecord>) => {
+    const sanitizedTitle = (journeyData.title || '').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 32);
+    const fallbackId = sanitizedTitle ? `jrn_${sanitizedTitle}` : `journey_${Date.now()}`;
+    const journeyId = journeyData.id || fallbackId;
+
+    // Remove from blacklist if previously removed
+    if (typeof window !== 'undefined') {
+      try {
+        const removed = JSON.parse(localStorage.getItem('jansetu_removed_journey_ids') || '[]');
+        if (Array.isArray(removed) && (removed.includes(journeyId) || (journeyData.id && removed.includes(journeyData.id)))) {
+          const updatedRemoved = removed.filter((rId: string) => rId !== journeyId && rId !== journeyData.id);
+          localStorage.setItem('jansetu_removed_journey_ids', JSON.stringify(updatedRemoved));
+        }
+      } catch (e) {}
+    }
+
     const newJourney: JourneyRecord = {
-      id: journeyData.id || `journey_${Date.now()}`,
+      id: journeyId,
       title: journeyData.title || 'New Citizen Journey',
       category: journeyData.category || 'General Welfare',
       citizenName: journeyData.citizenName || 'Hriday Bardia',
       status: 'In Progress',
       progress: journeyData.progress || 10,
+      progress_percentage: journeyData.progress_percentage || journeyData.progress || 10,
       currentStage: journeyData.currentStage || 'Initial Documentation & Identity Verification',
       documentsReady: journeyData.documentsReady || 2,
       documentsTotal: journeyData.documentsTotal || 4,
       nextAction: journeyData.nextAction || 'Verify Aadhaar e-KYC and upload state credentials',
       lastUpdated: 'Just now',
       timestamp: Date.now(),
-      location: journeyData.location || 'Vadodara, Gujarat'
+      location: journeyData.location || 'Vadodara, Gujarat',
+      steps: journeyData.steps,
+      required_documents: journeyData.required_documents,
+      eligibility_criteria: journeyData.eligibility_criteria
     };
+
+    setJourneys(prev => {
+      const exists = prev.some(j => 
+        j.id === newJourney.id || 
+        (j.title && newJourney.title && j.title.trim().toLowerCase() === newJourney.title.trim().toLowerCase())
+      );
+      const updated = exists 
+        ? prev.map(j => (j.id === newJourney.id || (j.title && newJourney.title && j.title.trim().toLowerCase() === newJourney.title.trim().toLowerCase())) ? { ...j, ...newJourney, id: j.id } : j)
+        : [newJourney, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('jansetu_active_journeys', JSON.stringify(updated));
+        localStorage.setItem('jansetu_journeys', JSON.stringify(updated));
+      }
+      return updated;
+    });
 
     if (supabase) {
       Promise.resolve(supabase.from('journeys').upsert(toSupabaseJourney(newJourney))).catch(() => {});
@@ -1483,7 +1589,76 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
     });
   };
 
-  const submitApplication = (appData: ApplicationRecord) => {
+  const updateJourney = useCallback((journeyId: string, updates: Partial<JourneyRecord>) => {
+    setJourneys(prev => {
+      const updated = prev.map(j => {
+        if (j.id === journeyId || (j as any).journey_id === journeyId) {
+          const newSteps = updates.steps || j.steps;
+          let calculatedPct = updates.progress ?? (updates as any).progress_percentage ?? j.progress ?? (j as any).progress_percentage ?? 0;
+          if (Array.isArray(newSteps) && newSteps.length > 0) {
+            const completedCount = newSteps.filter((s: any) => 
+              s.state === 'COMPLETED' || s.status === 'COMPLETED' || (typeof s.state === 'string' && s.state.toUpperCase() === 'COMPLETED')
+            ).length;
+            calculatedPct = Math.round((completedCount / newSteps.length) * 100);
+          }
+          return {
+            ...j,
+            ...updates,
+            steps: newSteps,
+            progress: calculatedPct,
+            progress_percentage: calculatedPct,
+            lastUpdated: 'Just now',
+            timestamp: Date.now()
+          };
+        }
+        return j;
+      });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('jansetu_active_journeys', JSON.stringify(updated));
+        localStorage.setItem('jansetu_journeys', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (supabase) {
+      Promise.resolve(supabase.from('journeys').update(updates).eq('id', journeyId)).catch(() => {});
+    }
+
+    dispatchMeshEvent({
+      type: 'JOURNEY_UPDATED',
+      payload: { id: journeyId, ...updates },
+      sender: 'CITIZEN',
+      timestamp: new Date().toISOString()
+    });
+  }, []);
+
+  const removeJourney = useCallback((id: string) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const removed = JSON.parse(localStorage.getItem('jansetu_removed_journey_ids') || '[]');
+        if (Array.isArray(removed) && !removed.includes(id)) {
+          removed.push(id);
+          localStorage.setItem('jansetu_removed_journey_ids', JSON.stringify(removed));
+        }
+      } catch (e) {}
+    }
+
+    setJourneys(prev => {
+      const updated = prev.filter(j => j.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('jansetu_active_journeys', JSON.stringify(updated));
+        localStorage.setItem('jansetu_journeys', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (supabase) {
+      Promise.resolve(supabase.from('journeys').delete().eq('id', id)).catch(() => {});
+    }
+  }, []);
+
+  const submitApplication = useCallback((appData: ApplicationRecord) => {
     if (supabase) {
       Promise.resolve(supabase.from('applications').upsert(toSupabaseApplication(appData), { onConflict: 'id' })).catch(() => {});
     }
@@ -1493,7 +1668,21 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
       sender: 'CITIZEN',
       timestamp: new Date().toISOString()
     });
-  };
+  }, []);
+
+  const removeApplication = useCallback((id: string) => {
+    setApplications(prev => {
+      const updated = prev.filter(a => a.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('jansetu_applications', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (supabase) {
+      Promise.resolve(supabase.from('applications').delete().eq('id', id)).catch(() => {});
+    }
+  }, []);
 
   const broadcastApplicationCreated = (app: ApplicationRecord) => {
     submitApplication(app);
@@ -1813,7 +2002,10 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
       recentlyAddedAppId,
       recentlyAddedJourneyId,
       startJourney,
+      updateJourney,
+      removeJourney,
       submitApplication,
+      removeApplication,
       requestDocument,
       requestCitizenDoc,
       authorizeCitizenDoc,

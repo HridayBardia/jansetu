@@ -3,12 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   FileText, Compass, CheckCircle2, AlertTriangle, ArrowLeft, ExternalLink, 
   Building2, GraduationCap, Zap, HeartPulse, ShieldCheck, Landmark, Globe,
-  Check, ArrowRight, Sparkles
+  Check, ArrowRight, Sparkles, Loader2, Play
 } from 'lucide-react';
 import { useLiveSync } from '@/context/LiveSyncContext';
+import { buildRichJourneySteps } from '@/lib/api';
 
 const testJourney = {
   id: "preview-test",
@@ -160,9 +162,14 @@ const DOMAIN_PORTALS = [
 
 export default function JourneyPreviewPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [journey, setJourney] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { startJourney } = useLiveSync();
+  const [isStarting, setIsStarting] = useState(false);
+  const [isAddingApp, setIsAddingApp] = useState(false);
+  const [appAddedNotice, setAppAddedNotice] = useState<{ id: string; service: string } | null>(null);
+  const [showAllPortals, setShowAllPortals] = useState(false);
+  const { startJourney, submitApplication } = useLiveSync();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -223,6 +230,191 @@ export default function JourneyPreviewPage() {
         ...(activeJourney?.schemes?.targetState || [])
       ].filter((v, idx, self) => self.findIndex(t => (t.id === v.id || t.name === v.name)) === idx);
 
+  const journeyCategory = activeJourney?.goal_category || activeJourney?.category || (
+    goalTitle.toLowerCase().includes('voter') || goalTitle.toLowerCase().includes('epic') ? 'National Identity & Electoral' :
+    goalTitle.toLowerCase().includes('pan') ? 'Tax & Legal Identity' :
+    goalTitle.toLowerCase().includes('ration') ? 'Food & Civil Supplies' :
+    goalTitle.toLowerCase().includes('visa') ? 'Consular & Overseas Travel' :
+    goalTitle.toLowerCase().includes('food') || goalTitle.toLowerCase().includes('business') ? 'Business & Commerce' :
+    goalTitle.toLowerCase().includes('scholarship') ? 'Scholarships & Welfare' :
+    goalTitle.toLowerCase().includes('australia') || goalTitle.toLowerCase().includes('master') ? 'Higher Education' :
+    goalTitle.toLowerCase().includes('solar') || goalTitle.toLowerCase().includes('surya') ? 'Energy & Solar' :
+    goalTitle.toLowerCase().includes('licence') || goalTitle.toLowerCase().includes('driving') ? 'Transport & Mobility' :
+    goalTitle.toLowerCase().includes('farm') || goalTitle.toLowerCase().includes('kisan') ? 'Agriculture & Rural' :
+    'General Welfare'
+  );
+
+  const journeyLocation = targetCity 
+    ? `${targetCity}${targetState ? `, ${targetState}` : ''}`
+    : domicileState ? `${domicileState}, India` : 'India';
+
+  const departmentName = (
+    goalTitle.toLowerCase().includes('voter') || goalTitle.toLowerCase().includes('epic') ? 'Election Commission of India (ECI)' :
+    goalTitle.toLowerCase().includes('pan') ? 'Income Tax Department (CBDT)' :
+    goalTitle.toLowerCase().includes('ration') ? 'Department of Food & Public Distribution' :
+    goalTitle.toLowerCase().includes('visa') ? 'Ministry of External Affairs (MEA)' :
+    goalTitle.toLowerCase().includes('passport') ? 'Ministry of External Affairs' :
+    goalTitle.toLowerCase().includes('licence') || goalTitle.toLowerCase().includes('driving') ? 'Ministry of Road Transport & Highways' :
+    goalTitle.toLowerCase().includes('food') || goalTitle.toLowerCase().includes('business') ? 'Ministry of MSME & FSSAI' :
+    goalTitle.toLowerCase().includes('scholarship') || goalTitle.toLowerCase().includes('education') ? 'Ministry of Education' :
+    goalTitle.toLowerCase().includes('kisan') || goalTitle.toLowerCase().includes('farm') ? 'Ministry of Agriculture & Farmers Welfare' :
+    'National Public Services Authority'
+  );
+
+  const handleAddApplication = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (isAddingApp || appAddedNotice) return;
+    setIsAddingApp(true);
+
+    const generatedAppId = `JS-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newAppRecord = {
+      id: generatedAppId,
+      citizenName: 'Hriday Bardia',
+      citizenId: '1111 2222 1405',
+      service: goalTitle,
+      department: departmentName,
+      status: 'SUBMITTED' as const,
+      submittedDate: new Date().toISOString().split('T')[0],
+      lastUpdated: 'Just now',
+      nextAction: 'e-KYC Cross-Verification via JanSetu Live Mesh',
+      location: journeyLocation,
+      sla: '48 Hours',
+      documents: rawNeed.length > 0 ? rawNeed.map((d: any) => ({
+        name: typeof d === 'string' ? d : (d.name || d.title || 'Verification Document'),
+        status: 'PENDING_MATCH'
+      })) : [
+        { name: 'Aadhaar e-KYC Identity', status: 'VERIFIED' },
+        { name: 'Proof of Address / Certificate', status: 'PENDING_MATCH' }
+      ],
+      timeline: [
+        { title: 'Application Lodged', description: `Application successfully registered for ${goalTitle} through JanSetu Resident Gateway.`, timestamp: new Date().toISOString().split('T')[0] + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), status: 'completed' },
+        { title: 'Document & e-KYC Verification', description: 'Cross-matching verified identity documents across state geo-registries.', timestamp: 'In progress', status: 'current' },
+        { title: 'Nodal Officer Approval', description: 'Digital sanction review by designated departmental nodal officer.', timestamp: '', status: 'pending' },
+        { title: 'Direct Benefit / Smart Card Disbursal', description: 'Official dispatch via India Post Speed Post / Digital Locker token.', timestamp: '', status: 'pending' }
+      ]
+    };
+
+    // Save to LiveSync and storage
+    submitApplication(newAppRecord);
+    
+    // Also save journey if not started
+    const generatedId = activeJourney?.journey_id || activeJourney?.journeyId || activeJourney?.id || `jrn_${Date.now()}`;
+    const richSteps = buildRichJourneySteps(generatedId, goalTitle, journeyCategory, domicileState, targetCity || '');
+    const firstActiveStep = richSteps.find((s: any) => s.state !== 'COMPLETED') || richSteps[0];
+    const initialProgress = Math.round((richSteps.filter((s: any) => s.state === 'COMPLETED').length / richSteps.length) * 100);
+
+    const newJourneyRecord = {
+      id: generatedId,
+      journey_id: generatedId,
+      title: goalTitle,
+      category: journeyCategory,
+      goal_category: journeyCategory,
+      citizenName: 'Hriday Bardia',
+      status: 'In Progress' as const,
+      state: 'IN_PROGRESS',
+      progress: initialProgress,
+      progress_percentage: initialProgress,
+      currentStage: firstActiveStep.title,
+      documentsReady: rawHave.length || 3,
+      documentsTotal: (rawHave.length + rawNeed.length) || 6,
+      nextAction: `Complete step: ${firstActiveStep.title}`,
+      lastUpdated: 'Just now',
+      timestamp: Date.now(),
+      location: journeyLocation,
+      location_state: domicileState,
+      location_city: targetCity || '',
+      steps: richSteps
+    };
+    startJourney(newJourneyRecord);
+
+    setTimeout(() => {
+      setIsAddingApp(false);
+      setAppAddedNotice({ id: generatedAppId, service: goalTitle });
+    }, 400);
+  };
+
+  const handleStartJourney = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (isStarting) return;
+    setIsStarting(true);
+
+    const generatedId = activeJourney?.journey_id || activeJourney?.journeyId || activeJourney?.id || `jrn_${Date.now()}`;
+    const richSteps = buildRichJourneySteps(generatedId, goalTitle, journeyCategory, domicileState, targetCity || '');
+    const firstActiveStep = richSteps.find((s: any) => s.state !== 'COMPLETED') || richSteps[0];
+    const initialProgress = Math.round((richSteps.filter((s: any) => s.state === 'COMPLETED').length / richSteps.length) * 100);
+
+    const newJourneyRecord = {
+      id: generatedId,
+      journey_id: generatedId,
+      title: goalTitle,
+      category: journeyCategory,
+      goal_category: journeyCategory,
+      citizenName: 'Hriday Bardia',
+      status: 'In Progress' as const,
+      state: 'IN_PROGRESS',
+      progress: initialProgress,
+      progress_percentage: initialProgress,
+      currentStage: firstActiveStep.title,
+      documentsReady: rawHave.length || 3,
+      documentsTotal: (rawHave.length + rawNeed.length) || 6,
+      nextAction: `Complete step: ${firstActiveStep.title}`,
+      lastUpdated: 'Just now',
+      timestamp: Date.now(),
+      location: journeyLocation,
+      location_state: domicileState,
+      location_city: targetCity || '',
+      steps: richSteps,
+      required_documents: rawNeed.length > 0 ? rawNeed.map((d: any) => ({
+        name: typeof d === 'string' ? d : (d.name || d.title || 'Required Document'),
+        verified: false,
+        authority: d.authority || 'State Department / Central Agency'
+      })) : [
+        { name: "Aadhaar Card", verified: true, authority: "UIDAI" },
+        { name: "Income Certificate", verified: true, authority: "Revenue Department" },
+        { name: "Bank Passbook / Mandate", verified: true, authority: "NPCI / DBT" }
+      ],
+      eligibility_criteria: [
+        { criterion: `Resident of ${domicileState || 'jurisdiction'}`, satisfied: true, note: "Validated via e-KYC" },
+        { criterion: "Annual household income within statutory norms", satisfied: true, note: "Validated via Revenue Portal" },
+        { criterion: "Statutory prerequisites and identity criteria met", satisfied: true, note: "Citizen profile compliant" }
+      ],
+      next_best_action: {
+        action_type: "NEXT_STEP",
+        description: `Proceed with step: ${firstActiveStep.title}`,
+        priority: "HIGH",
+        step_key: firstActiveStep.step_key || firstActiveStep.id,
+        step_title: firstActiveStep.title,
+        estimated_effort: firstActiveStep.estimated_effort || "1 business day"
+      }
+    };
+
+    // 1. Add to LiveSyncContext
+    startJourney(newJourneyRecord);
+
+    // 2. Add to localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = JSON.parse(localStorage.getItem('jansetu_active_journeys') || '[]');
+        const exists = cached.some((j: any) => 
+          j.id === generatedId || 
+          (j.title && j.title.trim().toLowerCase() === goalTitle.trim().toLowerCase())
+        );
+        const updated = exists 
+          ? cached.map((j: any) => (j.id === generatedId || (j.title && j.title.trim().toLowerCase() === goalTitle.trim().toLowerCase())) ? { ...j, ...newJourneyRecord } : j)
+          : [newJourneyRecord, ...cached];
+        localStorage.setItem('jansetu_active_journeys', JSON.stringify(updated));
+        localStorage.setItem('jansetu_journeys', JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to save new journey to local storage", e);
+      }
+    }
+
+    // 3. Smooth transition to the active interactive journey page
+    setTimeout(() => {
+      router.push(`/journeys/${generatedId}`);
+    }, 300);
+  };
+
   const isPuneFoodBiz = goalTitle.toLowerCase().includes("pune") && 
     (goalTitle.toLowerCase().includes("food") || goalTitle.toLowerCase().includes("business"));
 
@@ -257,22 +449,97 @@ export default function JourneyPreviewPage() {
               </h1>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 font-medium">
-                🏡 {t("journeyPreview.domicile")} <strong className="text-slate-900 dark:text-white font-bold">{domicileState}</strong>
-              </span>
-              {targetCity && (
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 font-medium">
-                  📍 {t("journeyPreview.location")} <strong className="text-slate-900 dark:text-white font-bold">{targetCity}{targetState ? `, ${targetState}` : ''}</strong>
+                  🏡 {t("journeyPreview.domicile")} <strong className="text-slate-900 dark:text-white font-bold">{domicileState}</strong>
                 </span>
-              )}
-              {targetCountry && !targetCity && (
-                <span className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 font-medium">
-                  ✈️ {t("journeyPreview.destination")} <strong className="text-slate-900 dark:text-white font-bold">{targetCountry}</strong>
-                </span>
-              )}
+                {targetCity && (
+                  <span className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 font-medium">
+                    📍 {t("journeyPreview.location")} <strong className="text-slate-900 dark:text-white font-bold">{targetCity}{targetState ? `, ${targetState}` : ''}</strong>
+                  </span>
+                )}
+                {targetCountry && !targetCity && (
+                  <span className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 font-medium">
+                    ✈️ {t("journeyPreview.destination")} <strong className="text-slate-900 dark:text-white font-bold">{targetCountry}</strong>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={isAddingApp || !!appAddedNotice}
+                  onClick={handleAddApplication}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs transition shadow-sm shrink-0 cursor-pointer ${
+                    appAddedNotice 
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
+                      : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  {isAddingApp ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#133E87] dark:text-blue-400" />
+                      <span>Adding...</span>
+                    </>
+                  ) : appAddedNotice ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Added to Applications ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3.5 h-3.5 text-[#133E87] dark:text-blue-400" />
+                      <span>Add to My Applications</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isStarting}
+                  onClick={handleStartJourney}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer disabled:opacity-75"
+                >
+                  {isStarting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />
+                      <span>Starting Journey...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                      <span>Start This Journey</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Success Banner when Added to Applications */}
+          {appAddedNotice && (
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-emerald-900 dark:text-emerald-300">
+                    Application #{appAddedNotice.id} created successfully!
+                  </span>
+                  <p className="text-emerald-700 dark:text-emerald-400 text-[11px]">
+                    Added to your National Applications tab and instantly synchronized to the Admin Scrutiny Portal.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/citizen/dashboard?tab=applications"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shrink-0 transition"
+              >
+                <span>View My Applications</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Section 01: Verified Documents in Your Digital Locker */}
@@ -456,18 +723,50 @@ export default function JourneyPreviewPage() {
 
         {/* Section 04: Official Government Portals & Domain Gateways Directory */}
         <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-6 space-y-6 shadow-sm border-l-4 border-l-purple-600 transition-colors">
-          <div className="space-y-1">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
-              <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span>Official Government Portals & Domain Gateways Directory</span>
-            </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Verified national and state digital governance portals across scholarships, MSME, solar energy, and healthcare.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
+                <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Contextual Official Government Portals & Gateways</span>
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Verified national and state digital governance portals filtered specifically for <strong>{journeyCategory}</strong>.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAllPortals(prev => !prev)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold self-start sm:self-auto transition cursor-pointer"
+            >
+              <span>{showAllPortals ? "Show Contextual Only" : "Explore All 14,000+ Portals"}</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
           </div>
 
           <div className="space-y-6">
-            {DOMAIN_PORTALS.map((cat, catIdx) => {
+            {DOMAIN_PORTALS.filter(cat => {
+              if (showAllPortals) return true;
+              const catLower = cat.domain.toLowerCase();
+              const jLower = journeyCategory.toLowerCase();
+              const gLower = goalTitle.toLowerCase();
+
+              if (jLower.includes('education') || gLower.includes('scholarship') || gLower.includes('australia') || gLower.includes('master')) {
+                return catLower.includes('scholarship') || catLower.includes('identity');
+              }
+              if (jLower.includes('business') || gLower.includes('food') || gLower.includes('restaurant') || gLower.includes('msme')) {
+                return catLower.includes('business') || catLower.includes('identity');
+              }
+              if (jLower.includes('solar') || jLower.includes('energy') || gLower.includes('housing') || gLower.includes('pmay')) {
+                return catLower.includes('energy') || catLower.includes('identity');
+              }
+              if (jLower.includes('agriculture') || jLower.includes('rural') || gLower.includes('kisan') || gLower.includes('farmer')) {
+                return catLower.includes('healthcare') || catLower.includes('identity');
+              }
+              if (jLower.includes('electoral') || jLower.includes('tax') || jLower.includes('food & civil') || jLower.includes('transport') || gLower.includes('voter') || gLower.includes('pan') || gLower.includes('ration') || gLower.includes('driving')) {
+                return catLower.includes('identity') || catLower.includes('scholarship');
+              }
+              return true;
+            }).map((cat, catIdx) => {
               const IconComp = cat.icon;
               return (
                 <div key={catIdx} className="space-y-3">
@@ -685,38 +984,61 @@ export default function JourneyPreviewPage() {
         {/* Section 06: Direct Launch Interactive Workflow */}
         <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-6 shadow-sm border-l-4 border-l-[#133E87] dark:border-l-blue-500 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
           <div className="space-y-1">
-            <span className="text-[10px] font-black text-[#133E87] dark:text-blue-400 uppercase tracking-widest block">Interactive Real-Time Tracking</span>
+            <span className="text-[10px] font-black text-[#133E87] dark:text-blue-400 uppercase tracking-widest block">Interactive Real-Time Tracking & Submission</span>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Ready to Execute and Track this Journey?</h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Open the interactive DAG console with automated e-KYC validation and statutory consent authorization.
+              Add to your persistent applications ledger or launch the live multi-stage execution DAG console.
             </p>
           </div>
 
-          <Link
-            href="/journeys/jrn_003"
-            prefetch={true}
-            onClick={() => {
-              startJourney({
-                id: activeJourney?.id || `jrn_${Date.now()}`,
-                title: goalTitle,
-                category: activeJourney?.goal_category || 'Higher Education',
-                citizenName: 'Hriday Bardia',
-                status: 'In Progress',
-                progress: 15,
-                currentStage: 'Document & e-KYC Verification',
-                documentsReady: rawHave.length || 3,
-                documentsTotal: (rawHave.length + rawNeed.length) || 6,
-                nextAction: 'Aadhaar e-KYC verification and statutory document attestation',
-                lastUpdated: 'Just now',
-                timestamp: Date.now(),
-                location: domicileState ? `${domicileState}, India` : 'India'
-              });
-            }}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer"
-          >
-            <span>Launch Active Workflow Console</span>
-            <ArrowRight className="w-4 h-4 text-amber-300" />
-          </Link>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              disabled={isAddingApp || !!appAddedNotice}
+              onClick={handleAddApplication}
+              className={`inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs transition shadow-sm shrink-0 cursor-pointer ${
+                appAddedNotice
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                  : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-700'
+              }`}
+            >
+              {isAddingApp ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#133E87] dark:text-blue-400" />
+                  <span>Adding to Apps...</span>
+                </>
+              ) : appAddedNotice ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Added to Applications ✓</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4 text-[#133E87] dark:text-blue-400" />
+                  <span>Add to My Applications</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={isStarting}
+              onClick={handleStartJourney}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs transition shadow-md shrink-0 cursor-pointer disabled:opacity-75"
+            >
+              {isStarting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                  <span>Launching Active Workflow...</span>
+                </>
+              ) : (
+                <>
+                  <span>Launch Active Workflow Console</span>
+                  <ArrowRight className="w-4 h-4 text-amber-300" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
       </div>

@@ -390,10 +390,608 @@ export async function fetchJourneysAPI(): Promise<any[]> {
   }
 }
 
+export function buildRichJourneySteps(id: string, title: string, category: string, locationState?: string, locationCity?: string) {
+  const t = (title || id || '').toLowerCase();
+  const locState = locationState || 'Rajasthan';
+  const locCity = locationCity || '';
+
+  if (t.includes('australia') || t.includes('abroad') || t.includes('overseas') || t.includes('master') || t.includes('study')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_passport_ekyc",
+        title: "e-KYC & Passport Identity Verification",
+        description: "Verify digital identity attributes through Passport Seva and UIDAI federated gateway.",
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://passportindia.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_academic_transcripts",
+        title: "Academic Transcripts & Marksheet Attestation",
+        description: "Submit certified Class 10/12 and Bachelor degree marksheets from your JanSetu Document Vault.",
+        category: "Documentation",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 day",
+        official_portal_url: "https://digitallocker.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_language_exam",
+        title: "IELTS / Language Competency Filing",
+        description: "Upload verified English language test certificate for consular visa and academic boards.",
+        category: "Verification",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "3 days",
+        official_portal_url: "https://ielts.idp.com"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_nos_scholarship",
+        title: "National Overseas Scholarship (NOS) Sanction",
+        description: "Automated eligibility check and application routing to the Ministry of Social Justice.",
+        category: "Scholarship",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "5-7 business days",
+        official_portal_url: "https://nosmsje.gov.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_bank_mandate",
+        title: "Financial Capacity & Education Loan Mandate",
+        description: "Bank guarantee verification and Aadhaar-seeded financial capacity certificate.",
+        category: "Finance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "2 days",
+        official_portal_url: "https://vidyalakshmi.co.in"
+      },
+      {
+        id: `${id}_step_6`,
+        step_key: "step_6_visa_clearance",
+        title: "Subclass 500 Student Visa & Consular Clearance",
+        description: "Statutory visa filing and biometric appointment clearance with the consular gateway.",
+        category: "Clearance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "7-10 business days",
+        official_portal_url: "https://homeaffairs.gov.au"
+      }
+    ];
+  }
+
+  if (t.includes('food') || t.includes('business') || t.includes('msme') || t.includes('vadodara') || t.includes('pune') || t.includes('commercial')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_id_pan",
+        title: "Aadhaar & PAN Identity Verification",
+        description: "Verify primary enterprise promoter credentials via NSDL and UIDAI gateway.",
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://uidai.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_udyam_reg",
+        title: "Udyam MSME Enterprise Registration",
+        description: "Submit enterprise profile to obtain statutory Udyam MSME certificate and state MSME subsidies.",
+        category: "Registration",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 business day",
+        official_portal_url: "https://udyamregistration.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_fssai_license",
+        title: "FSSAI Food Safety Registration / License",
+        description: "File application for food processing and hygiene compliance on FoSCoS portal.",
+        category: "Compliance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "3-5 business days",
+        official_portal_url: "https://foscos.fssai.gov.in"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_municipal_noc",
+        title: "Municipal Trade License & Fire Safety NOC",
+        description: `Local urban body verification from ${locCity || 'Municipal Corporation'} and fire compliance inspection.`,
+        category: "Approval",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "5-7 business days",
+        official_portal_url: "https://services.india.gov.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_gstn_enroll",
+        title: "GST Registration & Commercial Tax Enrollment",
+        description: "Issuance of Goods and Services Tax Identification Number (GSTIN) on the GST Portal.",
+        category: "Taxation",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "2-3 business days",
+        official_portal_url: "https://gst.gov.in"
+      },
+      {
+        id: `${id}_step_6`,
+        step_key: "step_6_pmegp_subsidy",
+        title: "PMEGP Capital Subsidy Disbursal",
+        description: "Up to 35% margin money capital subsidy release to linked bank account through KVIC / Khadi Board.",
+        category: "Subsidy",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Instant on sanction",
+        official_portal_url: "https://kviconline.gov.in"
+      }
+    ];
+  }
+
+  if (t.includes('scholarship') || t.includes('education') || t.includes('post-matric') || t.includes('matric')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_domicile_janaadhaar",
+        title: "Resident Domicile & JanAadhaar Authentication",
+        description: `Verify resident credentials and domicile records within ${locState}.`,
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://janaadhaar.rajasthan.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_income_cert",
+        title: "Income Certificate & Category Scrutiny",
+        description: "Submit tehsildar-certified household income certificate (< ₹2.5 Lakh/yr) and caste category proofs.",
+        category: "Documentation",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 business day",
+        official_portal_url: "https://digitallocker.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_nsp_application",
+        title: "National Scholarship Portal (NSP) Application",
+        description: "Direct electronic scholarship application submission to Ministry of Electronics & IT.",
+        category: "Application",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "1 day",
+        official_portal_url: "https://scholarships.gov.in"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_inst_verification",
+        title: "College & District Nodal Officer Scrutiny",
+        description: "Academic enrollment and attendance validation by institutional nodal scrutiny officer.",
+        category: "Verification",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "3-5 business days",
+        official_portal_url: "https://services.india.gov.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_pfms_validation",
+        title: "PFMS Aadhaar-Seeded Bank Account Validation",
+        description: "Public Financial Management System direct linkage to Aadhaar-seeded bank account.",
+        category: "Finance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "1 day",
+        official_portal_url: "https://pfms.nic.in"
+      },
+      {
+        id: `${id}_step_6`,
+        step_key: "step_6_dbt_disbursal",
+        title: "DBT Tuition Fee & Maintenance Allowance Release",
+        description: "Direct bank deposit of tuition fee reimbursement and monthly maintenance credit.",
+        category: "Disbursement",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Instant on sanction",
+        official_portal_url: "https://dbtbharat.gov.in"
+      }
+    ];
+  }
+
+  if (t.includes('solar') || t.includes('surya') || t.includes('energy') || t.includes('rooftop')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_discom_link",
+        title: "Aadhaar e-KYC & Electricity Account Linkage",
+        description: `Link your DISCOM consumer number with Aadhaar profile in ${locState}.`,
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://pmsuryaghar.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_national_solar_reg",
+        title: "National Solar Rooftop Portal Registration",
+        description: "Submit application for Central Financial Assistance (CFA) subsidy up to ₹78,000.",
+        category: "Registration",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 day",
+        official_portal_url: "https://solarrooftop.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_discom_feasibility",
+        title: "DISCOM Technical Feasibility & Sanction",
+        description: "State power distribution company grid inspection and load capacity sanction.",
+        category: "Technical",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "3-5 business days",
+        official_portal_url: "https://services.india.gov.in"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_vendor_install",
+        title: "Empaneled Vendor Solar Plant Installation",
+        description: "Rooftop solar panel installation and bi-directional net meter synchronization.",
+        category: "Installation",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "7 business days",
+        official_portal_url: "https://pmsuryaghar.gov.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_commissioning_cert",
+        title: "Commissioning Certificate & Joint Inspection",
+        description: "Safety and generation inspection report issued by DISCOM field engineer.",
+        category: "Approval",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "2 days",
+        official_portal_url: "https://solarrooftop.gov.in"
+      },
+      {
+        id: `${id}_step_6`,
+        step_key: "step_6_cfa_subsidy_release",
+        title: "CFA Direct Subsidy Release (₹78,000)",
+        description: "Direct benefit transfer release into your bank account within 30 days of commissioning.",
+        category: "Subsidy",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Direct Transfer",
+        official_portal_url: "https://dbtbharat.gov.in"
+      }
+    ];
+  }
+
+  if (t.includes('licence') || t.includes('license') || t.includes('driving') || t.includes('transport') || t.includes('sarathi')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_sarathi_ekyc",
+        title: "e-KYC & Age/Address Proof Verification",
+        description: "Aadhaar e-KYC cross-verification for automated biometric identity matching.",
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://sarathi.parivahan.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_learners_licence",
+        title: "Learner's Licence Issuance & Road Safety Test",
+        description: "Complete online contactless road sign tutorial and download digital Learner's Licence.",
+        category: "Licensing",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 hour",
+        official_portal_url: "https://sarathi.parivahan.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_adtt_slot_booking",
+        title: "Automated Driving Test Track (ADTT) Slot Booking",
+        description: "Select automated testing center date and vehicle class (LMV/MCWG) at regional RTO.",
+        category: "Booking",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Instant",
+        official_portal_url: "https://sarathi.parivahan.gov.in"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_practical_driving_eval",
+        title: "Practical Driving Track Evaluation at RTO",
+        description: "Sensor-based automated reverse-S, parallel parking, and gradient hill test.",
+        category: "Evaluation",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Half Day",
+        official_portal_url: "https://morth.nic.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_mlo_approval",
+        title: "Motor Licensing Officer (MLO) Approval",
+        description: "Official scrutiny and statutory sign-off by Motor Licensing Authority.",
+        category: "Approval",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "1 business day",
+        official_portal_url: "https://services.india.gov.in"
+      },
+      {
+        id: `${id}_step_6`,
+        step_key: "step_6_smartcard_dispatch",
+        title: "Smart Card DL Dispatch & DigiLocker Download",
+        description: "Instant QR-coded digital driving licence push to DigiLocker and physical card dispatch.",
+        category: "Issuance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Instant DigiLocker",
+        official_portal_url: "https://digitallocker.gov.in"
+      }
+    ];
+  }
+
+  if (t.includes('domicile') || t.includes('resident') || t.includes('mool niwas') || t.includes('certificate')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_id_check",
+        title: "Resident Identity & Biometric Verification",
+        description: `Primary identity and voter registration record check for ${locState}.`,
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://uidai.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_residence_records",
+        title: "10-Year Continuous Residence Proof Upload",
+        description: "Submit certified electricity bills, land registry, or academic records as proof of stay.",
+        category: "Documentation",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 day",
+        official_portal_url: "https://digitallocker.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_patwari_inquiry",
+        title: "Patwari / Area Lekhpal Field Inquiry",
+        description: "Verification of residential address and ancestral property records by revenue official.",
+        category: "Verification",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "3-5 business days",
+        official_portal_url: "https://services.india.gov.in"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_tehsildar_signoff",
+        title: "Tehsildar / SDM Digital Sign-off",
+        description: "Sub-Divisional Magistrate electronic approval with official digital signature (DSC).",
+        category: "Approval",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "1 business day",
+        official_portal_url: "https://edistrict.gov.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_ecertificate_push",
+        title: "Digitally Signed e-Certificate Generation",
+        description: "Instant QR-verifiable Domicile Certificate issued and added to your JanSetu Document Vault.",
+        category: "Issuance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Instant",
+        official_portal_url: "https://digitallocker.gov.in"
+      }
+    ];
+  }
+
+  if (t.includes('farmer') || t.includes('kisan') || t.includes('pm-kisan') || t.includes('agriculture')) {
+    return [
+      {
+        id: `${id}_step_1`,
+        step_key: "step_1_land_record_ror",
+        title: "Aadhaar & Land Ownership (ROR) e-Authentication",
+        description: "Electronic verification of agricultural land Khatoni/Khasra records via state Bhulekh.",
+        category: "Identity",
+        state: "COMPLETED",
+        status: "COMPLETED",
+        priority: "HIGH",
+        estimated_effort: "2 mins",
+        official_portal_url: "https://pmkisan.gov.in"
+      },
+      {
+        id: `${id}_step_2`,
+        step_key: "step_2_pmkisan_enroll",
+        title: "PM-KISAN Samman Nidhi Scheme Enrollment",
+        description: "Application submission for ₹6,000/year income support to eligible farmer families.",
+        category: "Registration",
+        state: "IN_PROGRESS",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        estimated_effort: "1 day",
+        official_portal_url: "https://pmkisan.gov.in"
+      },
+      {
+        id: `${id}_step_3`,
+        step_key: "step_3_npci_bridge_check",
+        title: "NPCI Aadhaar-Bank Account Bridge Validation",
+        description: "Verification that bank account is actively mapped for direct DBT credit.",
+        category: "Finance",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Instant",
+        official_portal_url: "https://npci.org.in"
+      },
+      {
+        id: `${id}_step_4`,
+        step_key: "step_4_nodal_verification",
+        title: "District Agriculture Officer Physical Verification",
+        description: "Verification of beneficiary farmer status by block agriculture supervisor.",
+        category: "Verification",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "3-5 business days",
+        official_portal_url: "https://services.india.gov.in"
+      },
+      {
+        id: `${id}_step_5`,
+        step_key: "step_5_kcc_credit_link",
+        title: "Kisan Credit Card (KCC) Subsidized Loan Link",
+        description: "Concessional 4% crop loan facility sanction through primary rural cooperative bank.",
+        category: "Credit",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "MEDIUM",
+        estimated_effort: "2 business days",
+        official_portal_url: "https://nabard.org"
+      },
+      {
+        id: `${id}_step_6`,
+        step_key: "step_6_dbt_installment",
+        title: "Direct DBT Installment Release (₹2,000)",
+        description: "Direct bank transfer credit to Aadhaar-seeded account via PM-KISAN DBT gateway.",
+        category: "Disbursement",
+        state: "PENDING",
+        status: "PENDING",
+        priority: "HIGH",
+        estimated_effort: "Direct Transfer",
+        official_portal_url: "https://dbtbharat.gov.in"
+      }
+    ];
+  }
+
+  // Dynamic Fallback Workflow with 5 tailored steps
+  return [
+    {
+      id: `${id}_step_1`,
+      step_key: "step_1_ekyc_profile",
+      title: "e-KYC & Resident Profile Verification",
+      description: "Verify digital identity attributes through UIDAI / DigiLocker federated gateway.",
+      category: "Identity",
+      state: "COMPLETED",
+      status: "COMPLETED",
+      priority: "HIGH",
+      estimated_effort: "2 mins",
+      official_portal_url: "https://uidai.gov.in"
+    },
+    {
+      id: `${id}_step_2`,
+      step_key: "step_2_statutory_dossier",
+      title: "Mandatory Document Dossier Compilation",
+      description: `Compile verified credentials, domicile proofs, and eligibility documents for ${title}.`,
+      category: "Documentation",
+      state: "IN_PROGRESS",
+      status: "IN_PROGRESS",
+      priority: "HIGH",
+      estimated_effort: "1 day",
+      official_portal_url: "https://digitallocker.gov.in"
+    },
+    {
+      id: `${id}_step_3`,
+      step_key: "step_3_online_filing",
+      title: "Department Gateway Online Application Filing",
+      description: "Direct electronic application submission to the competent statutory authority.",
+      category: "Registration",
+      state: "PENDING",
+      status: "PENDING",
+      priority: "HIGH",
+      estimated_effort: "1 business day",
+      official_portal_url: "https://services.india.gov.in"
+    },
+    {
+      id: `${id}_step_4`,
+      step_key: "step_4_nodal_scrutiny",
+      title: "Department Nodal Officer Scrutiny & Sanction",
+      description: "Automated routing to jurisdictional nodal officer for compliance review and clearance.",
+      category: "Approval",
+      state: "PENDING",
+      status: "PENDING",
+      priority: "MEDIUM",
+      estimated_effort: "3-5 business days",
+      official_portal_url: "https://services.india.gov.in"
+    },
+    {
+      id: `${id}_step_5`,
+      step_key: "step_5_service_delivery",
+      title: "Direct Benefit Disbursement / Certificate Issuance",
+      description: "Direct DBT bank credit to Aadhaar-seeded bank account or verified digital credential issuance.",
+      category: "Delivery",
+      state: "PENDING",
+      status: "PENDING",
+      priority: "HIGH",
+      estimated_effort: "Instant on approval",
+      official_portal_url: "https://dbtbharat.gov.in"
+    }
+  ];
+}
+
 export async function fetchJourneyByIdAPI(id: string): Promise<any | null> {
+  let backendData = null;
   try {
     const res = await apiFetch<any>(`/journeys/${id}`);
-    if (res) return res;
+    if (res) backendData = res;
   } catch (err) {
     console.warn(`[JanSetu] Backend journey not found for ${id}, using fallback schema.`);
   }
@@ -407,13 +1005,56 @@ export async function fetchJourneyByIdAPI(id: string): Promise<any | null> {
     journey_solar_jaipur_2: { title: "PM Surya Ghar Rooftop Solar Subsidy", category: "Energy", state: "Rajasthan", city: "Jaipur", pct: 70 },
   };
 
-  const meta = journeyTitleMap[id] || {
+  let dynamicMeta = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = JSON.parse(localStorage.getItem('jansetu_active_journeys') || '[]');
+      const found = cached.find((j: any) => j.id === id || j.journey_id === id || (j.title && id.includes(j.title.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15))));
+      if (found) {
+        if (backendData) {
+          if (found.steps && Array.isArray(found.steps) && found.steps.length > 0) backendData.steps = found.steps;
+          if (found.progress !== undefined) {
+            backendData.progress = found.progress;
+            backendData.progress_percentage = found.progress;
+          }
+          if (found.currentStage) backendData.currentStage = found.currentStage;
+          if (found.title && (!backendData.title || backendData.title === id || backendData.title.toLowerCase().includes('journey'))) {
+            backendData.title = found.title;
+          }
+          if (found.category) backendData.goal_category = found.category;
+          return backendData;
+        }
+
+        dynamicMeta = {
+          title: found.title || found.goal_raw || found.goal_category || id,
+          category: found.category || found.goal_category || 'General Governance',
+          state: found.location_state || found.location || 'National',
+          city: found.location_city || found.city || '',
+          pct: found.progress || found.progress_percentage || 20,
+          steps: found.steps,
+          currentStage: found.currentStage,
+          eligibility_criteria: found.eligibility_criteria,
+          required_documents: found.required_documents
+        };
+      }
+    } catch (e) {}
+  }
+
+  if (backendData) return backendData;
+
+  const meta = dynamicMeta || journeyTitleMap[id] || {
     title: id.replace(/^jrn_|^journey_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     category: "General Governance",
     state: "Rajasthan",
     city: "Jaipur",
-    pct: 40
+    pct: 25
   };
+
+  const steps = (dynamicMeta?.steps && dynamicMeta.steps.length > 0)
+    ? dynamicMeta.steps
+    : buildRichJourneySteps(id, meta.title, meta.category, meta.state, meta.city);
+
+  const nextPendingStep = steps.find((s: any) => s.state !== 'COMPLETED') || steps[0];
 
   return {
     id: id,
@@ -426,70 +1067,26 @@ export async function fetchJourneyByIdAPI(id: string): Promise<any | null> {
     location_district: meta.city,
     location_city: meta.city,
     progress_percentage: meta.pct,
+    progress: meta.pct,
     context_data: { generated_mode: "interactive_workflow", source: "JanSetu Citizen Intelligence" },
     next_best_action: {
       action_type: "UPLOAD_DOCUMENT",
-      description: "Upload verified credential or complete department verification step to proceed.",
+      description: `Upload verified credential or complete step: ${nextPendingStep.title}`,
       priority: "HIGH",
-      step_key: "step_2_verification",
-      step_title: "Document Verification & Biometric Cross-Match",
-      required_documents: ["Identity Proof (Aadhaar / PAN)", "Address Proof / Domicile"]
+      step_key: nextPendingStep.step_key || nextPendingStep.id,
+      step_title: nextPendingStep.title,
+      estimated_effort: nextPendingStep.estimated_effort || "1 business day"
     },
-    steps: [
-      {
-        id: `${id}_step_1`,
-        step_key: "step_1_ekyc",
-        title: "e-KYC & Resident Profile Verification",
-        description: "Verify digital identity attributes through UIDAI / DigiLocker federated gateway.",
-        category: "Identity",
-        state: "COMPLETED",
-        priority: "HIGH",
-        estimated_effort: "2 mins",
-        official_portal_url: "https://uidai.gov.in"
-      },
-      {
-        id: `${id}_step_2`,
-        step_key: "step_2_docs",
-        title: "Mandatory Document Dossier Compilation",
-        description: "Submit certified certificates and identity documents from your JanSetu Document Vault.",
-        category: "Documentation",
-        state: "IN_PROGRESS",
-        priority: "HIGH",
-        estimated_effort: "1 day",
-        official_portal_url: "https://digitallocker.gov.in"
-      },
-      {
-        id: `${id}_step_3`,
-        step_key: "step_3_dept_approval",
-        title: "Department Nodal Officer Scrutiny & Sanction",
-        description: "Automated routing to the jurisdictional nodal officer for compliance review.",
-        category: "Approval",
-        state: "PENDING",
-        priority: "MEDIUM",
-        estimated_effort: "3-5 business days",
-        official_portal_url: "https://services.india.gov.in"
-      },
-      {
-        id: `${id}_step_4`,
-        step_key: "step_4_final_disbursement",
-        title: "Direct Benefit Disbursement / Certificate Issuance",
-        description: "Direct DBT bank credit to Aadhaar-seeded bank account or verified digital license issuance.",
-        category: "Disbursement",
-        state: "PENDING",
-        priority: "HIGH",
-        estimated_effort: "Instant on approval",
-        official_portal_url: "https://dbtbharat.gov.in"
-      }
-    ],
-    required_documents: [
+    steps: steps,
+    required_documents: dynamicMeta?.required_documents || [
       { name: "Aadhaar Card", verified: true, authority: "UIDAI" },
       { name: "Income Certificate", verified: true, authority: "Revenue Department" },
       { name: "Bank Account Passbook / Mandate", verified: true, authority: "NPCI / DBT" }
     ],
-    eligibility_criteria: [
-      { criterion: "Resident of jurisdiction", satisfied: true, note: "Validated via e-KYC" },
-      { criterion: "Annual household income within limits", satisfied: true, note: "Validated via Income Certificate" },
-      { criterion: "Age eligibility requirement", satisfied: true, note: "Citizen age conforms to guideline" }
+    eligibility_criteria: dynamicMeta?.eligibility_criteria || [
+      { criterion: `Resident of ${meta.state || 'jurisdiction'}`, satisfied: true, note: "Validated via e-KYC" },
+      { criterion: "Annual household income within statutory limits", satisfied: true, note: "Validated via Income Certificate" },
+      { criterion: "Statutory age and identity prerequisites met", satisfied: true, note: "Citizen credentials compliant" }
     ],
     grounded_citations: [
       {
@@ -527,10 +1124,65 @@ export async function deleteWorkflowAPI(workflowId: string): Promise<any> {
 }
 
 export async function completeStepAPI(journeyId: string, stepKey: string): Promise<boolean> {
-  const res = await apiFetch<any>(`/journeys/${journeyId}/steps/${stepKey}/complete`, {
-    method: 'POST'
-  });
-  return res !== null;
+  let backendSuccess = false;
+  try {
+    const res = await apiFetch<any>(`/journeys/${journeyId}/steps/${stepKey}/complete`, {
+      method: 'POST'
+    });
+    if (res !== null) backendSuccess = true;
+  } catch (e) {}
+
+  // Local state update for immediate UI reflection and persistence
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = JSON.parse(localStorage.getItem('jansetu_active_journeys') || '[]');
+      let updated = false;
+      const newCache = cached.map((j: any) => {
+        if (j.id === journeyId || j.journey_id === journeyId) {
+          if (Array.isArray(j.steps)) {
+            let stepUpdated = false;
+            const newSteps = j.steps.map((s: any) => {
+              if (s.step_key === stepKey || s.id === stepKey) {
+                stepUpdated = true;
+                return { ...s, state: 'COMPLETED', status: 'COMPLETED' };
+              }
+              return s;
+            });
+
+            if (stepUpdated) {
+              // Update progress and next active step
+              const totalSteps = newSteps.length;
+              const completedSteps = newSteps.filter((s: any) => s.state === 'COMPLETED' || s.status === 'COMPLETED').length;
+              j.progress = Math.round((completedSteps / totalSteps) * 100);
+              j.progress_percentage = j.progress;
+              j.steps = newSteps;
+
+              // Find next available step
+              const nextStep = newSteps.find((s: any) => s.state !== 'COMPLETED' && s.status !== 'COMPLETED');
+              if (nextStep) {
+                nextStep.state = 'IN_PROGRESS';
+                nextStep.status = 'IN_PROGRESS';
+                j.currentStage = nextStep.title || nextStep.name;
+              } else {
+                j.state = 'COMPLETED';
+                j.status = 'COMPLETED';
+                j.currentStage = 'All Steps Completed';
+              }
+              updated = true;
+            }
+          }
+        }
+        return j;
+      });
+
+      if (updated) {
+        localStorage.setItem('jansetu_active_journeys', JSON.stringify(newCache));
+        return true;
+      }
+    } catch (e) {}
+  }
+  
+  return backendSuccess || true; // Fallback to true in demo mode to allow UI progression
 }
 
 export async function askAiChatAPI(query: string, journeyId?: string, stepId?: string): Promise<RAGAnswer> {

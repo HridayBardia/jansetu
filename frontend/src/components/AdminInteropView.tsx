@@ -22,6 +22,22 @@ export const AdminInteropView = () => {
     { id: 'municipal', label: 'State & Municipal Registry', type: 'external', status: 'Active', protocol: 'ISO-8583 / REST', latency: '210ms', successRate: '96.2%', demo: true },
   ], []);
 
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationStage, setSimulationStage] = useState(0);
+
+  const runSimulation = () => {
+    if (isSimulating) return;
+    setIsSimulating(true);
+    setSimulationStage(1);
+    setTimeout(() => setSimulationStage(2), 700);
+    setTimeout(() => setSimulationStage(3), 1400);
+    setTimeout(() => setSimulationStage(4), 2100);
+    setTimeout(() => {
+      setSimulationStage(5);
+      setIsSimulating(false);
+    }, 2800);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
@@ -68,6 +84,82 @@ export const AdminInteropView = () => {
           >
             {t('adminInterop.exceptionCenter', 'Exception Center')}
           </button>
+        </div>
+      </div>
+
+      {/* SIH Presentation Demo Mode Card */}
+      <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white border border-indigo-500/40 rounded-2xl p-5 shadow-lg space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="bg-pink-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider">SIH 2026 Live Demo Mode</span>
+              <span className="text-emerald-400 text-xs font-mono font-bold">● Multi-Cloud Mesh Active</span>
+            </div>
+            <h3 className="text-base font-black tracking-tight">Zero-Trust NDEF Data Translation Engine</h3>
+            <p className="text-xs text-slate-300 max-w-3xl">
+              Simulate an end-to-end citizen query showing how JanSetu verifies DPDP user consent, queries heterogeneous state nodes (SOAP/REST/ISO), and unifies credentials into verifiable NDEF JSON-LD.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={isSimulating}
+            onClick={runSimulation}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shadow-md transition cursor-pointer shrink-0 disabled:opacity-75"
+          >
+            {isSimulating ? (
+              <>
+                <Activity className="w-4 h-4 animate-spin text-amber-300" />
+                <span>Translating across Mesh...</span>
+              </>
+            ) : (
+              <>
+                <ArrowRightLeft className="w-4 h-4 text-amber-300" />
+                <span>Trigger Live SIH Simulation</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Live Simulation Progress Pipeline */}
+        {simulationStage > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-2 border-t border-indigo-800/60 animate-fade-in text-[11px]">
+            <div className={`p-2.5 rounded-lg border ${simulationStage >= 1 ? 'bg-indigo-900/60 border-pink-400 text-pink-200' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
+              <span className="font-bold block text-[10px]">01. Citizen Request</span>
+              <span className="text-[10px] text-slate-300">Pune Food Biz / Voter / PAN</span>
+            </div>
+            <div className={`p-2.5 rounded-lg border ${simulationStage >= 2 ? 'bg-indigo-900/60 border-pink-400 text-pink-200' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
+              <span className="font-bold block text-[10px]">02. DPDP Consent Gate</span>
+              <span className="text-[10px] text-slate-300">OAuth 2.0 Token Issued</span>
+            </div>
+            <div className={`p-2.5 rounded-lg border ${simulationStage >= 3 ? 'bg-indigo-900/60 border-pink-400 text-pink-200' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
+              <span className="font-bold block text-[10px]">03. Legacy Protocol Ingest</span>
+              <span className="text-[10px] text-slate-300">SOAP 1.2 XML / ISO-8583</span>
+            </div>
+            <div className={`p-2.5 rounded-lg border ${simulationStage >= 4 ? 'bg-indigo-900/60 border-pink-400 text-pink-200' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
+              <span className="font-bold block text-[10px]">04. NDEF Canonical Map</span>
+              <span className="text-[10px] text-slate-300">Normalized JSON-LD Mesh</span>
+            </div>
+            <div className={`p-2.5 rounded-lg border ${simulationStage >= 5 ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300' : 'bg-slate-900/40 border-slate-800 text-slate-500'}`}>
+              <span className="font-bold block text-[10px]">05. Verified Delivery</span>
+              <span className="text-[10px] text-emerald-300">Verified in 14ms ✓</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Interoperability Gateway Descriptive Banner */}
+      <div className="bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800/40 rounded-2xl p-5 shadow-xs border-l-4 border-l-pink-500 flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-xs shrink-0 border border-pink-100 dark:border-pink-900/50">
+          <ArrowRightLeft className="w-6 h-6 text-pink-600 dark:text-pink-400" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-bold text-slate-900 dark:text-white text-sm">How the Interoperability Hub Works</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-4xl">
+            The Interoperability Hub serves as the central nervous system connecting disjointed state and central government registries. 
+            By standardizing data protocols into the National Data Exchange Format (NDEF), it enables seamless cross-departmental data fetching,
+            eliminating the need for citizens to manually submit duplicate documents across different government silos.
+          </p>
         </div>
       </div>
 

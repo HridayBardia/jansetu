@@ -527,13 +527,16 @@ export const ALL_WORKFLOWS: AdminWorkflow[] = [
 
 export function getWorkflowsForAdmin(adminUsername: string): AdminWorkflow[] {
   const normalized = (adminUsername || '').toLowerCase();
+  // Hide workflows unless they have started progressing (> 10%)
+  let workflows = ALL_WORKFLOWS.filter(w => w.progress > 10);
+
   if (normalized === 'dishita') {
-    return ALL_WORKFLOWS.filter(w => w.assignedTo === 'DISHITA');
+    return workflows.filter(w => w.assignedTo === 'DISHITA');
   }
   if (normalized === 'jyoti') {
-    return ALL_WORKFLOWS.filter(w => w.assignedTo === 'JYOTI');
+    return workflows.filter(w => w.assignedTo === 'JYOTI');
   }
-  return ALL_WORKFLOWS;
+  return workflows;
 }
 
 // ==========================================

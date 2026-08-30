@@ -2,11 +2,14 @@
 
 import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
-import { HelpCircle, Compass } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { HelpCircle, Compass, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HelpPage() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'admin' || user?.role === 'SYSTEM_ADMIN' || user?.role === 'system_admin';
   
   const faqs = [
     {
@@ -57,15 +60,19 @@ export default function HelpPage() {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors">
         <div className="space-y-1">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">{t("help.readyToStart", "Ready to start your citizen journey?")}</h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400">{t("help.tellUsGoal", "Tell us your goal in natural language on the Dashboard.")}</p>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            {isAdmin ? t("help.returnDashboard", "Return to Admin Console") : t("help.readyToStart", "Ready to start your citizen journey?")}
+          </h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            {isAdmin ? t("help.adminDesc", "Manage state workflows, telemetry queues, and interop gateways.") : t("help.tellUsGoal", "Tell us your goal in natural language on the Dashboard.")}
+          </p>
         </div>
         <Link
-          href="/citizen/dashboard"
+          href={isAdmin ? "/admin/dashboard" : "/citizen/dashboard"}
           className="px-5 py-2.5 rounded-xl bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-extrabold text-xs transition flex items-center gap-1.5 shadow-sm"
         >
-          <Compass className="w-4 h-4 text-amber-400" />
-          <span>{t("help.startJourney", "Start Your Journey")}</span>
+          {isAdmin ? <LayoutDashboard className="w-4 h-4 text-amber-400" /> : <Compass className="w-4 h-4 text-amber-400" />}
+          <span>{isAdmin ? t("admin.returnDashboard", "Back to Admin Dashboard") : t("help.startJourney", "Start Your Journey")}</span>
         </Link>
       </div>
     </div>

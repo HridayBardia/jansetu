@@ -34,11 +34,38 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export const AdminWorkflowView = ({ adminUsername }: Props) => {
-  const workflows = useMemo(() => getWorkflowsForAdmin(adminUsername), [adminUsername]);
+  const initialWorkflows = useMemo(() => getWorkflowsForAdmin(adminUsername), [adminUsername]);
+  const [workflows, setWorkflows] = React.useState<AdminWorkflow[]>(initialWorkflows);
   const [selectedWf, setSelectedWf] = useState<AdminWorkflow | null>(workflows[0] || null);
   const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [editSteps, setEditSteps] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    setWorkflows(getWorkflowsForAdmin(adminUsername));
+  }, [adminUsername]);
+
+  React.useEffect(() => {
+    if (selectedWf) {
+      const updated = workflows.find(w => w.id === selectedWf.id);
+      if (updated) setSelectedWf(updated);
+    } else if (workflows.length > 0) {
+      setSelectedWf(workflows[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflows]);
+
+  const handleOverrideStatus = () => {
+    if (!selectedWf) return;
+    const nextStatus = selectedWf.status === 'Pending' ? 'Active' : selectedWf.status === 'Active' ? 'Action Required' : 'Pending';
+    const updated = workflows.map(w => w.id === selectedWf.id ? { ...w, status: nextStatus as any } : w);
+    setWorkflows(updated);
+  };
+
+  const handleSendNudge = () => {
+    if (!selectedWf) return;
+    alert(`Nudge notification sent to ${selectedWf.citizen} for workflow ${selectedWf.name}`);
+  };
 
   const handleEdit = () => {
     if (selectedWf) {
@@ -185,6 +212,23 @@ export const AdminWorkflowView = ({ adminUsername }: Props) => {
                 <span>{t('adminWorkflow.nextAction', 'Next Statutory Milestone')}</span>
               </div>
               <p className="text-xs font-medium text-slate-800 dark:text-slate-200 mt-1">{selectedWf.nextAction}</p>
+              
+              {!isEditing && (
+                <div className="mt-4 flex flex-wrap items-center gap-3 pt-3 border-t border-amber-200/60 dark:border-amber-800/50">
+                  <button
+                    onClick={handleSendNudge}
+                    className="bg-[#133E87] hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer"
+                  >
+                    Send Nudge
+                  </button>
+                  <button
+                    onClick={handleOverrideStatus}
+                    className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer"
+                  >
+                    Override Status
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Steps */}

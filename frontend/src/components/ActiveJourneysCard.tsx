@@ -4,13 +4,14 @@ import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
 import { Journey } from '@/types';
-import { MapPin, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { MapPin, ArrowRight, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 
 interface ActiveJourneysCardProps {
   journeys: Journey[];
+  onRemove?: (id: string) => void;
 }
 
-export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys }) => {
+export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys, onRemove }) => {
   const { t } = useLanguage();
   if (!journeys || journeys.length === 0) return null;
 
@@ -40,6 +41,9 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
           const title = jrn?.title || (jrn as any)?.goal_raw || jrn?.goal_category || 'Citizen Journey';
           const location = jrn?.location_state || (jrn as any)?.location || 'National / Central';
           const city = jrn?.location_city || jrn?.city;
+          const progressPct = (steps.length > 0)
+            ? Math.round((steps.filter((s: any) => s.state === 'COMPLETED' || s.status === 'COMPLETED' || s.status === 'completed').length / steps.length) * 100)
+            : (jrn.progress_percentage ?? (jrn as any).progress ?? 0);
 
           return (
             <div
@@ -59,16 +63,31 @@ export const ActiveJourneysCard: React.FC<ActiveJourneysCardProps> = ({ journeys
                       📍 {location} {city ? `(${city})` : ''}
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-[#133E87] dark:text-blue-300 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 shrink-0 font-mono">
-                    {jrn.progress_percentage}%
-                  </span>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className="text-xs font-bold text-[#133E87] dark:text-blue-300 bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 font-mono">
+                      {progressPct}%
+                    </span>
+                    {onRemove && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onRemove(jrn.id);
+                        }}
+                        className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 p-1.5 rounded transition"
+                        title={t("journeys.removeJourney", "Remove Journey")}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-slate-100 dark:bg-slate-900 rounded-full h-2 overflow-hidden mb-4 border border-slate-200 dark:border-slate-700">
                   <div
                     className="bg-gradient-to-r from-[#133E87] to-emerald-600 dark:from-amber-500 dark:to-emerald-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${jrn.progress_percentage}%` }}
+                    style={{ width: `${progressPct}%` }}
                   />
                 </div>
 

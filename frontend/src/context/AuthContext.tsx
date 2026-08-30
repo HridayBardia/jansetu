@@ -133,26 +133,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
-  const [sessionConsentAccepted, setSessionConsentState] = useState(false);
+  const [sessionConsentAccepted, setSessionConsentState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('jansetu_session_consent') === 'true';
+    }
+    return false;
+  });
   const [isSessionBroken, setIsSessionBroken] = useState(false);
   const [brokenAccountName, setBrokenAccountName] = useState('Citizen Beneficiary');
 
   const pathname = usePathname();
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
+  const isNeutralRoute = pathname ? ['/help', '/privacy', '/legal'].includes(pathname) : false;
 
   // Active User / Profile resolved dynamically with strict portal separation
-  const activeUser = isAdminRoute ? adminUser : citizenUser;
-  const activeProfile = isAdminRoute ? null : citizenProfile;
-  const isAuthenticated = isAdminRoute ? !!adminUser : !!citizenUser;
+  // For neutral routes (like /help), preserve admin session if no citizen session exists
+  const activeUser = isAdminRoute ? adminUser : (isNeutralRoute && adminUser && !citizenUser ? adminUser : citizenUser);
+  const activeProfile = isAdminRoute ? null : (isNeutralRoute && adminUser && !citizenUser ? null : citizenProfile);
+  const isAuthenticated = isAdminRoute ? !!adminUser : (isNeutralRoute && adminUser && !citizenUser ? !!adminUser : !!citizenUser);
 
   const setSessionConsent = useCallback((accepted: boolean) => {
     setSessionConsentState(accepted);
     if (typeof window !== 'undefined') {
-      if (accepted) {
-        sessionStorage.setItem('jansetu_session_consent_accepted', 'true');
-      } else {
-        sessionStorage.removeItem('jansetu_session_consent_accepted');
-      }
+      sessionStorage.setItem('jansetu_session_consent', accepted ? 'true' : 'false');
     }
   }, []);
 

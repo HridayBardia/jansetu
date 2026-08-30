@@ -29,6 +29,9 @@ export const CitizenJourneysQueue: React.FC = () => {
 
   const filteredJourneys = useMemo(() => {
     return journeys.filter(j => {
+      // Hide journeys unless they have started progressing
+      if ((j.progress || (j as any).progress_percentage || 0) <= 10) return false;
+
       if (filter === 'In Progress' && j.status !== 'In Progress') return false;
       if (filter === 'Ready to Apply' && j.status !== 'Ready to Apply') return false;
       if (filter === 'Completed' && j.status !== 'Completed') return false;
@@ -45,10 +48,11 @@ export const CitizenJourneysQueue: React.FC = () => {
   }, [journeys, filter, searchQuery]);
 
   const stats = useMemo(() => {
-    const total = journeys.length;
-    const inProgress = journeys.filter(j => j.status === 'In Progress').length;
-    const ready = journeys.filter(j => j.status === 'Ready to Apply').length;
-    const avgProgress = total > 0 ? Math.round(journeys.reduce((acc, curr) => acc + (curr.progress || 0), 0) / total) : 0;
+    const active = journeys.filter(j => (j.progress || (j as any).progress_percentage || 0) > 10);
+    const total = active.length;
+    const inProgress = active.filter(j => j.status === 'In Progress').length;
+    const ready = active.filter(j => j.status === 'Ready to Apply').length;
+    const avgProgress = total > 0 ? Math.round(active.reduce((acc, curr) => acc + (curr.progress || 0), 0) / total) : 0;
     return { total, inProgress, ready, avgProgress };
   }, [journeys]);
 
@@ -259,8 +263,27 @@ export const CitizenJourneysQueue: React.FC = () => {
 
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
               <button
+                onClick={() => {
+                  alert('SMS Nudge sent to citizen successfully.');
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 dark:text-amber-400 font-semibold text-xs border border-amber-200 dark:border-amber-800 transition cursor-pointer"
+              >
+                Send SMS Nudge
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to administratively override and mark this stage as complete?')) {
+                    alert('Stage overridden and marked complete.');
+                    setSelectedJourney(null);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 dark:text-emerald-400 font-semibold text-xs border border-emerald-200 dark:border-emerald-800 transition cursor-pointer"
+              >
+                Override & Approve
+              </button>
+              <button
                 onClick={() => setSelectedJourney(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 text-xs transition"
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 text-xs transition cursor-pointer"
               >
                 Close
               </button>

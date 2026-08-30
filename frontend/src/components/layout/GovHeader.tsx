@@ -96,12 +96,13 @@ function GovNavBar() {
   ];
 
   const adminLinks: NavLinkItem[] = [
-    { label: t('admin.officerTelemetry', 'Officer Telemetry'), href: '/admin/dashboard', exactPath: '/admin/dashboard', tabKey: 'official' },
-    { label: t('admin.beneficiaryApplications', 'Beneficiary Applications'), href: '/admin/dashboard?tab=applications', exactPath: '/admin/dashboard', tabKey: 'applications' },
-    { label: t('admin.citizenRegistry', 'Citizen Registry'), href: '/admin/dashboard?tab=citizens', exactPath: '/admin/dashboard', tabKey: 'citizens' },
+    { label: t('nav.home', 'Home'), href: '/', exactPath: '/' },
+    { label: t('admin.officerTelemetry', 'Admin Dashboard'), href: '/admin/dashboard', exactPath: '/admin/dashboard', tabKey: 'official' },
     { label: t('admin.interoperabilityHub', 'Interoperability Hub'), href: '/admin/dashboard?tab=interop', exactPath: '/admin/dashboard', tabKey: 'interop' },
     { label: t('admin.dataQualityAudit', 'Data Quality Audit'), href: '/admin/dashboard?tab=data_quality', exactPath: '/admin/dashboard', tabKey: 'data_quality' },
-    { label: t('admin.workflowEngine', 'Workflow Engine'), href: '/admin/dashboard?tab=workflow', exactPath: '/admin/dashboard', tabKey: 'workflow' },
+    { label: t('admin.workflowEngine', 'Live Mesh (Journey Preview)'), href: '/admin/dashboard?tab=workflow', exactPath: '/admin/dashboard', tabKey: 'workflow' },
+    { label: t('admin.beneficiaryApplications', 'Beneficiary Applications'), href: '/admin/dashboard?tab=applications', exactPath: '/admin/dashboard', tabKey: 'applications' },
+    { label: t('admin.citizenRegistry', 'Citizen Registry'), href: '/admin/dashboard?tab=citizens', exactPath: '/admin/dashboard', tabKey: 'citizens' },
     { label: t('nav.helpFaq', 'Help & FAQ'), href: '/help', exactPath: '/help' },
   ];
 
