@@ -973,103 +973,107 @@ export const LiveSyncProvider: React.FC<{ children: ReactNode }> = ({ children }
           type: 'DOC_KYC_REQUEST'
         };
 
-        // Always register the pending request into the global pending list & localStorage
-        setPendingKycRequests(prev => {
-          const updated = [...prev.filter(r => r.appId !== targetAppId), pendingReq];
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('jansetu_pending_kyc_requests', JSON.stringify(updated));
-              localStorage.setItem('jansetu_pending_kyc_request', JSON.stringify(pendingReq));
-              const existing = JSON.parse(localStorage.getItem('jansetu_active_requests') || '[]');
-              localStorage.setItem('jansetu_active_requests', JSON.stringify([pendingReq, ...existing.filter((r: any) => r.appId !== targetAppId)]));
-            } catch (e) {}
-          }
-          return updated;
-        });
-
-        const newReq: DocRequestRecord = {
-          id: reqId,
-          deptName: targetDept,
-          docType: targetDoc,
-          citizenId: targetUid,
-          citizenName: targetCitizen,
-          requestedAt: timestamp || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          status: 'PENDING'
-        };
-
-        setDocRequests(prev => {
-          const updated = [newReq, ...prev.filter(r => r.id !== reqId)];
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('jansetu_doc_requests', JSON.stringify(updated));
-            } catch (e) {}
-          }
-          return updated;
-        });
-
-        const safeDept = targetDept.toLowerCase();
-        setConsents(prev => {
-          const exists = prev.find(c => {
-            const cDept = (c?.department || '').toLowerCase();
-            return cDept && safeDept && (cDept.includes(safeDept) || safeDept.includes(cDept));
+        // Only register if we are the target citizen or an admin
+        if (isTargetCitizen || isAdmin) {
+          setPendingKycRequests(prev => {
+            const updated = [...prev.filter(r => r.appId !== targetAppId), pendingReq];
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('jansetu_pending_kyc_requests', JSON.stringify(updated));
+                localStorage.setItem('jansetu_pending_kyc_request', JSON.stringify(pendingReq));
+                const existing = JSON.parse(localStorage.getItem('jansetu_active_requests') || '[]');
+                localStorage.setItem('jansetu_active_requests', JSON.stringify([pendingReq, ...existing.filter((r: any) => r.appId !== targetAppId)]));
+              } catch (e) {}
+            }
+            return updated;
           });
-          let updated: ConsentRecord[];
-          if (exists) {
-            updated = prev.map(c => c.id === exists.id ? { 
-              ...c, 
-              status: 'PENDING', 
-              purpose: `Verification of ${targetDoc} for Application #${targetAppId}`, 
-              requestedFields: [...new Set([...(c.requestedFields || []), targetDoc])]
-            } : c);
-          } else {
-            updated = [
-              {
-                id: `cst_${Date.now()}`,
-                department: targetDept,
-                purpose: `Verification of ${targetDoc} for Application #${targetAppId}`,
-                requestedFields: [targetDoc, 'Aadhaar e-KYC'],
-                status: 'PENDING'
-              },
-              ...prev
-            ];
-          }
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('jansetu_consents', JSON.stringify(updated));
-            } catch (e) {}
-          }
-          return updated;
-        });
 
-        setRevokedDepartments(prev => prev.filter(d => {
-          const dLower = (d || '').toLowerCase();
-          return !(dLower && safeDept && (dLower.includes(safeDept) || safeDept.includes(dLower)));
-        }));
+          const newReq: DocRequestRecord = {
+            id: reqId,
+            deptName: targetDept,
+            docType: targetDoc,
+            citizenId: targetUid,
+            citizenName: targetCitizen,
+            requestedAt: timestamp || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            status: 'PENDING'
+          };
 
-        // 2. Deduplication check: Prevent duplicate notifications in Bell & Alerts
-        const newNotifItem: NotificationRecord = {
-          id: reqId,
-          timestamp: 'Just now',
-          message: `Action Required: ${targetDept} requested ${targetDoc} for Application #${targetAppId}.`,
-          category: 'Document',
-          citizenName: targetCitizen,
-          appId: targetAppId,
-          recipientRole: 'CITIZEN',
-          isNew: true
-        };
+          setDocRequests(prev => {
+            const updated = [newReq, ...prev.filter(r => r.id !== reqId)];
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('jansetu_doc_requests', JSON.stringify(updated));
+              } catch (e) {}
+            }
+            return updated;
+          });
+        }
 
-        setNotifications(prev => {
-          if (prev.some(n => n.id === reqId || (n as any).requestId === reqId)) {
-            return prev;
-          }
-          const updated = [newNotifItem, ...prev];
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('jansetu_notifications', JSON.stringify(updated));
-            } catch (e) {}
-          }
-          return updated;
-        });
+        if (isTargetCitizen || isAdmin) {
+          const safeDept = targetDept.toLowerCase();
+          setConsents(prev => {
+            const exists = prev.find(c => {
+              const cDept = (c?.department || '').toLowerCase();
+              return cDept && safeDept && (cDept.includes(safeDept) || safeDept.includes(cDept));
+            });
+            let updated: ConsentRecord[];
+            if (exists) {
+              updated = prev.map(c => c.id === exists.id ? { 
+                ...c, 
+                status: 'PENDING', 
+                purpose: `Verification of ${targetDoc} for Application #${targetAppId}`, 
+                requestedFields: [...new Set([...(c.requestedFields || []), targetDoc])]
+              } : c);
+            } else {
+              updated = [
+                {
+                  id: `cst_${Date.now()}`,
+                  department: targetDept,
+                  purpose: `Verification of ${targetDoc} for Application #${targetAppId}`,
+                  requestedFields: [targetDoc, 'Aadhaar e-KYC'],
+                  status: 'PENDING'
+                },
+                ...prev
+              ];
+            }
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('jansetu_consents', JSON.stringify(updated));
+              } catch (e) {}
+            }
+            return updated;
+          });
+
+          setRevokedDepartments(prev => prev.filter(d => {
+            const dLower = (d || '').toLowerCase();
+            return !(dLower && safeDept && (dLower.includes(safeDept) || safeDept.includes(dLower)));
+          }));
+
+          // 2. Deduplication check: Prevent duplicate notifications in Bell & Alerts
+          const newNotifItem: NotificationRecord = {
+            id: reqId,
+            timestamp: 'Just now',
+            message: `Action Required: ${targetDept} requested ${targetDoc} for Application #${targetAppId}.`,
+            category: 'Document',
+            citizenName: targetCitizen,
+            appId: targetAppId,
+            recipientRole: 'CITIZEN',
+            isNew: true
+          };
+
+          setNotifications(prev => {
+            if (prev.some(n => n.id === reqId || (n as any).requestId === reqId)) {
+              return prev;
+            }
+            const updated = [newNotifItem, ...prev];
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('jansetu_notifications', JSON.stringify(updated));
+              } catch (e) {}
+            }
+            return updated;
+          });
+        }
 
         // Trigger mobile haptic feedback if supported
         if (typeof window !== 'undefined' && window.navigator?.vibrate) {
