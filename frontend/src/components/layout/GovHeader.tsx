@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLiveSync } from '@/context/LiveSyncContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from './NotificationBell';
+import { Logo } from '@/components/common/Logo';
 import { 
   ShieldCheck, 
   Globe, 
@@ -319,27 +320,13 @@ export const GovHeader: React.FC = () => {
       {/* TIER 2: MAIN BRANDING & OFFICIAL SEALS MASTHEAD                           */}
       {/* ========================================================================= */}
       <div className="w-full bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-3 px-4 md:px-12 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
-        {/* Left: State Emblem Seal / Bilingual Identity */}
-        <Link href="/" className="flex items-center gap-3.5 group">
-          {/* Ashoka Pillar / Emblem Seal */}
-          <div className="w-12 h-12 rounded bg-[#0B2545] border-2 border-amber-500/50 flex items-center justify-center text-amber-400 shadow-sm shrink-0">
-            <span className="font-serif text-xl font-bold tracking-tighter">JS</span>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight font-serif">
-                जन सेतु <span className="font-sans font-bold text-[#0B2545] dark:text-blue-400">| JanSetu</span>
-              </span>
-              <span className="hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-500/30 uppercase tracking-wider">
-                GIGW 3.0 Standard
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium tracking-wide">
-              {t('National Unified Citizen Services & Telemetry Gateway', 'National Unified Citizen Services & Telemetry Gateway')}
-            </p>
-          </div>
-        </Link>
+        {/* Left: Official JanSetu Bilingual Logo Identity */}
+        <div className="flex items-center gap-3.5">
+          <Logo variant="full" height={44} />
+          <span className="hidden lg:inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-500/30 uppercase tracking-wider self-center">
+            GIGW 3.0 Standard
+          </span>
+        </div>
 
         {/* Right: Official Partner Seals & Auth State */}
         <div className="flex items-center gap-3 shrink-0 self-end md:self-center">

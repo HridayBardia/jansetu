@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ExternalLink, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { Logo } from '@/components/common/Logo';
 
 export const GovFooter: React.FC = () => {
   const { t } = useLanguage();
@@ -76,10 +77,16 @@ export const GovFooter: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom Tier: Copyright */}
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-          <p>{t('footer.allRightsReserved', '© 2026 JanSetu. All Rights Reserved. Government of India.')}</p>
-          <p className="font-mono">Last Updated: 28 August 2026 • Build Release v3.0-GIGW</p>
+        {/* Bottom Tier: Logo & Copyright */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-3">
+            <Logo variant="full" height={32} />
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center md:text-right">
+            <p>{t('footer.allRightsReserved', '© 2026 JanSetu. All Rights Reserved. Government of India.')}</p>
+            <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
+            <p className="font-mono">Last Updated: 31 August 2026 • Build Release v3.0-GIGW</p>
+          </div>
         </div>
       </div>
     </footer>

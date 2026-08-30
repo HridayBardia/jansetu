@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { LanguageSelector } from './LanguageSelector';
 import { ThemeToggle } from './ThemeToggle';
-import { JanSetuLogo } from './JanSetuLogo';
+import { Logo } from '@/components/common/Logo';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -95,16 +95,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-18 md:h-20 flex items-center justify-between">
           
           {/* Logo Section */}
-          <Link href="/" className="flex items-center gap-3.5 shrink-0 transition transform hover:scale-[1.02]">
+          <div className="flex items-center gap-3.5 shrink-0 transition transform hover:scale-[1.02]">
             {/* Desktop Logo */}
-            <div className="hidden md:block">
-              <JanSetuLogo size="lg" variant="full" />
+            <div className="hidden sm:block">
+              <Logo variant="full" height={42} />
             </div>
             {/* Mobile Logo */}
-            <div className="md:hidden">
-              <JanSetuLogo size="md" variant="full" />
+            <div className="sm:hidden">
+              <Logo variant="icon-only" height={36} />
             </div>
-          </Link>
+          </div>
 
           {/* Mobile Contextual Title */}
           <div className="md:hidden flex-1 px-3 text-center">
