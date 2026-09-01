@@ -133,14 +133,16 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
 
   // Sync custom documents from localStorage on mount & on event
   React.useEffect(() => {
+    let isMounted = true;
+
     const loadStoredCustomDocs = () => {
       if (typeof window !== 'undefined') {
         try {
           const stored = localStorage.getItem('jansetu_documents');
           if (stored) {
             const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-              setLocalUploadedDocs(parsed.map(d => ({
+            if (Array.isArray(parsed) && isMounted) {
+              const formatted = parsed.map(d => ({
                 id: d.id,
                 document_type: d.type || d.document_type || 'Document',
                 document_name: d.name || d.document_name || d.type,
@@ -152,7 +154,10 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                 is_synthetic: d.isDemo ?? false,
                 synthetic_notice: d.synthetic_notice || 'DEMO DOCUMENT - SELF UPLOADED & OCR VERIFIED',
                 issued_by: d.source || d.issued_by || 'Self Uploaded'
-              })));
+              }));
+              setTimeout(() => {
+                if (isMounted) setLocalUploadedDocs(formatted);
+              }, 0);
             }
           }
         } catch (e) {}
@@ -163,6 +168,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
     window.addEventListener('jansetu_documents_updated', loadStoredCustomDocs);
     window.addEventListener('storage', loadStoredCustomDocs);
     return () => {
+      isMounted = false;
       window.removeEventListener('jansetu_documents_updated', loadStoredCustomDocs);
       window.removeEventListener('storage', loadStoredCustomDocs);
     };

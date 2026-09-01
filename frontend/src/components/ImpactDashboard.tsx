@@ -52,7 +52,7 @@ export const ImpactDashboard: React.FC = () => {
 
       {/* 4 Impact Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+
         {/* Card 1: Portals Bypassed */}
         <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-5 rounded-xl relative overflow-hidden shadow-2xs space-y-2">
           <div className="absolute -right-3 -bottom-3 opacity-5 dark:opacity-10 pointer-events-none">

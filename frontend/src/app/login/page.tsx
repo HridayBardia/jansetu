@@ -4,15 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { 
-  ShieldCheck, 
-  ArrowRight, 
-  Loader2, 
-  AlertCircle, 
-  Users, 
-  CheckCircle2, 
-  RotateCw, 
-  Smartphone, 
+import {
+  ShieldCheck,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  Users,
+  CheckCircle2,
+  RotateCw,
+  Smartphone,
   CreditCard,
   ArrowLeft,
   Sparkles,
@@ -30,11 +30,11 @@ import {
 import { LegalConsentModal } from '@/components/LegalConsentModal';
 import { GovHeader } from '@/components/GovHeader';
 import { GovFooter } from '@/components/GovFooter';
-import { 
-  DEMO_CITIZENS, 
+import {
+  DEMO_CITIZENS,
   DEMO_ADMINS,
-  GLOBAL_DEMO_OTP, 
-  formatAadhaarNumber, 
+  GLOBAL_DEMO_OTP,
+  formatAadhaarNumber,
   findCitizenByAadhaar
 } from '@/data/demoCitizens';
 
@@ -633,11 +633,10 @@ export default function LoginPage() {
                       key={cit.rawAadhaar}
                       type="button"
                       onClick={() => handleSelectAadhaarChip(cit.rawAadhaar)}
-                      className={`px-2 py-1 rounded text-xs font-mono font-bold transition border cursor-pointer ${
-                        aadhaarRaw === cit.rawAadhaar
+                      className={`px-2 py-1 rounded text-xs font-mono font-bold transition border cursor-pointer ${aadhaarRaw === cit.rawAadhaar
                           ? 'bg-blue-700 text-white border-blue-700 shadow-xs'
                           : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-blue-500'
-                      }`}
+                        }`}
                     >
                       {cit.name.split(' ')[0]} ({cit.rawAadhaar.slice(-4)})
                     </button>
@@ -700,13 +699,12 @@ export default function LoginPage() {
                   </div>
 
                   {/* Statutory Terms & DPDP Privacy Checkbox */}
-                  <div className={`p-3 rounded border text-xs transition ${
-                    citizenConsentAccepted 
-                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20' 
-                      : citizenConsentShake 
-                        ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 animate-shake' 
+                  <div className={`p-3 rounded border text-xs transition ${citizenConsentAccepted
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : citizenConsentShake
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 animate-shake'
                         : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950'
-                  }`}>
+                    }`}>
                     <label className="flex items-start gap-2.5 cursor-pointer">
                       <input
                         type="checkbox"
@@ -919,11 +917,10 @@ export default function LoginPage() {
                       key={adm.officerId}
                       type="button"
                       onClick={() => handleSelectAdminChip(adm.officerId)}
-                      className={`px-2 py-1 rounded text-xs font-mono font-bold transition border cursor-pointer ${
-                        adminUserId === adm.officerId
+                      className={`px-2 py-1 rounded text-xs font-mono font-bold transition border cursor-pointer ${adminUserId === adm.officerId
                           ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
                           : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-500'
-                      }`}
+                        }`}
                     >
                       {adm.officerId} ({adm.role === 'SYSTEM_ADMIN' ? 'System Admin' : 'Dept Admin'})
                     </button>
@@ -997,13 +994,12 @@ export default function LoginPage() {
                 </div>
 
                 {/* Official Compliance Checkbox */}
-                <div className={`p-3 rounded border text-xs transition ${
-                  adminComplianceAccepted 
-                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20' 
-                    : adminConsentShake 
-                      ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 animate-shake' 
+                <div className={`p-3 rounded border text-xs transition ${adminComplianceAccepted
+                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
+                    : adminConsentShake
+                      ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 animate-shake'
                       : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950'
-                }`}>
+                  }`}>
                   <label className="flex items-start gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"

@@ -277,7 +277,9 @@ export const MockDataProvider = ({ children }: { children: ReactNode }) => {
           const initialIds = new Set(initialDocuments.map(d => d.id));
           const customOnly = updated.filter(d => !initialIds.has(d.id));
           localStorage.setItem('jansetu_documents', JSON.stringify(customOnly));
-          window.dispatchEvent(new Event('jansetu_documents_updated'));
+          setTimeout(() => {
+            window.dispatchEvent(new Event('jansetu_documents_updated'));
+          }, 0);
         } catch (e) {}
       }
       return updated;
@@ -292,7 +294,9 @@ export const MockDataProvider = ({ children }: { children: ReactNode }) => {
           const initialIds = new Set(initialDocuments.map(d => d.id));
           const customOnly = updated.filter(d => !initialIds.has(d.id));
           localStorage.setItem('jansetu_documents', JSON.stringify(customOnly));
-          window.dispatchEvent(new Event('jansetu_documents_updated'));
+          setTimeout(() => {
+            window.dispatchEvent(new Event('jansetu_documents_updated'));
+          }, 0);
         } catch (e) {}
       }
       return updated;

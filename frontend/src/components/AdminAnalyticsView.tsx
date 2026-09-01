@@ -161,7 +161,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ analytic
           </div>
         </div>
       </div>
-      
+
       <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
         <ImpactDashboard />
       </div>

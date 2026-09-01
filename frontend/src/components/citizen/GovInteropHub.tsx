@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Code
 } from 'lucide-react';
+import { InteroperabilityDataFlow } from '@/components/InteroperabilityDataFlow';
 
 interface RegistryConnector {
   id: string;
@@ -283,7 +284,10 @@ export const GovInteropHub: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Topological Connector Flow Diagram */}
+      {/* 2. Interactive Federated API Exchange Mesh */}
+      <InteroperabilityDataFlow />
+
+      {/* 3. Topological Connector Flow Diagram */}
       <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">

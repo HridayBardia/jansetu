@@ -684,7 +684,8 @@ export default function DashboardPage() {
         <SchemeExplorer 
           onApplicationCreated={(newApp: any) => {
             addApplication(newApp);
-          }} 
+          }}
+          onNavigateToTracker={() => setActiveTab('applications')}
         />
       )}
 

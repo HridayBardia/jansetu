@@ -21,95 +21,7 @@ import {
 import { SchemeCard, SchemeProps } from './SchemeCard';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
-
-const DEFAULT_SCHEME_CATALOG: SchemeProps[] = [
-  {
-    id: 'SCH-PM-KISAN-01',
-    name: 'PM-KISAN Samman Nidhi Yojana',
-    official_name: 'Pradhan Mantri Kisan Samman Nidhi',
-    description: 'Direct income support of ₹6,000 per year in three equal installments to all landholding farmer families across India.',
-    level: 'CENTRAL',
-    state_name: 'All India',
-    department: 'Ministry of Agriculture & Farmers Welfare',
-    category: 'Agriculture',
-    benefits: { annual_amount: '₹6,000', payment_mode: 'Direct DBT to Aadhaar Linked Bank' },
-    official_source_url: 'https://pmkisan.gov.in',
-    status: 'ACTIVE',
-    last_verified_at: '2026-08-28'
-  },
-  {
-    id: 'SCH-NATS-EDU-02',
-    name: 'National Apprenticeship Training Scheme (NATS)',
-    official_name: 'National Apprenticeship Training Scheme 2.0',
-    description: 'One-year skill training & stipend support (₹8,000 - ₹9,000/month) for graduates and diploma holders in engineering and technology.',
-    level: 'CENTRAL',
-    state_name: 'All India',
-    department: 'Ministry of Education',
-    category: 'Education',
-    benefits: { monthly_stipend: '₹9,000 / month', duration: '12 Months' },
-    official_source_url: 'https://nats.education.gov.in',
-    status: 'ACTIVE',
-    last_verified_at: '2026-08-28'
-  },
-  {
-    id: 'SCH-PMAY-G-03',
-    name: 'Pradhan Mantri Awas Yojana - Gramin',
-    official_name: 'PMAY-G Housing for All (Rural)',
-    description: 'Financial assistance of ₹1.20 Lakh to ₹1.30 Lakh for construction of pucca houses with hygienic cooking space for rural homeless families.',
-    level: 'CENTRAL',
-    state_name: 'All India',
-    department: 'Ministry of Rural Development',
-    category: 'Housing',
-    benefits: { construction_grant: '₹1,20,000', sanitation_bonus: '₹12,000' },
-    official_source_url: 'https://pmayg.nic.in',
-    status: 'ACTIVE',
-    last_verified_at: '2026-08-28'
-  },
-  {
-    id: 'SCH-PMJAY-HEALTH-04',
-    name: 'Ayushman Bharat PM-JAY Health Cover',
-    official_name: 'Ayushman Bharat Pradhan Mantri Jan Arogya Yojana',
-    description: 'Cashless health insurance cover of ₹5 Lakh per family per year for secondary and tertiary care hospitalization across empaneled hospitals.',
-    level: 'CENTRAL',
-    state_name: 'All India',
-    department: 'National Health Authority',
-    category: 'Healthcare',
-    benefits: { health_cover: '₹5,00,000 / Year', cashless: '100% Empaneled Hospitals' },
-    official_source_url: 'https://pmjay.gov.in',
-    status: 'ACTIVE',
-    last_verified_at: '2026-08-28'
-  },
-  {
-    id: 'SCH-PMMVY-WOMEN-05',
-    name: 'Pradhan Mantri Matru Vandana Yojana',
-    official_name: 'PMMVY Direct Maternity Benefit',
-    description: 'Direct conditional cash transfer of ₹5,000 to pregnant women and lactating mothers for health check-ups and nutritional support.',
-    level: 'CENTRAL',
-    state_name: 'All India',
-    department: 'Ministry of Women & Child Development',
-    category: 'Women & Child',
-    benefits: { cash_transfer: '₹5,000', installment_stages: '3 Stages' },
-    official_source_url: 'https://pmmvy.wcd.gov.in',
-    status: 'ACTIVE',
-    last_verified_at: '2026-08-28'
-  },
-  {
-    id: 'SCH-PMEGP-EMP-06',
-    name: 'Prime Minister Employment Generation Programme',
-    official_name: 'PMEGP Credit Linked Subsidy Programme',
-    description: 'Credit-linked subsidy program for generating self-employment micro-enterprises with subsidy up to 35% on project costs up to ₹50 Lakh.',
-    level: 'CENTRAL',
-    state_name: 'All India',
-    department: 'Ministry of Micro, Small and Medium Enterprises',
-    category: 'Employment',
-    benefits: { subsidy_rate: '15% to 35%', max_project: '₹50 Lakh' },
-    official_source_url: 'https://kviconline.gov.in/pmegpeportal',
-    status: 'ACTIVE',
-    last_verified_at: '2026-08-28'
-  }
-];
-
-const CATEGORIES = ['All', 'Agriculture', 'Education', 'Healthcare', 'Housing', 'Women & Child', 'Employment'];
+import { SCHEMES_DATABASE, SCHEME_CATEGORIES, SchemeItem } from '@/data/schemesData';
 
 interface CitizenSchemeExplorerProps {
   onApplicationSubmitted?: (newApp: any) => void;
@@ -120,16 +32,16 @@ export const CitizenSchemeExplorer: React.FC<CitizenSchemeExplorerProps> = ({ on
   const { user, profile } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All Schemes');
   const [appliedSchemeIds, setAppliedSchemeIds] = useState<string[]>([]);
   const [selectedSchemeForApply, setSelectedSchemeForApply] = useState<SchemeProps | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applicationSuccess, setApplicationSuccess] = useState<any | null>(null);
 
   const filteredSchemes = useMemo(() => {
-    return DEFAULT_SCHEME_CATALOG.filter(sch => {
+    return SCHEMES_DATABASE.filter(sch => {
       // Category match
-      if (selectedCategory !== 'All' && sch.category !== selectedCategory) {
+      if (selectedCategory !== 'All Schemes' && sch.category !== selectedCategory) {
         return false;
       }
       // Search match
@@ -140,7 +52,8 @@ export const CitizenSchemeExplorer: React.FC<CitizenSchemeExplorerProps> = ({ on
         sch.official_name.toLowerCase().includes(q) ||
         sch.description.toLowerCase().includes(q) ||
         sch.department.toLowerCase().includes(q) ||
-        sch.category.toLowerCase().includes(q)
+        sch.category.toLowerCase().includes(q) ||
+        sch.tags.some(tag => tag.toLowerCase().includes(q))
       );
     });
   }, [selectedCategory, searchQuery]);
@@ -229,7 +142,7 @@ export const CitizenSchemeExplorer: React.FC<CitizenSchemeExplorerProps> = ({ on
 
       {/* Category Filter Pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 tab-scrollbar-hide">
-        {CATEGORIES.map((cat) => (
+        {SCHEME_CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}

@@ -25,6 +25,7 @@ interface ApplicationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitSuccess: (newApplication: any) => void;
+  onNavigateToTracker?: () => void;
 }
 
 const DEMO_BANK_ACCOUNTS = [
@@ -50,7 +51,8 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
   scheme,
   isOpen,
   onClose,
-  onSubmitSuccess
+  onSubmitSuccess,
+  onNavigateToTracker
 }) => {
   const { user, profile } = useAuth();
   const { broadcastApplicationCreated } = useLiveSync();
@@ -64,10 +66,11 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
   if (!isOpen || !scheme) return null;
 
-  const citizenName = profile?.full_name || user?.full_name || 'Ayush Singh Chauhan';
-  const aadhaarNumber = profile?.aadhaar || '1111 2222 0207';
-  const maskedAadhaar = `XXXX XXXX ${aadhaarNumber.replace(/\D/g, '').slice(-4) || '0207'}`;
-  const address = `${profile?.location_city || 'Jaipur'}, ${profile?.location_state || 'Rajasthan'} - 302001`;
+  // Resolve active logged-in citizen specifically
+  const citizenName = profile?.full_name || user?.full_name || 'Hriday Bardia';
+  const aadhaarNumber = profile?.aadhaar || user?.id || '1111 2222 1405';
+  const maskedAadhaar = `XXXX XXXX ${aadhaarNumber.replace(/\D/g, '').slice(-4) || '1405'}`;
+  const address = `${profile?.location_city || 'Vadodara'}, ${profile?.location_state || 'Gujarat'}`;
 
   const handleNextStep = () => {
     if (step === 1) setStep(2);
@@ -98,10 +101,14 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
       const newRecord = {
         id: newId,
+        scheme_id: scheme.id,
         title: scheme.name,
+        service: scheme.name,
         service_name: scheme.name,
         department: scheme.department,
         department_name: scheme.department,
+        citizenName,
+        citizenId: aadhaarNumber,
         status: 'SUBMITTED',
         submittedDate: new Date().toISOString().slice(0, 10),
         disbursementBank: `${selectedBank.bankName} (${selectedBank.accountNumber})`,
@@ -141,7 +148,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
       broadcastApplicationCreated({
         id: newId,
         citizenName,
-        citizenId: maskedAadhaar,
+        citizenId: aadhaarNumber,
         service: scheme.name,
         department: scheme.department,
         status: 'SUBMITTED',
@@ -467,7 +474,17 @@ DPDP Act Status:       Verified & Grounded
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  if (onNavigateToTracker) {
+                    onNavigateToTracker();
+                  } else if (typeof window !== 'undefined') {
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('tab', 'applications');
+                    window.history.pushState({}, '', newUrl.toString());
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                }}
                 className="flex-1 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
               >
                 <span>View in Benefit Tracker</span>

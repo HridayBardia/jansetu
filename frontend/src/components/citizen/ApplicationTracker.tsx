@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useLiveSync, ApplicationRecord, JourneyRecord } from '@/context/LiveSyncContext';
+import { useAuth } from '@/context/AuthContext';
+import { isCitizenMatching } from '@/lib/vaultDetection';
 
 export interface BenefitApplication {
   id: string;
@@ -111,6 +113,7 @@ interface ApplicationTrackerProps {
 export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ customApplications }) => {
   const router = useRouter();
   const { t } = useLanguage();
+  const { user, profile } = useAuth();
   const { 
     applications: liveApps, 
     journeys: liveJourneys, 
@@ -124,13 +127,25 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ customAp
   const [viewDocsAppId, setViewDocsAppId] = useState<string | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
-  // Map LiveSync Applications to unified UI BenefitApplication format
+  // Map LiveSync Applications strictly for THIS active logged-in citizen
+  const activeCitName = (profile?.full_name || user?.full_name || '').toLowerCase().trim();
+  const activeCitAadhaar = (profile?.aadhaar || user?.id || '').replace(/\D/g, '');
+  const activeCitUsername = (user?.username || '').toLowerCase().trim();
+
   const applications: BenefitApplication[] = useMemo(() => {
     if (customApplications && customApplications.length > 0) {
       return customApplications;
     }
 
-    return liveApps.map(a => {
+    // Filter live applications strictly belonging to this citizen
+    const myLiveApps = liveApps.filter(a => {
+      return isCitizenMatching(
+        { citizenName: a.citizenName, citizenId: a.citizenId, appId: a.id },
+        { name: activeCitName, aadhaar: activeCitAadhaar, username: activeCitUsername }
+      );
+    });
+
+    return myLiveApps.map(a => {
       const statusKey = (
         a.status === 'UNDER_REVIEW' ? 'UNDER_VERIFICATION' :
         a.status === 'DOCUMENTS_REQUIRED' ? 'ACTION_REQUIRED' :
@@ -182,7 +197,7 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ customAp
         timeline: (a.timeline && a.timeline.length > 0) ? (a.timeline as any) : defaultTimeline
       };
     });
-  }, [customApplications, liveApps]);
+  }, [customApplications, liveApps, activeCitName, activeCitAadhaar, activeCitUsername]);
 
   // Filtered applications
   const filteredApps = useMemo(() => {
