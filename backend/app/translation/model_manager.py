@@ -1,17 +1,17 @@
 """
-IndicTrans2 Model Manager.
+IndicTrans2 Model Manager & Neural Translation Engine.
 
-Handles loading, caching, and inference for the AI4Bharat IndicTrans2 model.
-Supports both GPU and CPU inference. Gracefully degrades when the model is unavailable.
-
-The model is loaded once at server startup and kept in memory for all requests.
+Integrates AI4Bharat's IndicTrans2 using IndicTransToolkit and Hugging Face Transformers.
+Supports GPU (CUDA FP16) and CPU (FP32) inference with automatic batching,
+dynamic CUDA Out-of-Memory (OOM) recovery, and graceful degradation.
 """
 
 import os
+import gc
 import time
 import logging
 import threading
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, List, Any, Union
 from enum import Enum
 
 logger = logging.getLogger("jansetu.translation")
@@ -25,14 +25,213 @@ class ModelStatus(str, Enum):
     DEGRADED = "DEGRADED"
 
 
+class IndicTranslatorEngine:
+    """
+    Production-grade Neural Machine Translation Inference Engine
+    leveraging IndicTransToolkit and Hugging Face AutoModelForSeq2SeqLM.
+    """
+
+    def __init__(
+        self,
+        model_name_or_path: str = "ai4bharat/indictrans2-indic-indic-dist-320M",
+        device: Optional[str] = None,
+        max_batch_size: int = 32,
+        max_length: int = 512,
+    ):
+        self.model_name = model_name_or_path
+        self.max_batch_size = max_batch_size
+        self.max_length = max_length
+
+        import torch
+        # 1. Device configuration
+        if device and device != "auto":
+            self.device = torch.device(device)
+        else:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # 2. Precision: FP16 on GPU for 2x throughput, FP32 on CPU
+        self.torch_dtype = torch.float16 if self.device.type == "cuda" else torch.float32
+
+        logger.info("Initializing IndicTranslatorEngine on %s (dtype=%s)", self.device, self.torch_dtype)
+
+        # 3. Load IndicProcessor from IndicTransToolkit
+        self.ip = None
+        try:
+            from IndicTransToolkit import IndicProcessor
+            self.ip = IndicProcessor(inference=True)
+            logger.info("IndicTransToolkit IndicProcessor initialized successfully.")
+        except ImportError:
+            logger.warning("IndicTransToolkit not installed. Using native script formatting fallback.")
+            self.ip = None
+
+        # 4. Load Tokenizer & Seq2Seq Model
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name,
+            trust_remote_code=True,
+        )
+
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(
+            self.model_name,
+            trust_remote_code=True,
+            torch_dtype=self.torch_dtype,
+            low_cpu_mem_usage=True,
+        ).to(self.device)
+
+        self.model.eval()
+        logger.info("Successfully loaded IndicTrans2 model: %s", self.model_name)
+
+    def preprocess(self, texts: List[str], src_lang: str, tgt_lang: str) -> List[str]:
+        """
+        Preprocesses and normalizes text batch using IndicTransToolkit's IndicProcessor.
+        """
+        if self.ip is not None:
+            return self.ip.preprocess_batch(texts, src_lang=src_lang, tgt_lang=tgt_lang)
+        
+        # Fallback formatting if IndicTransToolkit is unavailable
+        return [f"{src_lang} {t.strip()}" for t in texts]
+
+    def postprocess(self, texts: List[str], src_lang: str, tgt_lang: str) -> List[str]:
+        """
+        Postprocesses and detokenizes translation output.
+        """
+        if self.ip is not None:
+            return self.ip.postprocess_batch(texts, lang=tgt_lang)
+        
+        # Clean up any leftover language tags
+        cleaned = []
+        for t in texts:
+            val = t.replace(src_lang, "").replace(tgt_lang, "").strip()
+            cleaned.append(val)
+        return cleaned
+
+    def _generate_chunk(self, batch_texts: List[str], src_lang: str, tgt_lang: str) -> List[str]:
+        """
+        Performs batched inference on a chunk of texts with dynamic CUDA OOM recovery.
+        """
+        if not batch_texts:
+            return []
+
+        import torch
+
+        # Step 1: Preprocess with IndicTransToolkit
+        preprocessed = self.preprocess(batch_texts, src_lang=src_lang, tgt_lang=tgt_lang)
+
+        try:
+            # Step 2: Batched Tokenization
+            inputs = self.tokenizer(
+                preprocessed,
+                padding="longest",
+                truncation=True,
+                max_length=self.max_length,
+                return_tensors="pt",
+            ).to(self.device)
+
+            # Step 3: Model Generation with Beam Search
+            with torch.inference_mode():
+                generated_tokens = self.model.generate(
+                    **inputs,
+                    use_cache=True,
+                    min_length=0,
+                    max_length=self.max_length,
+                    num_beams=4,
+                    num_return_sequences=1,
+                )
+
+            # Step 4: Batch Decoding
+            decoded = self.tokenizer.batch_decode(
+                generated_tokens,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True,
+            )
+
+            # Step 5: Postprocessing
+            return self.postprocess(decoded, src_lang=src_lang, tgt_lang=tgt_lang)
+
+        except torch.cuda.OutOfMemoryError:
+            logger.warning("CUDA OOM encountered during translation. Halving batch size and retrying...")
+            torch.cuda.empty_cache()
+            gc.collect()
+
+            if len(batch_texts) <= 1:
+                # Single oversized text: truncate and retry
+                truncated = [batch_texts[0][: len(batch_texts[0]) // 2]]
+                return self._generate_chunk(truncated, src_lang, tgt_lang)
+
+            mid = len(batch_texts) // 2
+            left = self._generate_chunk(batch_texts[:mid], src_lang, tgt_lang)
+            right = self._generate_chunk(batch_texts[mid:], src_lang, tgt_lang)
+            return left + right
+
+    def translate_batch(
+        self,
+        texts: List[str],
+        src_lang: str,
+        tgt_lang: str,
+        chunk_size: Optional[int] = None,
+    ) -> List[str]:
+        """
+        Translates a list of strings with chunking, preservation of empty slots,
+        and automatic input filtering.
+        """
+        if not texts:
+            return []
+
+        chunk_size = chunk_size or self.max_batch_size
+        results: List[str] = [""] * len(texts)
+
+        valid_indices = []
+        valid_texts = []
+
+        for idx, text in enumerate(texts):
+            if text is None or not str(text).strip():
+                results[idx] = "" if text is None else str(text)
+                continue
+            valid_indices.append(idx)
+            valid_texts.append(str(text).strip())
+
+        if not valid_texts:
+            return results
+
+        # Process valid texts in chunks
+        translated_valid = []
+        for i in range(0, len(valid_texts), chunk_size):
+            chunk = valid_texts[i : i + chunk_size]
+            trans_chunk = self._generate_chunk(chunk, src_lang, tgt_lang)
+            translated_valid.extend(trans_chunk)
+
+        # Merge back into results
+        for orig_idx, trans in zip(valid_indices, translated_valid):
+            results[orig_idx] = trans
+
+        return results
+
+    def get_system_metrics(self) -> Dict[str, Any]:
+        """Return device and GPU memory metrics."""
+        import torch
+        metrics: Dict[str, Any] = {
+            "device": str(self.device),
+            "model_name": self.model_name,
+            "precision": str(self.torch_dtype),
+            "has_indictrans_toolkit": self.ip is not None,
+        }
+        if self.device.type == "cuda":
+            metrics["gpu_name"] = torch.cuda.get_device_name(0)
+            metrics["gpu_allocated_mb"] = round(torch.cuda.memory_allocated(0) / (1024 * 1024), 2)
+            metrics["gpu_reserved_mb"] = round(torch.cuda.memory_reserved(0) / (1024 * 1024), 2)
+            metrics["gpu_max_allocated_mb"] = round(torch.cuda.max_memory_allocated(0) / (1024 * 1024), 2)
+        return metrics
+
+
 class ModelManager:
     """
-    Singleton model manager for IndicTrans2 translation model.
+    Singleton model manager for IndicTrans2 translation engine.
 
     Lifecycle:
     - Server startup → load_model() called once
     - All translation requests reuse the same loaded model
-    - If model fails to load, system operates in DEGRADED mode (pretranslated fallback)
+    - If model is unavailable, system operates in DEGRADED mode with in-memory dictionaries & fallback
     """
 
     _instance = None
@@ -50,9 +249,7 @@ class ModelManager:
             return
         self._initialized = True
 
-        self._model = None
-        self._tokenizer_src = None
-        self._tokenizer_tgt = None
+        self._engine: Optional[IndicTranslatorEngine] = None
         self._device = "cpu"
         self._model_id = os.getenv(
             "INDICTRANS_MODEL_ID", "ai4bharat/indictrans2-indic-indic-dist-320M"
@@ -77,16 +274,13 @@ class ModelManager:
 
     @property
     def is_ready(self) -> bool:
-        return self._status == ModelStatus.READY
+        return self._status == ModelStatus.READY and self._engine is not None
 
     def load_model(self) -> bool:
         """
         Load the IndicTrans2 model into memory. Called once at server startup.
-
-        Returns:
-            True if model loaded successfully, False otherwise.
         """
-        if self._status == ModelStatus.READY:
+        if self._status == ModelStatus.READY and self._engine is not None:
             logger.info("Model already loaded and ready")
             return True
 
@@ -94,101 +288,38 @@ class ModelManager:
         start_time = time.time()
 
         try:
-            # Check for GPU availability
-            device_preference = os.getenv("TRANSLATION_DEVICE", "auto")
-
-            if device_preference == "auto":
-                try:
-                    import torch
-                    if torch.cuda.is_available():
-                        self._device = "cuda"
-                    else:
-                        self._device = "cpu"
-                except ImportError:
-                    self._device = "cpu"
-            else:
-                self._device = device_preference
-
-            logger.info(f"Loading IndicTrans2 model: {self._model_id} on {self._device}")
-
-            # Try to load IndicTrans2 via HuggingFace transformers
-            try:
-                self._load_with_huggingface()
-            except ImportError:
-                logger.warning(
-                    "transformers/torch not available. "
-                    "Translation engine will operate in DEGRADED mode "
-                    "(using pretranslated dictionaries only)."
-                )
-                self._status = ModelStatus.DEGRADED
-                self._load_error = "transformers not installed"
-                self._load_time = time.time() - start_time
-                return False
-            except Exception as e:
-                logger.warning(
-                    f"Failed to load IndicTrans2 model: {e}. "
-                    "Operating in DEGRADED mode."
-                )
-                self._status = ModelStatus.DEGRADED
-                self._load_error = str(e)
-                self._load_time = time.time() - start_time
-                return False
-
+            device_pref = os.getenv("TRANSLATION_DEVICE", "auto")
+            self._engine = IndicTranslatorEngine(
+                model_name_or_path=self._model_id,
+                device=device_pref,
+            )
+            self._device = str(self._engine.device)
             self._status = ModelStatus.READY
             self._load_time = time.time() - start_time
             logger.info(
-                f"IndicTrans2 model loaded successfully in {self._load_time:.2f}s "
-                f"on {self._device}"
+                "IndicTrans2 engine loaded successfully in %.2fs on %s",
+                self._load_time,
+                self._device,
             )
             return True
-
+        except ImportError as ie:
+            logger.warning(
+                "ML dependencies not available (%s). Translation operating in DEGRADED mode.",
+                ie,
+            )
+            self._status = ModelStatus.DEGRADED
+            self._load_error = f"Dependencies missing: {ie}"
+            self._load_time = time.time() - start_time
+            return False
         except Exception as e:
+            logger.warning(
+                "Failed to load IndicTrans2 model (%s). Operating in DEGRADED mode.",
+                e,
+            )
             self._status = ModelStatus.DEGRADED
             self._load_error = str(e)
             self._load_time = time.time() - start_time
-            logger.error(f"Model loading failed: {e}. Operating in DEGRADED mode.")
             return False
-
-    def _load_with_huggingface(self):
-        """Load model using HuggingFace transformers library."""
-        import torch
-        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
-        # For the distilled model, we use the seq2seq variant
-        # The model is designed for Indic → Indic and English ↔ Indic translation
-        try:
-            self._tokenizer_src = AutoTokenizer.from_pretrained(
-                self._model_id, trust_remote_code=True
-            )
-            self._tokenizer_tgt = AutoTokenizer.from_pretrained(
-                self._model_id, trust_remote_code=True
-            )
-            self._model = AutoModelForSeq2SeqLM.from_pretrained(
-                self._model_id,
-                trust_remote_code=True,
-            )
-
-            if self._device == "cuda":
-                self._model = self._model.cuda()
-
-            self._model.eval()
-        except Exception:
-            # Fallback: try the dedicated IndicTrans2 pipeline
-            logger.info("Attempting IndicTrans2 dedicated pipeline loading...")
-            from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
-            self._tokenizer_src = AutoTokenizer.from_pretrained(
-                self._model_id, trust_remote_code=True
-            )
-            self._model = AutoModelForSeq2SeqLM.from_pretrained(
-                self._model_id,
-                trust_remote_code=True,
-            )
-
-            if self._device == "cuda":
-                self._model = self._model.cuda()
-
-            self._model.eval()
 
     def translate(
         self,
@@ -197,111 +328,64 @@ class ModelManager:
         target_lang: str,
     ) -> Optional[str]:
         """
-        Translate text using the loaded IndicTrans2 model.
-
-        Args:
-            text: Source text to translate
-            source_lang: IndicTrans2 BCP-47 source code (e.g., "hin_Deva")
-            target_lang: IndicTrans2 BCP-47 target code (e.g., "eng_Latn")
-
-        Returns:
-            Translated text or None if translation fails.
+        Translate a single text using IndicTranslatorEngine.
         """
-        if not self.is_ready or not self._model:
+        if not self.is_ready or not self._engine:
             return None
 
         if not text or not text.strip():
-            return None
+            return text
 
         try:
-            import torch
-
             start = time.time()
-
-            # Build input with language tags
-            # IndicTrans2 expects: source_lang_tag + text + target_lang_tag
-            # For seq2seq models, the format is typically: "__src_lang__ text __tgt_lang__"
-            src_tag = source_lang
-            tgt_tag = target_lang
-
-            # Prepare input
-            input_text = f"{src_tag} {text.strip()}"
-            inputs = self._tokenizer_src(
-                input_text,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=512,
-            )
-
-            if self._device == "cuda":
-                inputs = {k: v.cuda() for k, v in inputs.items()}
-
-            # Generate translation
-            with torch.no_grad():
-                outputs = self._model.generate(
-                    **inputs,
-                    max_length=512,
-                    num_beams=4,
-                    early_stopping=True,
-                )
-
-            # Decode output
-            translation = self._tokenizer_tgt.decode(
-                outputs[0], skip_special_tokens=True
-            )
-
+            results = self._engine.translate_batch([text], source_lang, target_lang)
             elapsed = time.time() - start
+
             self._inference_count += 1
             self._total_inference_time += elapsed
 
-            logger.debug(
-                f"Translation: {source_lang}→{target_lang} in {elapsed:.3f}s "
-                f"({len(text)}→{len(translation)} chars)"
-            )
-
-            return translation.strip()
-
+            return results[0] if results else None
         except Exception as e:
-            logger.error(f"Translation inference failed: {e}")
+            logger.error("Translation inference failed: %s", e)
             return None
 
     def translate_batch(
         self,
-        texts: list,
+        texts: List[str],
         source_lang: str,
         target_lang: str,
-    ) -> list:
+    ) -> List[Optional[str]]:
         """
-        Translate multiple texts at once.
-
-        Args:
-            texts: List of source texts
-            source_lang: IndicTrans2 source code
-            target_lang: IndicTrans2 target code
-
-        Returns:
-            List of translated texts (None for failed translations).
+        Translate a batch of texts in parallel using IndicTranslatorEngine.
         """
-        if not self.is_ready or not self._model:
+        if not self.is_ready or not self._engine:
             return [None] * len(texts)
 
-        results = []
-        for text in texts:
-            result = self.translate(text, source_lang, target_lang)
-            results.append(result)
+        if not texts:
+            return []
 
-        return results
+        try:
+            start = time.time()
+            results = self._engine.translate_batch(texts, source_lang, target_lang)
+            elapsed = time.time() - start
+
+            self._inference_count += len(texts)
+            self._total_inference_time += elapsed
+
+            return results
+        except Exception as e:
+            logger.error("Batch translation inference failed: %s", e)
+            return [None] * len(texts)
 
     def get_health(self) -> Dict[str, Any]:
-        """Return model health information."""
+        """Return model health information and hardware metrics."""
         avg_latency = (
             self._total_inference_time / self._inference_count
             if self._inference_count > 0
             else 0
         )
 
-        return {
+        data = {
             "status": self._status.value,
             "model_id": self._model_id,
             "device": self._device,
@@ -311,11 +395,14 @@ class ModelManager:
             "error": self._load_error,
         }
 
+        if self.is_ready and self._engine:
+            data.update(self._engine.get_system_metrics())
+
+        return data
+
     def unload(self):
         """Unload model from memory."""
-        self._model = None
-        self._tokenizer_src = None
-        self._tokenizer_tgt = None
+        self._engine = None
         self._status = ModelStatus.UNLOADED
         logger.info("Model unloaded from memory")
 

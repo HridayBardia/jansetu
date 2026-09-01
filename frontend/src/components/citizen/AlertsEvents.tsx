@@ -297,12 +297,12 @@ export const AlertsEvents: React.FC = () => {
               >
                 <div className="flex justify-between items-center text-xs">
                   <span className={`font-bold border px-2 py-0.5 rounded text-[11px] ${tagBg}`}>
-                    {policy.tag}
+                    {t(policy.tag)}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono">{policy.effectiveDate}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{t(policy.effectiveDate)}</span>
                 </div>
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">{policy.title}</h4>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">{policy.description}</p>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">{t(policy.title)}</h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">{t(policy.description)}</p>
               </div>
             );
           })}

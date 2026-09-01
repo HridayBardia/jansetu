@@ -18,7 +18,7 @@ export default function HomePage() {
           router.replace('/citizen/dashboard');
         }
       } else {
-        router.replace('/login');
+        router.replace('/citizen-portal');
       }
     }
   }, [isLoading, isAuthenticated, user, router]);

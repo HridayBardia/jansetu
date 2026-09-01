@@ -504,10 +504,10 @@ export const CheckMyInformation: React.FC = () => {
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <History className="w-4 h-4 text-[#133E87] dark:text-blue-400" />
-            <span>Field-Level Provenance & Cryptographic Lineage</span>
+            <span>{t('Field-Level Provenance & Cryptographic Lineage', 'Field-Level Provenance & Cryptographic Lineage')}</span>
           </h3>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            Click any verified credential field to inspect its authoritative source authority, historical audit log, and cryptographic integrity seal.
+            {t('Click any verified credential field to inspect its authoritative source authority, historical audit log, and cryptographic integrity seal.', 'Click any verified credential field to inspect its authoritative source authority, historical audit log, and cryptographic integrity seal.')}
           </p>
         </div>
 
@@ -519,13 +519,13 @@ export const CheckMyInformation: React.FC = () => {
               className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-[#133E87] dark:hover:border-blue-400 rounded-lg p-4 space-y-2 cursor-pointer transition transform hover:-translate-y-0.5 shadow-2xs group"
             >
               <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{prov.fieldLabel}</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t(prov.fieldLabel, prov.fieldLabel)}</span>
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#133E87] dark:group-hover:text-blue-400 transition" />
               </div>
-              <p className="text-xs font-black text-slate-900 dark:text-white font-mono truncate">{prov.fieldValue}</p>
-              <p className="text-[10px] text-slate-600 dark:text-slate-400 truncate">{prov.sourceAuthority}</p>
+              <p className="text-xs font-black text-slate-900 dark:text-white font-mono truncate">{t(prov.fieldValue, prov.fieldValue)}</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 truncate">{t(prov.sourceAuthority, prov.sourceAuthority)}</p>
               <span className="inline-block text-[9px] font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded font-bold">
-                NIST IAL-3 Verified
+                {t('NIST IAL-3 Verified', 'NIST IAL-3 Verified')}
               </span>
             </div>
           ))}

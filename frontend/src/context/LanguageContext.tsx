@@ -29,6 +29,7 @@ import mni from '../locales/mni.json';
 
 import { MASTER_TRANSLATIONS } from '../locales/translations';
 import { UNIVERSAL_PHRASES } from '../locales/universalDict';
+import { translateBatchStrings, translateObject as deepTranslateObject } from '../utils/indicTranslator';
 
 const LOCALES: Record<string, Record<string, string>> = {
   en, hi, gu, kn, ur, bn, mr, ta, te, ml, or, pa,
@@ -89,6 +90,8 @@ export interface LanguageContextType {
   translateInputToEnglish: (userInputText: string) => Promise<string>;
   translateDynamic: (text: string, targetLang?: string) => Promise<string>;
   translateDynamicText: (text: string, targetLang?: string) => Promise<string>;
+  translateBatch: (texts: string[], targetLang?: string) => Promise<string[]>;
+  translateObject: <T>(obj: T, targetLang?: string) => Promise<T>;
   isRTL: boolean;
   supportedLanguages: SupportedLanguage[];
   translationStatus: 'ready' | 'degraded' | 'unavailable';
@@ -131,42 +134,56 @@ function setCached(key: string, value: string) {
  * 4. Fallback chain to English
  */
 function resolveTranslation(lang: string, key: string, fallback?: string): string {
-  if (!key) return fallback || '';
+  if (!key && !fallback) return '';
   const normLang = lang === 'kok' ? 'gom' : lang;
-  const currentDict = LOCALES[normLang] || LOCALES['en'];
-  const enDict = LOCALES['en'];
-  const trimmedKey = key.trim();
+  if (normLang === 'en') {
+    return fallback !== undefined ? fallback : (LOCALES['en']?.[key] || key);
+  }
 
-  // 0. Direct Universal Phrase Match (0ms)
-  if (UNIVERSAL_PHRASES[trimmedKey]?.[normLang]) {
+  const currentDict = LOCALES[normLang] || LOCALES['en'];
+  const trimmedKey = (key || '').trim();
+  const trimmedFallback = (fallback || '').trim();
+
+  // 0. Direct Universal Phrase Match on key or fallback
+  if (trimmedKey && UNIVERSAL_PHRASES[trimmedKey]?.[normLang]) {
     return UNIVERSAL_PHRASES[trimmedKey][normLang];
   }
-
-  // 1. Direct JSON lookup
-  if (currentDict && currentDict[key] !== undefined) {
-    return currentDict[key];
+  if (trimmedFallback && UNIVERSAL_PHRASES[trimmedFallback]?.[normLang]) {
+    return UNIVERSAL_PHRASES[trimmedFallback][normLang];
   }
 
-  // 2. Reverse English text matching (e.g. key is 'System Overview')
-  const lowerKey = trimmedKey.toLowerCase();
-  const matchedJsonKey = EN_VALUE_TO_KEY[lowerKey];
-  if (matchedJsonKey && currentDict && currentDict[matchedJsonKey] !== undefined) {
-    return currentDict[matchedJsonKey];
+  // 1. Direct JSON lookup on key
+  if (trimmedKey && currentDict && currentDict[trimmedKey] !== undefined) {
+    return currentDict[trimmedKey];
+  }
+
+  // 2. Reverse English text matching on key or fallback
+  if (trimmedKey) {
+    const lowerKey = trimmedKey.toLowerCase();
+    const matchedJsonKey = EN_VALUE_TO_KEY[lowerKey];
+    if (matchedJsonKey && currentDict && currentDict[matchedJsonKey] !== undefined) {
+      return currentDict[matchedJsonKey];
+    }
+  }
+  if (trimmedFallback) {
+    const lowerFallback = trimmedFallback.toLowerCase();
+    const matchedJsonKey = EN_VALUE_TO_KEY[lowerFallback];
+    if (matchedJsonKey && currentDict && currentDict[matchedJsonKey] !== undefined) {
+      return currentDict[matchedJsonKey];
+    }
   }
 
   // 3. Namespaced Master Translation lookup
-  if (key.includes('.')) {
-    const parts = key.split('.');
+  if (trimmedKey && trimmedKey.includes('.')) {
+    const parts = trimmedKey.split('.');
     const namespace = parts[0];
     const itemKey = parts.slice(1).join('.');
 
-    // Try current lang in MASTER_TRANSLATIONS
     const masterLang = MASTER_TRANSLATIONS[normLang] || MASTER_TRANSLATIONS['en'];
     if (masterLang && (masterLang as any)[namespace]) {
       const nsObj = (masterLang as any)[namespace];
       if (nsObj[itemKey] !== undefined) return nsObj[itemKey];
 
-      // Try camelCase / snake_case alternative
       const snakeKey = itemKey.replace(/([A-Z])/g, '_$1').toLowerCase();
       if (nsObj[snakeKey] !== undefined) return nsObj[snakeKey];
 
@@ -175,30 +192,12 @@ function resolveTranslation(lang: string, key: string, fallback?: string): strin
     }
   }
 
-  // 4. Fallback to English direct JSON lookup
-  if (enDict && enDict[key] !== undefined) {
-    return enDict[key];
-  }
-
-  // 5. Fallback to English Master Translation
-  if (key.includes('.')) {
-    const parts = key.split('.');
-    const namespace = parts[0];
-    const itemKey = parts.slice(1).join('.');
-    const enMaster = MASTER_TRANSLATIONS['en'];
-    if (enMaster && (enMaster as any)[namespace]) {
-      const nsObj = (enMaster as any)[namespace];
-      if (nsObj[itemKey] !== undefined) return nsObj[itemKey];
+  // 4. Try segment lookup
+  if (trimmedKey) {
+    const lastSegment = trimmedKey.includes('.') ? trimmedKey.split('.').pop()! : trimmedKey;
+    if (currentDict && currentDict[lastSegment] !== undefined) {
+      return currentDict[lastSegment];
     }
-  }
-
-  // 6. Try segment lookup
-  const lastSegment = key.includes('.') ? key.split('.').pop()! : key;
-  if (currentDict && currentDict[lastSegment] !== undefined) {
-    return currentDict[lastSegment];
-  }
-  if (enDict && enDict[lastSegment] !== undefined) {
-    return enDict[lastSegment];
   }
 
   return fallback !== undefined ? fallback : key;
@@ -415,6 +414,8 @@ const LanguageContext = createContext<LanguageContextType>({
   translateInputToEnglish: async (text: string) => text,
   translateDynamic: async (text: string) => text,
   translateDynamicText: async (text: string) => text,
+  translateBatch: async (texts: string[]) => texts,
+  translateObject: async <T,>(obj: T) => obj,
   isRTL: false,
   supportedLanguages: SUPPORTED_LANGUAGES_LIST,
   translationStatus: 'ready',
@@ -461,6 +462,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return await translateDynamicText(text, targetLang || language);
   }, [language]);
 
+  const translateBatch = useCallback(async (texts: string[], targetLang?: string): Promise<string[]> => {
+    const normLang = targetLang || language;
+    return await translateBatchStrings(texts, { targetLang: normLang === 'kok' ? 'gom' : normLang });
+  }, [language]);
+
+  const translateObject = useCallback(async <T,>(obj: T, targetLang?: string): Promise<T> => {
+    const normLang = targetLang || language;
+    return await deepTranslateObject(obj, normLang === 'kok' ? 'gom' : normLang);
+  }, [language]);
+
   const handleTranslateInputToEnglish = useCallback(async (userInputText: string): Promise<string> => {
     return await translateInputToEnglish(userInputText);
   }, []);
@@ -475,6 +486,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         translateInputToEnglish: handleTranslateInputToEnglish,
         translateDynamic,
         translateDynamicText: translateDynamic,
+        translateBatch,
+        translateObject,
         isRTL,
         supportedLanguages: SUPPORTED_LANGUAGES_LIST,
         translationStatus: 'ready',

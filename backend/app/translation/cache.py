@@ -1,14 +1,15 @@
 """
-Translation Cache - In-memory implementation with TTL support.
+Translation Cache - Multi-tier Redis + In-Memory LRU Cache with TTL support.
 
-Provides fast lookups for previously translated strings.
-Uses hash-based cache keys combining source language, target language, and text hash.
+Provides lightning-fast lookups for previously translated strings.
+Uses SHA-256 cache keys combining source language, target language, and text hash.
 """
 
+import os
 import hashlib
 import time
 import threading
-from typing import Optional, Dict, Tuple, Any
+from typing import Optional, Dict, List, Tuple, Any
 import logging
 
 logger = logging.getLogger("jansetu.translation")
@@ -16,17 +17,23 @@ logger = logging.getLogger("jansetu.translation")
 
 class TranslationCache:
     """
-    Thread-safe in-memory translation cache with TTL-based expiration.
+    Thread-safe multi-tier translation cache:
+    1. Redis Cache (distributed, persistent across worker processes)
+    2. In-Memory LRU Cache (low-latency fallback if Redis is unavailable)
 
-    Cache key format: sha256(f"{source_lang}:{target_lang}:{text}")
+    Cache key format: f"trans:{source_lang}:{target_lang}:{sha256(text)}"
     """
 
     def __init__(
         self,
         static_ttl: int = 86400 * 30,     # 30 days for static UI strings
-        dynamic_ttl: int = 3600,            # 1 hour for dynamic content
-        scheme_ttl: int = 86400,            # 24 hours for scheme descriptions
-        max_entries: int = 50000,           # Max cache entries
+        dynamic_ttl: int = 3600,          # 1 hour for dynamic content
+        scheme_ttl: int = 86400,          # 24 hours for scheme descriptions
+        max_entries: int = 50000,         # Max memory cache entries
+        redis_host: Optional[str] = None,
+        redis_port: Optional[int] = None,
+        redis_db: int = 0,
+        redis_password: Optional[str] = None,
     ):
         self._cache: Dict[str, Tuple[str, float]] = {}  # key -> (translation, expiry)
         self._lock = threading.Lock()
@@ -35,17 +42,49 @@ class TranslationCache:
             "misses": 0,
             "evictions": 0,
             "sets": 0,
+            "redis_hits": 0,
         }
         self.static_ttl = static_ttl
         self.dynamic_ttl = dynamic_ttl
         self.scheme_ttl = scheme_ttl
         self.max_entries = max_entries
 
+        # Configure Redis if available
+        self.redis_client = None
+        host = redis_host or os.getenv("REDIS_HOST", "localhost")
+        port = redis_port or int(os.getenv("REDIS_PORT", "6379"))
+        password = redis_password or os.getenv("REDIS_PASSWORD", None)
+
+        try:
+            import redis
+            client = redis.Redis(
+                host=host,
+                port=port,
+                db=redis_db,
+                password=password,
+                socket_timeout=1.5,
+                decode_responses=True,
+            )
+            client.ping()
+            self.redis_client = client
+            logger.info("Translation cache connected to Redis at %s:%s", host, port)
+        except Exception as e:
+            logger.info("Redis not active (%s). Operating with in-memory LRU cache.", str(e))
+            self.redis_client = None
+
     @staticmethod
     def _make_key(source_lang: str, target_lang: str, text: str) -> str:
         """Generate cache key from language pair and text."""
-        raw = f"{source_lang}:{target_lang}:{text}"
-        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        raw = f"{source_lang}:{target_lang}:{text.strip()}"
+        content_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        return f"trans:{source_lang}:{target_lang}:{content_hash}"
+
+    def _get_ttl(self, category: str) -> int:
+        if category == "static":
+            return self.static_ttl
+        if category == "scheme":
+            return self.scheme_ttl
+        return self.dynamic_ttl
 
     def get(
         self,
@@ -56,21 +95,25 @@ class TranslationCache:
     ) -> Optional[str]:
         """
         Look up a cached translation.
-
-        Args:
-            source_lang: Source language code (e.g., "en")
-            target_lang: Target language code (e.g., "hi")
-            text: The text to look up
-            category: Cache category ("static", "dynamic", "scheme")
-
-        Returns:
-            Cached translation or None if not found/expired.
         """
         if not text or not text.strip():
             return None
 
         key = self._make_key(source_lang, target_lang, text)
 
+        # 1. Check Redis first if available
+        if self.redis_client:
+            try:
+                cached = self.redis_client.get(key)
+                if cached is not None:
+                    with self._lock:
+                        self._stats["hits"] += 1
+                        self._stats["redis_hits"] += 1
+                    return cached
+            except Exception as e:
+                logger.debug("Redis lookup error: %s", e)
+
+        # 2. Check In-Memory Cache
         with self._lock:
             entry = self._cache.get(key)
             if entry is None:
@@ -96,68 +139,134 @@ class TranslationCache:
     ) -> None:
         """
         Store a translation in cache.
-
-        Args:
-            source_lang: Source language code
-            target_lang: Target language code
-            text: Original text
-            translation: Translated text
-            category: Cache category for TTL selection
         """
-        if not text or not text.strip():
+        if not text or not text.strip() or translation is None:
             return
 
         key = self._make_key(source_lang, target_lang, text)
-
-        # Select TTL based on category
-        if category == "static":
-            ttl = self.static_ttl
-        elif category == "scheme":
-            ttl = self.scheme_ttl
-        else:
-            ttl = self.dynamic_ttl
-
+        ttl = self._get_ttl(category)
         expiry = time.time() + ttl
 
+        # 1. Set in Redis
+        if self.redis_client:
+            try:
+                self.redis_client.setex(key, ttl, translation)
+            except Exception as e:
+                logger.debug("Redis set error: %s", e)
+
+        # 2. Set in Memory Cache
         with self._lock:
-            # Evict oldest entries if at capacity
             if len(self._cache) >= self.max_entries and key not in self._cache:
                 self._evict_oldest()
 
             self._cache[key] = (translation, expiry)
             self._stats["sets"] += 1
 
-    def invalidate(
+    def get_batch(
         self,
-        source_lang: Optional[str] = None,
-        target_lang: Optional[str] = None,
-    ) -> int:
+        items: List[Tuple[str, str, str]],
+        category: str = "dynamic",
+    ) -> Dict[int, str]:
         """
-        Invalidate cache entries optionally filtered by language pair.
+        Look up multiple translations at once using Redis MGET or batch in-memory queries.
+
+        Args:
+            items: List of (source_lang, target_lang, text) tuples
 
         Returns:
-            Number of entries invalidated.
+            Dict mapping index -> cached translation (only hits)
         """
-        count = 0
+        results: Dict[int, str] = {}
+        if not items:
+            return results
+
+        keys = [self._make_key(src, tgt, text) if text and text.strip() else None for src, tgt, text in items]
+
+        # Redis MGET
+        if self.redis_client:
+            valid_keys = [k for k in keys if k is not None]
+            if valid_keys:
+                try:
+                    redis_vals = self.redis_client.mget(valid_keys)
+                    val_map = {k: v for k, v in zip(valid_keys, redis_vals) if v is not None}
+                    for i, key in enumerate(keys):
+                        if key and key in val_map:
+                            results[i] = val_map[key]
+                            with self._lock:
+                                self._stats["hits"] += 1
+                                self._stats["redis_hits"] += 1
+                except Exception as e:
+                    logger.debug("Redis batch lookup error: %s", e)
+
+        # Fill remaining misses from Memory Cache
+        now = time.time()
         with self._lock:
-            keys_to_delete = []
-            for key, (translation, expiry) in self._cache.items():
-                # We can't easily reverse the key to check languages,
-                # so for targeted invalidation, we clear all
-                if source_lang is None and target_lang is None:
-                    keys_to_delete.append(key)
+            for i, (src, tgt, text) in enumerate(items):
+                if i in results or not text or not text.strip():
+                    continue
+
+                key = keys[i]
+                entry = self._cache.get(key)
+                if entry is not None:
+                    translation, expiry = entry
+                    if now <= expiry:
+                        results[i] = translation
+                        self._stats["hits"] += 1
+                    else:
+                        del self._cache[key]
+                        self._stats["misses"] += 1
                 else:
-                    # For targeted invalidation, delete all (can't filter by key alone)
-                    keys_to_delete.append(key)
+                    self._stats["misses"] += 1
 
-            for key in keys_to_delete:
-                del self._cache[key]
-                count += 1
+        return results
 
-        return count
+    def set_batch(
+        self,
+        items: List[Tuple[str, str, str, str]],
+        category: str = "dynamic",
+    ) -> None:
+        """
+        Store a batch of (source_lang, target_lang, original_text, translated_text) in cache.
+        """
+        if not items:
+            return
+
+        ttl = self._get_ttl(category)
+        expiry = time.time() + ttl
+
+        # Redis Pipeline
+        if self.redis_client:
+            try:
+                pipe = self.redis_client.pipeline()
+                for src, tgt, text, translation in items:
+                    if text and text.strip() and translation is not None:
+                        key = self._make_key(src, tgt, text)
+                        pipe.setex(key, ttl, translation)
+                pipe.execute()
+            except Exception as e:
+                logger.debug("Redis batch set error: %s", e)
+
+        # In-Memory Cache
+        with self._lock:
+            for src, tgt, text, translation in items:
+                if text and text.strip() and translation is not None:
+                    key = self._make_key(src, tgt, text)
+                    if len(self._cache) >= self.max_entries and key not in self._cache:
+                        self._evict_oldest()
+                    self._cache[key] = (translation, expiry)
+                    self._stats["sets"] += 1
 
     def clear(self) -> None:
         """Clear all cache entries."""
+        if self.redis_client:
+            try:
+                # Flush Redis keys with prefix
+                keys = self.redis_client.keys("trans:*")
+                if keys:
+                    self.redis_client.delete(*keys)
+            except Exception as e:
+                logger.debug("Redis clear error: %s", e)
+
         with self._lock:
             self._cache.clear()
             logger.info("Translation cache cleared")
@@ -166,14 +275,10 @@ class TranslationCache:
         """Remove the oldest 10% of entries when at capacity."""
         if not self._cache:
             return
-
-        # Sort by expiry time and remove the oldest 10%
         entries = sorted(self._cache.items(), key=lambda x: x[1][1])
         evict_count = max(1, len(entries) // 10)
-
         for key, _ in entries[:evict_count]:
             del self._cache[key]
-
         self._stats["evictions"] += evict_count
 
     def get_stats(self) -> Dict[str, Any]:
@@ -182,36 +287,16 @@ class TranslationCache:
             total = self._stats["hits"] + self._stats["misses"]
             hit_rate = (self._stats["hits"] / total * 100) if total > 0 else 0
             return {
-                "entries": len(self._cache),
+                "redis_connected": self.redis_client is not None,
+                "memory_entries": len(self._cache),
                 "hits": self._stats["hits"],
                 "misses": self._stats["misses"],
+                "redis_hits": self._stats["redis_hits"],
                 "hit_rate_percent": round(hit_rate, 1),
                 "sets": self._stats["sets"],
                 "evictions": self._stats["evictions"],
-                "max_entries": self.max_entries,
+                "max_memory_entries": self.max_entries,
             }
-
-    def get_batch(
-        self,
-        items: list,
-        category: str = "dynamic",
-    ) -> Dict[int, str]:
-        """
-        Look up multiple translations at once.
-
-        Args:
-            items: List of (source_lang, target_lang, text) tuples
-            category: Cache category
-
-        Returns:
-            Dict mapping index -> cached translation (only hits)
-        """
-        results = {}
-        for i, (src, tgt, text) in enumerate(items):
-            cached = self.get(src, tgt, text, category)
-            if cached is not None:
-                results[i] = cached
-        return results
 
 
 # Module-level singleton

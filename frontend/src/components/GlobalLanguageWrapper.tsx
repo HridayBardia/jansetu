@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { UNIVERSAL_PHRASES } from '@/locales/universalDict';
+import { translateBatchStrings } from '@/utils/indicTranslator';
 
 // Master in-memory reverse lookup map built once for lightning-fast 0ms DOM translations
 const originalTextMap = new WeakMap<Node, string>();
@@ -10,15 +11,17 @@ const originalAttrMap = new WeakMap<Element, Record<string, string>>();
 const pendingTranslationNodes = new Set<string>();
 
 export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { language, t, translateDynamicText } = useLanguage();
+  const { language, t } = useLanguage();
   const isTranslatingRef = useRef(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
     const normLang = language === 'kok' ? 'gom' : language;
+    pendingTranslationNodes.clear();
 
-    const translateDOM = () => {
+    const translateDOM = async () => {
       if (isTranslatingRef.current) return;
       isTranslatingRef.current = true;
 
@@ -32,14 +35,13 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
           NodeFilter.SHOW_TEXT,
           {
             acceptNode(node) {
-              // Skip script and style tags
               const parent = node.parentElement;
               if (!parent) return NodeFilter.FILTER_REJECT;
               const tag = parent.tagName.toLowerCase();
               if (tag === 'script' || tag === 'style' || tag === 'noscript') {
                 return NodeFilter.FILTER_REJECT;
               }
-              // Skip code blocks that are literal code
+              // Skip code blocks that are literal technical tokens
               if (parent.classList.contains('font-mono') && (
                 parent.textContent?.startsWith('SHA256') || 
                 parent.textContent?.startsWith('KA-') || 
@@ -52,6 +54,8 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
             }
           }
         );
+
+        const dynamicNodesToTranslate: Array<{ node: Node; original: string; textToTranslate: string }> = [];
 
         let currentNode = walker.nextNode();
         while (currentNode) {
@@ -73,7 +77,7 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
                 currentNode.nodeValue = original;
               }
             } else {
-              // 1. Direct Universal Phrase match
+              // 1. Direct Universal Phrase match (0ms)
               if (UNIVERSAL_PHRASES[originalTrimmed]?.[normLang]) {
                 const translated = UNIVERSAL_PHRASES[originalTrimmed][normLang];
                 const newText = original.replace(originalTrimmed, translated);
@@ -89,16 +93,15 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
                     currentNode.nodeValue = newText;
                   }
                 } else if (/[a-zA-Z]{2,}/.test(originalTrimmed) && originalTrimmed.length > 3) {
-                  // 3. Dynamic Indic Translation for longer paragraphs / descriptions
-                  const targetNode = currentNode;
+                  // 3. Queue for batched IndicTrans2 translation
                   const nodeKey = `${normLang}:${originalTrimmed}`;
                   if (!pendingTranslationNodes.has(nodeKey)) {
                     pendingTranslationNodes.add(nodeKey);
-                    translateDynamicText(originalTrimmed, normLang).then((dynTranslated) => {
-                      if (dynTranslated && dynTranslated !== originalTrimmed && targetNode.nodeValue) {
-                        targetNode.nodeValue = original.replace(originalTrimmed, dynTranslated);
-                      }
-                    }).catch(() => {});
+                    dynamicNodesToTranslate.push({
+                      node: currentNode,
+                      original,
+                      textToTranslate: originalTrimmed,
+                    });
                   }
                 }
               }
@@ -144,8 +147,33 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
             }
           }
         });
+
+        // Execute dynamic batch translation for all queued nodes in ONE request
+        if (dynamicNodesToTranslate.length > 0 && normLang !== 'en') {
+          const uniqueTexts = Array.from(new Set(dynamicNodesToTranslate.map(d => d.textToTranslate)));
+          const translations = await translateBatchStrings(uniqueTexts, {
+            targetLang: normLang,
+            sourceLang: 'auto',
+            preserveTokens: true,
+          });
+
+          const transMap = new Map<string, string>();
+          uniqueTexts.forEach((txt, idx) => {
+            if (translations[idx]) {
+              transMap.set(txt, translations[idx]);
+            }
+          });
+
+          // Apply translations to DOM text nodes
+          dynamicNodesToTranslate.forEach(({ node, original, textToTranslate }) => {
+            const translated = transMap.get(textToTranslate);
+            if (translated && translated !== textToTranslate && node.nodeValue) {
+              node.nodeValue = original.replace(textToTranslate, translated);
+            }
+          });
+        }
       } catch (err) {
-        // Safe fail
+        // Fail-safe pass
       } finally {
         isTranslatingRef.current = false;
       }
@@ -154,7 +182,7 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
     // Initial translation run
     translateDOM();
 
-    // MutationObserver to watch for client-side state changes, tab switches, and live updates
+    // Debounced MutationObserver
     const observer = new MutationObserver((mutations) => {
       let hasRelevantChanges = false;
       for (const m of mutations) {
@@ -164,7 +192,12 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
         }
       }
       if (hasRelevantChanges) {
-        translateDOM();
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          translateDOM();
+        }, 60);
       }
     });
 
@@ -176,8 +209,11 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
 
     return () => {
       observer.disconnect();
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
     };
-  }, [language, t, translateDynamicText]);
+  }, [language, t]);
 
   return <>{children}</>;
 };

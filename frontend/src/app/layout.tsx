@@ -31,11 +31,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!isLoading) {
-      const protectedRoutes = ['/citizen', '/journeys', '/alerts', '/help', '/privacy', '/admin'];
-      const isProtected = pathname ? protectedRoutes.some(route => pathname.startsWith(route)) : false;
+      // Explicit public routes that never require authentication
+      const isPublic = !pathname || 
+        pathname === '/' || 
+        pathname === '/login' || 
+        pathname.startsWith('/citizen-portal') || 
+        pathname.startsWith('/legal') || 
+        pathname.startsWith('/help');
+
+      const isProtected = pathname ? !isPublic && (
+        pathname.startsWith('/citizen/dashboard') ||
+        pathname.startsWith('/admin') ||
+        pathname.startsWith('/journeys') ||
+        pathname.startsWith('/alerts') ||
+        (pathname.startsWith('/citizen') && !pathname.startsWith('/citizen-portal'))
+      ) : false;
+
       // Require BOTH authentication AND current-session T&C consent for protected routes
       if (isProtected && (!isAuthenticated || !sessionConsentAccepted)) {
-        router.replace('/login');
+        const redirectUrl = pathname ? `/login?redirect=${encodeURIComponent(pathname)}` : '/login';
+        router.replace(redirectUrl);
       }
       // Redirect to appropriate dashboard if already authenticated and consented on login page
       if (pathname && pathname === '/login' && isAuthenticated && sessionConsentAccepted && user) {

@@ -1352,7 +1352,7 @@ export default function DashboardPage() {
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#133E87] dark:text-blue-300 px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800">
-                              {j.category}
+                              {t(j.category) || j.category}
                             </span>
                             {(() => {
                               const steps = Array.isArray(j.steps) ? j.steps : [];
@@ -1361,15 +1361,21 @@ export default function DashboardPage() {
                               const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : (j.progress ?? (j as any).progress_percentage ?? 0);
                               return (
                                 <span className="text-xs text-slate-700 dark:text-slate-300 font-mono font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                                  {pct}% ({completedSteps}/{totalSteps || 5} Milestones)
+                                  {pct}% ({completedSteps}/{totalSteps || 5} {t('journeys.milestones', 'Milestones')})
                                 </span>
                               );
                             })()}
-                            <span className="text-[10px] text-slate-400 font-mono">({j.location || 'India'})</span>
+                            <span className="text-[10px] text-slate-400 font-mono">({t(j.location || 'India') || j.location || 'India'})</span>
                           </div>
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#133E87] dark:group-hover:text-blue-400 transition-colors">{j.title}</h3>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">Current Stage: <strong className="text-[#133E87] dark:text-blue-400">{j.currentStage}</strong></p>
-                          <p className="text-[11px] text-slate-500">Next Action: {j.nextAction || 'Verify statutory credentials'}</p>
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#133E87] dark:group-hover:text-blue-400 transition-colors">
+                            {t(j.title) || j.title}
+                          </h3>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            {t("journeys.currentStage", "Current Stage")}: <strong className="text-[#133E87] dark:text-blue-400">{t(j.currentStage) || j.currentStage}</strong>
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            {t("journeys.nextAction", "Next Action")}: {t(j.nextAction) || j.nextAction}
+                          </p>
                           {(() => {
                             const steps = Array.isArray(j.steps) ? j.steps : [];
                             const totalSteps = steps.length;

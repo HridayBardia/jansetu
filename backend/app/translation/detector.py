@@ -59,9 +59,11 @@ class LanguageDetector:
         if roman_confidence >= confidence_threshold:
             return roman_lang, roman_confidence
 
-        # Strategy 3: Mixed script detection (e.g., Hindi-English mix)
-        if script_lang and roman_lang and script_lang == roman_lang:
-            return script_lang, max(script_confidence, roman_confidence)
+        # Strategy 3: Latin script analysis (English default if no romanized keywords matched)
+        latin_chars = sum(1 for c in text if 'a' <= c.lower() <= 'z')
+        meaningful_chars = sum(1 for c in text if c.isalpha())
+        if meaningful_chars > 0 and (latin_chars / meaningful_chars) >= 0.6:
+            return "en", 0.95
 
         # Fallback: Use the highest confidence detection or user's language
         if script_confidence > roman_confidence and script_confidence > 0:
