@@ -11,5 +11,8 @@
     "test:incognito": "npm --prefix frontend run test:incognito",
     "test:isolation": "npx tsx frontend/src/tests/verify_realtime_isolation.js",
     "test:session": "npx tsx frontend/src/tests/verify_session_break.js"
+  },
+  "dependencies": {
+    "google-translate-api": "^2.3.0"
   }
 }

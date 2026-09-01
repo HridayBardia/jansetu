@@ -5,6 +5,7 @@ import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, FileText, AlertTr
 import { LockScroll } from '@/hooks/useLockBodyScroll';
 import { useAuth } from '@/context/AuthContext';
 import { useLiveSync } from '@/context/LiveSyncContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface PdfViewerModalProps {
   documentData: {
@@ -24,6 +25,7 @@ interface PdfViewerModalProps {
 export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ documentData, onClose }) => {
   const { user } = useAuth();
   const { revokedDepartments } = useLiveSync();
+  const { t } = useLanguage();
   const [zoom, setZoom] = useState(100);
 
   if (!documentData) return null;
@@ -87,18 +89,18 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-bold text-white truncate">
-                  {documentData.document_name}
+                  {t(documentData.document_name, documentData.document_name)}
                 </h3>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
                   isRevoked
                     ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                     : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                 }`}>
-                  {isRevoked ? 'CONSENT REVOKED' : 'DEMO DATA'}
+                  {isRevoked ? t('CONSENT REVOKED', 'CONSENT REVOKED') : t('DEMO DATA', 'DEMO DATA')}
                 </span>
               </div>
               <p className="text-xs text-slate-400 truncate">
-                {documentData.document_number_masked || 'XXXX XXXX 1234'} • {issuedBy}
+                {documentData.document_number_masked || 'XXXX XXXX 1234'} • {t(issuedBy, issuedBy)}
               </p>
             </div>
           </div>
@@ -109,7 +111,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               <button
                 onClick={handleZoomOut}
                 disabled={zoom <= 75 || isRevoked}
-                title="Zoom Out"
+                title={t('Zoom Out', 'Zoom Out')}
                 className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded transition"
               >
                 <ZoomOut className="w-4 h-4" />
@@ -118,7 +120,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               <button
                 onClick={handleZoomIn}
                 disabled={zoom >= 200 || isRevoked}
-                title="Zoom In"
+                title={t('Zoom In', 'Zoom In')}
                 className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded transition"
               >
                 <ZoomIn className="w-4 h-4" />
@@ -126,7 +128,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               <button
                 onClick={handleResetZoom}
                 disabled={isRevoked}
-                title="Reset Zoom"
+                title={t('Reset Zoom', 'Reset Zoom')}
                 className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded transition ml-1"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -136,7 +138,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
             <button
               onClick={handleDownload}
               disabled={isRevoked}
-              title={isRevoked ? 'Access Revoked under DPDP Act' : 'Download Document'}
+              title={isRevoked ? t('Access Revoked under DPDP Act', 'Access Revoked under DPDP Act') : t('Download Document', 'Download Document')}
               className={`font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition shadow ${
                 isRevoked
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
@@ -144,7 +146,7 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
               }`}
             >
               {isRevoked ? <Lock className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{isRevoked ? 'Access Revoked' : 'Download'}</span>
+              <span className="hidden sm:inline">{isRevoked ? t('Access Revoked', 'Access Revoked') : t('Download', 'Download')}</span>
             </button>
 
             <button
@@ -160,12 +162,12 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
         {isRevoked ? (
           <div className="bg-rose-950/90 border-b-2 border-rose-600 px-4 py-3 flex items-center justify-center gap-2.5 text-center text-rose-200 text-xs font-bold animate-pulse">
             <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
-            <span>⚠️ Access Revoked by Citizen under DPDP Act 2023. e-KYC Token Terminated. Access to this record is strictly blocked.</span>
+            <span>{t('⚠️ Access Revoked by Citizen under DPDP Act 2023. e-KYC Token Terminated. Access to this record is strictly blocked.', '⚠️ Access Revoked by Citizen under DPDP Act 2023. e-KYC Token Terminated. Access to this record is strictly blocked.')}</span>
           </div>
         ) : (
           <div className="bg-rose-500/20 border-b border-rose-500/40 px-4 py-2 flex items-center justify-center gap-2 text-center text-rose-300 text-xs font-black uppercase tracking-wider">
             <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY</span>
+            <span>{t('DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY', 'DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY')}</span>
           </div>
         )}
 
@@ -179,10 +181,10 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
                 <Lock className="w-7 h-7" />
               </div>
               <h4 className="text-base font-black text-rose-300">
-                Encrypted Data Access Denied
+                {t('Encrypted Data Access Denied', 'Encrypted Data Access Denied')}
               </h4>
               <p className="text-xs text-slate-400 max-w-md">
-                The citizen has actively revoked data sharing consent with <strong className="text-white">{issuedBy}</strong>. Under Section 6 of the Digital Personal Data Protection (DPDP) Act 2023, decryption tokens have been wiped.
+                {t('The citizen has actively revoked data sharing consent with', 'The citizen has actively revoked data sharing consent with')} <strong className="text-white">{t(issuedBy, issuedBy)}</strong>. {t('Under Section 6 of the Digital Personal Data Protection (DPDP) Act 2023, decryption tokens have been wiped.', 'Under Section 6 of the Digital Personal Data Protection (DPDP) Act 2023, decryption tokens have been wiped.')}
               </p>
             </div>
           )}
@@ -210,30 +212,30 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
                 </div>
                 <div>
                   <h4 className="text-base sm:text-lg font-black text-white tracking-wide">
-                    {(documentData.document_name || '').toUpperCase()}
+                    {t(documentData.document_name, documentData.document_name).toUpperCase()}
                   </h4>
                   <p className="text-xs text-amber-400 font-semibold">
-                    {issuedBy}
+                    {t(issuedBy, issuedBy)}
                   </p>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Verified Demo</span>
+                <span>{t('Verified Demo', 'Verified Demo')}</span>
               </span>
             </div>
 
             {/* Document Fields Content */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10 text-xs">
               <div className="space-y-1">
-                <span className="text-slate-400 font-medium block">Document Holder</span>
+                <span className="text-slate-400 font-medium block">{t('Document Holder', 'Document Holder')}</span>
                 <span className="text-sm font-bold text-white block">
                   {holderName}
                 </span>
               </div>
 
               <div className="space-y-1">
-                <span className="text-slate-400 font-medium block">Document Number</span>
+                <span className="text-slate-400 font-medium block">{t('Document Number', 'Document Number')}</span>
                 <span className="text-sm font-mono font-bold text-amber-300 block">
                   {documentData.document_number_masked || fields.aadhaar_number || fields.pan_number || 'DEMO-DOC-0001'}
                 </span>
@@ -241,35 +243,35 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
 
               {fields.date_of_birth && (
                 <div className="space-y-1">
-                  <span className="text-slate-400 font-medium block">Date of Birth</span>
+                  <span className="text-slate-400 font-medium block">{t('Date of Birth', 'Date of Birth')}</span>
                   <span className="text-slate-200 font-semibold block">{fields.date_of_birth}</span>
                 </div>
               )}
 
               {fields.gender && (
                 <div className="space-y-1">
-                  <span className="text-slate-400 font-medium block">Gender</span>
-                  <span className="text-slate-200 font-semibold block">{fields.gender}</span>
+                  <span className="text-slate-400 font-medium block">{t('Gender', 'Gender')}</span>
+                  <span className="text-slate-200 font-semibold block">{t(fields.gender, fields.gender)}</span>
                 </div>
               )}
 
               {fields.address && (
                 <div className="sm:col-span-2 space-y-1 pt-2 border-t border-slate-800/80">
-                  <span className="text-slate-400 font-medium block">Address</span>
+                  <span className="text-slate-400 font-medium block">{t('Address', 'Address')}</span>
                   <span className="text-slate-200 font-medium block leading-relaxed">{fields.address}</span>
                 </div>
               )}
 
               {fields.degree && (
                 <div className="space-y-1">
-                  <span className="text-slate-400 font-medium block">Qualification / Degree</span>
-                  <span className="text-slate-200 font-semibold block">{fields.degree}</span>
+                  <span className="text-slate-400 font-medium block">{t('Qualification / Degree', 'Qualification / Degree')}</span>
+                  <span className="text-slate-200 font-semibold block">{t(fields.degree, fields.degree)}</span>
                 </div>
               )}
 
               {fields.valid_until && (
                 <div className="space-y-1">
-                  <span className="text-slate-400 font-medium block">Validity Date</span>
+                  <span className="text-slate-400 font-medium block">{t('Validity Date', 'Validity Date')}</span>
                   <span className="text-slate-200 font-semibold block">{fields.valid_until}</span>
                 </div>
               )}
@@ -278,10 +280,10 @@ Notice: ${documentData.synthetic_notice || 'FOR DEMONSTRATION PURPOSES ONLY'}
             {/* Synthetic Document Footer Watermark */}
             <div className="mt-8 pt-4 border-t border-slate-800/80 text-center space-y-1 relative z-10">
               <p className="text-[11px] font-black text-rose-400 uppercase tracking-wider">
-                DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY
+                {t('DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY', 'DEMO DOCUMENT - NOT A GOVERNMENT-ISSUED DOCUMENT - FOR DEMONSTRATION ONLY')}
               </p>
               <p className="text-[10px] text-slate-500">
-                Generated by AI Citizen Journey Engine Sandbox • Issued for Demonstration Purposes
+                {t('Generated by AI Citizen Journey Engine Sandbox • Issued for Demonstration Purposes', 'Generated by AI Citizen Journey Engine Sandbox • Issued for Demonstration Purposes')}
               </p>
             </div>
           </div>

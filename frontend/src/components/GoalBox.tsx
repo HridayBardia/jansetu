@@ -80,7 +80,7 @@ export const GoalBox: React.FC<GoalBoxProps> = ({ onAnalyzeGoal, isLoading }) =>
                   ? 'bg-red-50 text-red-600 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800 animate-pulse'
                   : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
-              title="Voice Input (Speech-to-Text)"
+              title={t('Voice Input (Speech-to-Text)', 'Voice Input (Speech-to-Text)')}
             >
               {isRecording ? <Volume2 className="w-4 h-4 animate-bounce" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -110,7 +110,7 @@ export const GoalBox: React.FC<GoalBoxProps> = ({ onAnalyzeGoal, isLoading }) =>
         {isRecording && (
           <div className="mt-3 flex items-center justify-center gap-2 text-xs text-amber-700 dark:text-amber-400 font-medium animate-pulse">
             <Volume2 className="w-4 h-4" />
-            <span>Listening... Speak your goal in any of the 23 Indian languages...</span>
+            <span>{t('Listening... Speak your goal in any of the 23 Indian languages...', 'Listening... Speak your goal in any of the 23 Indian languages...')}</span>
           </div>
         )}
       </form>

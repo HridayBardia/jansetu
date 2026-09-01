@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { selectDemoCitizenAPI } from '@/lib/api';
 import { UserCheck, ShieldAlert, Sparkles, MapPin, Check } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export interface DemoCitizenSelectorProps {
   onCitizenChange?: (citizenKey: string, data: any) => void;
@@ -39,6 +40,7 @@ const CITIZEN_PROFILES = [
 ];
 
 export function DemoCitizenSelector({ onCitizenChange }: DemoCitizenSelectorProps) {
+  const { t } = useLanguage();
   const [selectedKey, setSelectedKey] = useState('aarav');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -59,18 +61,18 @@ export function DemoCitizenSelector({ onCitizenChange }: DemoCitizenSelectorProp
         <div className="flex items-center gap-2.5">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-[11px] uppercase tracking-wider animate-pulse">
             <Sparkles className="w-3.5 h-3.5" />
-            DEMO MODE
+            {t('DEMO MODE', 'DEMO MODE')}
           </span>
           <div className="flex items-center gap-1.5 text-xs text-amber-200/90">
             <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="hidden sm:inline font-medium">DEMO DATA - Synthetic documents used for demonstration.</span>
+            <span className="hidden sm:inline font-medium">{t('DEMO DATA - Synthetic documents used for demonstration.', 'DEMO DATA - Synthetic documents used for demonstration.')}</span>
           </div>
         </div>
 
         {/* Right: Interactive Judge Switcher Buttons */}
         <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 md:pb-0">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap mr-1">
-            Select Profile:
+            {t('Select Profile:', 'Select Profile:')}
           </span>
           {CITIZEN_PROFILES.map((p) => {
             const isSelected = selectedKey === p.key;

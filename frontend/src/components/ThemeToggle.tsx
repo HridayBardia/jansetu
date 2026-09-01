@@ -3,28 +3,30 @@
 import React from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme, Theme } from '@/context/ThemeContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useTheme();
+  const { t } = useLanguage();
 
   const options: { id: Theme; label: string; icon: React.ReactNode; tooltip: string }[] = [
     {
       id: 'light',
-      label: 'Light',
+      label: t('Light', 'Light'),
       icon: <Sun size={15} className="transition-transform duration-200" />,
-      tooltip: 'Light Mode'
+      tooltip: t('Light Mode', 'Light Mode')
     },
     {
       id: 'system',
-      label: 'System',
+      label: t('System', 'System'),
       icon: <Monitor size={15} className="transition-transform duration-200" />,
-      tooltip: 'System Preference'
+      tooltip: t('System Preference', 'System Preference')
     },
     {
       id: 'dark',
-      label: 'Dark',
+      label: t('Dark', 'Dark'),
       icon: <Moon size={15} className="transition-transform duration-200" />,
-      tooltip: 'Dark Mode'
+      tooltip: t('Dark Mode', 'Dark Mode')
     }
   ];
 
@@ -32,7 +34,7 @@ export const ThemeToggle: React.FC = () => {
     <div 
       className="inline-flex items-center bg-slate-200/90 dark:bg-slate-900/90 p-0.5 md:p-1 rounded-full border border-slate-300/80 dark:border-slate-700/80 shadow-inner backdrop-blur-sm"
       role="group"
-      aria-label="Theme Selector"
+      aria-label={t('Theme Selector', 'Theme Selector')}
     >
       {options.map((opt) => {
         const isActive = theme === opt.id;

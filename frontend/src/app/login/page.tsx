@@ -599,7 +599,7 @@ export default function LoginPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400 hover:underline transition cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Return to Portal Selection</span>
+              <span>{t('Return to Portal Selection', 'Return to Portal Selection')}</span>
             </button>
 
             {/* Main Card */}
@@ -608,24 +608,24 @@ export default function LoginPage() {
               <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800">
-                    UIDAI e-KYC Level 2
+                    {t('UIDAI e-KYC Level 2', 'UIDAI e-KYC Level 2')}
                   </span>
                   <span className="text-xs text-slate-500 font-mono">
-                    Step {citizenStep} of 2
+                    {t(`Step ${citizenStep} of 2`, `Step ${citizenStep} of 2`)}
                   </span>
                 </div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Citizen Resident Login
+                  {t('Citizen Resident Login', 'Citizen Resident Login')}
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Authenticate using your 12-digit Aadhaar Number and OTP.
+                  {t('Authenticate using your 12-digit Aadhaar Number and OTP.', 'Authenticate using your 12-digit Aadhaar Number and OTP.')}
                 </p>
               </div>
 
               {/* Fast Demo Test Personas */}
               <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded border border-slate-200 dark:border-slate-800 space-y-1.5">
                 <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400 block">
-                  Quick Demo Beneficiary Personas (Click to Populate):
+                  {t('Quick Demo Beneficiary Personas (Click to Populate):', 'Quick Demo Beneficiary Personas (Click to Populate):')}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   {DEMO_CITIZENS.map((cit) => (
@@ -650,7 +650,7 @@ export default function LoginPage() {
                   {/* Aadhaar Input */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
-                      12-Digit Aadhaar Number <span className="text-red-500">*</span>
+                      {t('12-Digit Aadhaar Number', '12-Digit Aadhaar Number')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -670,7 +670,7 @@ export default function LoginPage() {
                   {/* Captcha Box */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
-                      Security Captcha Code <span className="text-red-500">*</span>
+                      {t('Security Captcha Code', 'Security Captcha Code')} <span className="text-red-500">*</span>
                     </label>
                     <div className="flex items-center gap-3">
                       <div className="border border-slate-300 dark:border-slate-600 rounded overflow-hidden shadow-inner bg-slate-100">
@@ -679,7 +679,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={refreshCitizenCaptcha}
-                        title="Refresh Captcha"
+                        title={t('Refresh Captcha', 'Refresh Captcha')}
                         className="p-2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition cursor-pointer"
                       >
                         <RotateCw className="w-4 h-4" />
@@ -692,7 +692,7 @@ export default function LoginPage() {
                           setCitizenCaptchaInput(e.target.value.toUpperCase());
                           setErrorMsg(null);
                         }}
-                        placeholder="Enter Code"
+                        placeholder={t('Enter Code', 'Enter Code')}
                         className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-slate-900 dark:text-white font-mono text-sm uppercase focus:ring-2 focus:ring-blue-600 focus:border-transparent placeholder-slate-400"
                       />
                     </div>
@@ -720,7 +720,7 @@ export default function LoginPage() {
                         className="mt-0.5 w-4 h-4 accent-blue-700 cursor-pointer"
                       />
                       <span className="text-slate-700 dark:text-slate-300 leading-relaxed select-none">
-                        I hereby provide statutory consent under the Digital Personal Data Protection (DPDP) Act 2023 for UIDAI Aadhaar verification and agree to the{' '}
+                        {t('I hereby provide statutory consent under the Digital Personal Data Protection (DPDP) Act 2023 for UIDAI Aadhaar verification and agree to the', 'I hereby provide statutory consent under the Digital Personal Data Protection (DPDP) Act 2023 for UIDAI Aadhaar verification and agree to the')}{' '}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -729,9 +729,9 @@ export default function LoginPage() {
                           }}
                           className="text-blue-700 dark:text-blue-400 font-bold underline hover:text-blue-800"
                         >
-                          Terms of Service
+                          {t('Terms of Service', 'Terms of Service')}
                         </button>{' '}
-                        and{' '}
+                        {t('and', 'and')}{' '}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -740,7 +740,7 @@ export default function LoginPage() {
                           }}
                           className="text-emerald-700 dark:text-emerald-400 font-bold underline hover:text-emerald-800"
                         >
-                          Privacy Policy
+                          {t('Privacy Policy', 'Privacy Policy')}
                         </button>.
                       </span>
                     </label>
@@ -761,7 +761,7 @@ export default function LoginPage() {
                     disabled={isSubmitting}
                     className="w-full py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded text-sm transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                   >
-                    <span>Get Aadhaar OTP</span>
+                    <span>{t('Get Aadhaar OTP', 'Get Aadhaar OTP')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -773,17 +773,17 @@ export default function LoginPage() {
                   <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded text-xs text-blue-900 dark:text-blue-300 space-y-1">
                     <p className="font-bold flex items-center gap-1.5">
                       <Smartphone className="w-4 h-4 text-blue-600" />
-                      <span>OTP Sent Successfully</span>
+                      <span>{t('OTP Sent Successfully', 'OTP Sent Successfully')}</span>
                     </p>
                     <p className="text-slate-600 dark:text-slate-400">
-                      Enter the 6-digit authentication code sent to mobile linked with Aadhaar <strong>{formatAadhaarNumber(aadhaarRaw)}</strong>.
+                      {t('Enter the 6-digit authentication code sent to mobile linked with Aadhaar', 'Enter the 6-digit authentication code sent to mobile linked with Aadhaar')} <strong>{formatAadhaarNumber(aadhaarRaw)}</strong>.
                     </p>
                   </div>
 
                   {/* 6-Digit OTP Boxes */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-                      Enter 6-Digit OTP <span className="text-red-500">*</span>
+                      {t('Enter 6-Digit OTP', 'Enter 6-Digit OTP')} <span className="text-red-500">*</span>
                     </label>
                     <div className="flex items-center justify-between gap-2">
                       {otpDigits.map((digit, idx) => (
@@ -809,7 +809,7 @@ export default function LoginPage() {
                       onClick={() => setCitizenStep(1)}
                       className="text-slate-500 hover:text-slate-800 dark:hover:text-white underline cursor-pointer"
                     >
-                      Change Aadhaar Number
+                      {t('Change Aadhaar Number', 'Change Aadhaar Number')}
                     </button>
 
                     {canResend ? (
@@ -822,10 +822,10 @@ export default function LoginPage() {
                         }}
                         className="text-blue-700 dark:text-blue-400 font-bold hover:underline cursor-pointer"
                       >
-                        Resend OTP
+                        {t('Resend OTP', 'Resend OTP')}
                       </button>
                     ) : (
-                      <span>Resend OTP in <strong className="font-mono text-blue-700 dark:text-blue-400">{resendTimer}s</strong></span>
+                      <span>{t('Resend OTP in', 'Resend OTP in')} <strong className="font-mono text-blue-700 dark:text-blue-400">{resendTimer}s</strong></span>
                     )}
                   </div>
 
@@ -847,12 +847,12 @@ export default function LoginPage() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Verifying e-KYC Credentials...</span>
+                        <span>{t('Verifying e-KYC Credentials...', 'Verifying e-KYC Credentials...')}</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Verify & Enter Citizen Dashboard</span>
+                        <span>{t('Verify & Enter Citizen Dashboard', 'Verify & Enter Citizen Dashboard')}</span>
                       </>
                     )}
                   </button>
@@ -863,10 +863,10 @@ export default function LoginPage() {
               <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 p-3 rounded text-[11px] text-amber-900 dark:text-amber-300 space-y-0.5">
                 <p className="font-bold flex items-center gap-1">
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Statutory Security Notice</span>
+                  <span>{t('Statutory Security Notice', 'Statutory Security Notice')}</span>
                 </p>
                 <p>
-                  Unauthorized access to this government portal or falsification of electronic records is strictly prohibited and punishable under the Information Technology Act, 2000 and the Aadhaar Act, 2016.
+                  {t('Unauthorized access to this government portal or falsification of electronic records is strictly prohibited and punishable under the Information Technology Act, 2000 and the Aadhaar Act, 2016.', 'Unauthorized access to this government portal or falsification of electronic records is strictly prohibited and punishable under the Information Technology Act, 2000 and the Aadhaar Act, 2016.')}
                 </p>
               </div>
             </div>
@@ -888,7 +888,7 @@ export default function LoginPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:underline transition cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Return to Portal Selection</span>
+              <span>{t('Return to Portal Selection', 'Return to Portal Selection')}</span>
             </button>
 
             {/* Main Card */}
@@ -896,20 +896,20 @@ export default function LoginPage() {
               {/* Card Header */}
               <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700">
-                  Government Official Authorization
+                  {t('Government Official Authorization', 'Government Official Authorization')}
                 </span>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                  Departmental Admin Sign In
+                  {t('Departmental Admin Sign In', 'Departmental Admin Sign In')}
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Access restricted to authorized Nodal Officers and System Administrators.
+                  {t('Access restricted to authorized Nodal Officers and System Administrators.', 'Access restricted to authorized Nodal Officers and System Administrators.')}
                 </p>
               </div>
 
               {/* Fast Demo Officer Chips */}
               <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded border border-slate-200 dark:border-slate-800 space-y-1.5">
                 <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400 block">
-                  Quick Demo Officer Accounts (Click to Populate):
+                  {t('Quick Demo Officer Accounts (Click to Populate):', 'Quick Demo Officer Accounts (Click to Populate):')}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   {DEMO_ADMINS.map((adm) => (
@@ -922,7 +922,7 @@ export default function LoginPage() {
                           : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-500'
                         }`}
                     >
-                      {adm.officerId} ({adm.role === 'SYSTEM_ADMIN' ? 'System Admin' : 'Dept Admin'})
+                      {adm.officerId} ({adm.role === 'SYSTEM_ADMIN' ? t('System Admin', 'System Admin') : t('Dept Admin', 'Dept Admin')})
                     </button>
                   ))}
                 </div>
@@ -932,7 +932,7 @@ export default function LoginPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
-                    Designated Officer User ID <span className="text-red-500">*</span>
+                    {t('Designated Officer User ID', 'Designated Officer User ID')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -948,7 +948,7 @@ export default function LoginPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
-                    Departmental Password <span className="text-red-500">*</span>
+                    {t('Departmental Password', 'Departmental Password')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="password"
@@ -965,7 +965,7 @@ export default function LoginPage() {
                 {/* Captcha Box */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
-                    Security Captcha Code <span className="text-red-500">*</span>
+                    {t('Security Captcha Code', 'Security Captcha Code')} <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <div className="border border-slate-300 dark:border-slate-600 rounded overflow-hidden shadow-inner bg-slate-100">
@@ -974,7 +974,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={refreshAdminCaptcha}
-                      title="Refresh Captcha"
+                      title={t('Refresh Captcha', 'Refresh Captcha')}
                       className="p-2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
                     >
                       <RotateCw className="w-4 h-4" />
@@ -987,7 +987,7 @@ export default function LoginPage() {
                         setAdminCaptchaInput(e.target.value.toUpperCase());
                         setErrorMsg(null);
                       }}
-                      placeholder="Enter Code"
+                      placeholder={t('Enter Code', 'Enter Code')}
                       className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-3 py-2 text-slate-900 dark:text-white font-mono text-sm uppercase focus:ring-2 focus:ring-slate-600 focus:border-transparent placeholder-slate-400"
                     />
                   </div>
@@ -1015,7 +1015,7 @@ export default function LoginPage() {
                       className="mt-0.5 w-4 h-4 accent-slate-800 cursor-pointer"
                     />
                     <span className="text-slate-700 dark:text-slate-300 leading-relaxed select-none">
-                      I agree to the statutory government non-disclosure agreement and official compliance protocols under the Official Secrets Act and the DPDP Act 2023.
+                      {t('I agree to the statutory government non-disclosure agreement and official compliance protocols under the Official Secrets Act and the DPDP Act 2023.', 'I agree to the statutory government non-disclosure agreement and official compliance protocols under the Official Secrets Act and the DPDP Act 2023.')}
                     </span>
                   </label>
                 </div>
@@ -1038,12 +1038,12 @@ export default function LoginPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Validating Official Credentials...</span>
+                      <span>{t('Validating Official Credentials...', 'Validating Official Credentials...')}</span>
                     </>
                   ) : (
                     <>
                       <Lock className="w-4 h-4" />
-                      <span>Authenticate & Enter Administration Console</span>
+                      <span>{t('Authenticate & Enter Administration Console', 'Authenticate & Enter Administration Console')}</span>
                     </>
                   )}
                 </button>
@@ -1053,10 +1053,10 @@ export default function LoginPage() {
               <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 p-3 rounded text-[11px] text-amber-900 dark:text-amber-300 space-y-0.5">
                 <p className="font-bold flex items-center gap-1">
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Statutory Security Notice</span>
+                  <span>{t('Statutory Security Notice', 'Statutory Security Notice')}</span>
                 </p>
                 <p>
-                  Unauthorized access to this government portal is punishable under the Information Technology Act, 2000. All administrative sessions and IP traces are logged for national security auditing.
+                  {t('Unauthorized access to this government portal is punishable under the Information Technology Act, 2000. All administrative sessions and IP traces are logged for national security auditing.', 'Unauthorized access to this government portal is punishable under the Information Technology Act, 2000. All administrative sessions and IP traces are logged for national security auditing.')}
                 </p>
               </div>
             </div>

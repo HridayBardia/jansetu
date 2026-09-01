@@ -361,7 +361,7 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
       {recentlyAddedAppId && (
         <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-lg flex items-center gap-2 text-xs text-emerald-900 dark:text-emerald-200 font-semibold animate-scaleUp shadow-sm">
           <Sparkles className="w-4 h-4 text-emerald-600 animate-spin" />
-          <span>Live Mesh: Incoming application ({recentlyAddedAppId}) received and prepended to your queue in real-time.</span>
+          <span>{t(`Live Mesh: Incoming application (${recentlyAddedAppId}) received and prepended to your queue in real-time.`, `Live Mesh: Incoming application (${recentlyAddedAppId}) received and prepended to your queue in real-time.`)}</span>
         </div>
       )}
 
@@ -406,14 +406,14 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
                       <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">UID: {app.citizenId}</div>
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-white max-w-[220px] truncate border-r border-slate-200 dark:border-slate-800">
-                      {app.service}
+                      {t(app.service, app.service)}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400 max-w-[200px] truncate border-r border-slate-200 dark:border-slate-800">
-                      {app.department}
+                      {t(app.department, app.department)}
                     </td>
                     <td className="px-4 py-3 border-r border-slate-200 dark:border-slate-800">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[app.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {app.status.replace(/_/g, ' ')}
+                        {t(app.status.replace(/_/g, ' '), app.status.replace(/_/g, ' '))}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-mono border-r border-slate-200 dark:border-slate-800">
@@ -424,7 +424,7 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
                         type="button"
                         className="text-[#133E87] dark:text-blue-400 hover:underline font-bold inline-flex items-center gap-1"
                       >
-                        <span>Review</span>
+                        <span>{t('Review', 'Review')}</span>
                         <ChevronRight className="w-3 h-3" />
                       </button>
                     </td>
@@ -436,8 +436,8 @@ export const AdminApplicationsView = ({ adminUsername }: Props) => {
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500 text-sm">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Briefcase className="w-8 h-8 text-slate-400" />
-                      <p className="font-semibold text-slate-700 dark:text-slate-300">No applications match your search or filter.</p>
-                      <p className="text-xs text-slate-400">Try adjusting keywords or selecting "All" categories.</p>
+                      <p className="font-semibold text-slate-700 dark:text-slate-300">{t('No applications match your search or filter.', 'No applications match your search or filter.')}</p>
+                      <p className="text-xs text-slate-400">{t('Try adjusting keywords or selecting "All" categories.', 'Try adjusting keywords or selecting "All" categories.')}</p>
                     </div>
                   </td>
                 </tr>

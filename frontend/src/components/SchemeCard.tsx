@@ -42,10 +42,10 @@ export const SchemeCard: React.FC<{
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-              {t(scheme.level) || scheme.level} • {t(scheme.state_name) || scheme.state_name}
+              {t(scheme.level, scheme.level)} • {t(scheme.state_name, scheme.state_name)}
             </span>
             <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              {t(scheme.category) || scheme.category}
+              {t(scheme.category, scheme.category)}
             </span>
           </div>
 
@@ -58,31 +58,31 @@ export const SchemeCard: React.FC<{
         {/* Scheme Title & Department */}
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition">
-            {t(scheme.name) || scheme.name}
+            {t(scheme.name, scheme.name)}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
             <Building2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-            <span>{t(scheme.department) || scheme.department}</span>
+            <span>{t(scheme.department, scheme.department)}</span>
           </p>
         </div>
 
         {/* Description */}
         <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
-          {t(scheme.description) || scheme.description}
+          {t(scheme.description, scheme.description)}
         </p>
 
         {/* Benefits Highlights */}
         {scheme.benefits && Object.keys(scheme.benefits).length > 0 && (
           <div className="bg-slate-50 dark:bg-slate-950/80 rounded-xl p-3 border border-slate-200 dark:border-slate-800/80 space-y-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-              {t('schemes.benefits', 'Benefits & Direct Support')}
+              {t('Target Benefit Disbursal', 'Benefits & Direct Support')}
             </span>
             <div className="text-xs font-medium text-amber-800 dark:text-amber-300 flex items-center gap-1.5 flex-wrap">
               {Object.entries(scheme.benefits).map(([key, val]) => (
                 <span key={key} className="inline-flex items-center gap-1 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md text-[11px] border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
                   <Award className="w-3 h-3 text-emerald-500" />
-                  <span className="capitalize">{t(key.replace(/_/g, ' ')) || key.replace(/_/g, ' ')}:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{t(String(val)) || String(val)}</span>
+                  <span className="capitalize">{t(key.replace(/_/g, ' '), key.replace(/_/g, ' '))}:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{t(String(val), String(val))}</span>
                 </span>
               ))}
             </div>
@@ -99,7 +99,7 @@ export const SchemeCard: React.FC<{
           className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white text-xs font-medium transition"
         >
           <Calendar className="w-3 h-3" />
-          <span>{t('officialSource', 'Official Source')}</span>
+          <span>{t('Official Portal', 'Official Source')}</span>
           <ExternalLink className="w-3 h-3 text-amber-500" />
         </a>
 
@@ -117,12 +117,12 @@ export const SchemeCard: React.FC<{
             {isApplied ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Applied</span>
+                <span>{t('Application Lodged', 'Applied')}</span>
               </>
             ) : (
               <>
                 <Send className="w-3.5 h-3.5" />
-                <span>Apply Now</span>
+                <span>{t('Apply for Benefit', 'Apply Now')}</span>
               </>
             )}
           </button>

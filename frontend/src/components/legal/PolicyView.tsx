@@ -52,14 +52,14 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
         <div className="border-b border-slate-200 dark:border-slate-800 pb-5 space-y-2">
           <div className="flex items-center justify-between gap-4">
             <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-              Official Document Series
+              {t('Official Document Series', 'Official Document Series')}
             </span>
             <span className="text-xs font-mono text-slate-400">
               Ref: MEITY/JS/{policy.id.toUpperCase()}
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-            {policy.title}
+            {t(policy.title, policy.title)}
           </h2>
         </div>
 
@@ -72,7 +72,7 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
               className="space-y-3 scroll-mt-28"
             >
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 border-l-3 border-blue-600 pl-3">
-                <span>{section.heading}</span>
+                <span>{t(section.heading, section.heading)}</span>
               </h3>
 
               <div className="space-y-2.5 text-sm text-slate-600 dark:text-slate-300 pl-4">
@@ -80,23 +80,24 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
                   section.content.map((paragraph, pIdx) => {
                     const isBullet = paragraph.startsWith('•') || paragraph.startsWith('-');
                     if (isBullet) {
+                      const cleanParagraph = paragraph.replace(/^[•\-]\s*/, '');
                       return (
                         <div key={pIdx} className="flex items-start gap-2.5 ml-2 py-0.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 mt-2 shrink-0" />
                           <span className="leading-relaxed">
-                            {paragraph.replace(/^[•\-]\s*/, '')}
+                            {t(cleanParagraph, cleanParagraph)}
                           </span>
                         </div>
                       );
                     }
                     return (
                       <p key={pIdx} className="leading-relaxed">
-                        {paragraph}
+                        {t(paragraph, paragraph)}
                       </p>
                     );
                   })
                 ) : (
-                  <p className="leading-relaxed">{section.content}</p>
+                  <p className="leading-relaxed">{t(section.content, section.content)}</p>
                 )}
 
                 {/* Subsections if present */}
@@ -105,12 +106,12 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
                     {section.subsections.map((sub, subIdx) => (
                       <div key={subIdx} className="space-y-1.5">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                          {sub.subheading}
+                          {t(sub.subheading, sub.subheading)}
                         </h4>
                         <ul className="space-y-1 pl-3">
                           {sub.points.map((pt, ptIdx) => (
                             <li key={ptIdx} className="text-xs text-slate-600 dark:text-slate-400 list-disc">
-                              {pt}
+                              {t(pt, pt)}
                             </li>
                           ))}
                         </ul>
@@ -126,7 +127,7 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
         {/* Section: Additional Departmental Directives & Quick Links */}
         <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Related Statutory Frameworks & Portals
+            {t('Related Statutory Frameworks & Portals', 'Related Statutory Frameworks & Portals')}
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
@@ -137,7 +138,7 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
             >
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
-                <span>DPDP Act 2023 Gazette Copy</span>
+                <span>{t('DPDP Act 2023 Gazette Copy', 'DPDP Act 2023 Gazette Copy')}</span>
               </div>
               <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" />
             </a>
@@ -150,7 +151,7 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
             >
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>GIGW 3.0 Compliance Matrix (NIC)</span>
+                <span>{t('GIGW 3.0 Compliance Matrix (NIC)', 'GIGW 3.0 Compliance Matrix (NIC)')}</span>
               </div>
               <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
             </a>
@@ -162,17 +163,17 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policyId: propPolicyId }
           <div className="space-y-1 text-xs">
             <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>Need help applying or understanding policies?</span>
+              <span>{t('Need help applying or understanding policies?', 'Need help applying or understanding policies?')}</span>
             </p>
             <p className="text-slate-500 dark:text-slate-400 text-[11px]">
-              Our automated Welfare Navigator guides you step-by-step through required documents with zero guesswork.
+              {t('Our automated Welfare Navigator guides you step-by-step through required documents with zero guesswork.', 'Our automated Welfare Navigator guides you step-by-step through required documents with zero guesswork.')}
             </p>
           </div>
           <Link
             href="/citizen/dashboard?tab=planner"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs transition shrink-0"
           >
-            <span>Launch Goal Navigator</span>
+            <span>{t('Launch Goal Navigator', 'Launch Goal Navigator')}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>

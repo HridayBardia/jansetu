@@ -55,7 +55,7 @@ export const PolicyLayout: React.FC<PolicyLayoutProps> = ({ currentPolicy, child
             {t('legal.bilingualMandate', 'Official 22 Scheduled Language Gazette Notice')}
           </p>
           <p className="text-amber-800 dark:text-amber-300/90 text-[11px] leading-relaxed">
-            In accordance with Digital India Bhashini guidelines and Article 343/Eighth Schedule provisions, this policy is translated dynamically across all 22 official scheduled languages. Use the top language selector to switch dialects instantly. The English and Hindi gazette texts serve as the primary authentic references in legal disputes.
+            {t('In accordance with Digital India Bhashini guidelines and Article 343/Eighth Schedule provisions, this policy is translated dynamically across all 22 official scheduled languages. Use the top language selector to switch dialects instantly. The English and Hindi gazette texts serve as the primary authentic references in legal disputes.', 'In accordance with Digital India Bhashini guidelines and Article 343/Eighth Schedule provisions, this policy is translated dynamically across all 22 official scheduled languages. Use the top language selector to switch dialects instantly. The English and Hindi gazette texts serve as the primary authentic references in legal disputes.')}
           </p>
         </div>
       </div>
@@ -68,10 +68,10 @@ export const PolicyLayout: React.FC<PolicyLayoutProps> = ({ currentPolicy, child
             <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Civic Policy Directory</span>
+                <span>{t('Civic Policy Directory', 'Civic Policy Directory')}</span>
               </h2>
               <span className="text-[11px] font-semibold text-slate-500 bg-slate-200 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                7 Documents
+                {t('7 Documents', '7 Documents')}
               </span>
             </div>
 
@@ -93,7 +93,7 @@ export const PolicyLayout: React.FC<PolicyLayoutProps> = ({ currentPolicy, child
                       <span className={isActive ? 'text-blue-700 dark:text-blue-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}>
                         {icon}
                       </span>
-                      <span className="truncate">{policy.shortTitle}</span>
+                      <span className="truncate">{t(policy.shortTitle, policy.shortTitle)}</span>
                     </div>
                     <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isActive ? 'text-blue-700 dark:text-blue-400 translate-x-0.5' : 'text-slate-300 dark:text-slate-600 group-hover:text-slate-400'}`} />
                   </Link>
@@ -106,10 +106,10 @@ export const PolicyLayout: React.FC<PolicyLayoutProps> = ({ currentPolicy, child
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
             <h3 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Shield className="w-4 h-4 text-emerald-600" />
-              <span>Grievance & DPO Helpline</span>
+              <span>{t('Grievance & DPO Helpline', 'Grievance & DPO Helpline')}</span>
             </h3>
             <p className="text-[11px] leading-relaxed">
-              Questions regarding DPDP compliance or data revocation? Contact the Data Protection Officer directly at <span className="font-mono text-blue-600 dark:text-blue-400">dpo.jansetu@gov.in</span> or call toll-free <span className="font-bold text-slate-900 dark:text-white">1800-11-2026</span>.
+              {t('Questions regarding DPDP compliance or data revocation?', 'Questions regarding DPDP compliance or data revocation?')} {t('Contact the Data Protection Officer directly at', 'Contact the Data Protection Officer directly at')} <span className="font-mono text-blue-600 dark:text-blue-400">dpo.jansetu@gov.in</span> {t('or call toll-free', 'or call toll-free')} <span className="font-bold text-slate-900 dark:text-white">1800-11-2026</span>.
             </p>
           </div>
         </aside>

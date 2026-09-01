@@ -429,11 +429,11 @@ export const SchemeExplorer: React.FC<SchemeExplorerProps> = ({
           <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto text-slate-400">
             <Landmark className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-            No welfare schemes found matching "{searchQuery}"
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            {t(`No welfare schemes found matching "${searchQuery}"`, `No welfare schemes found matching "${searchQuery}"`)}
           </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Try adjusting your search query, clearing tag filters, or select "All Schemes" to view the complete catalog.
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            {t('Try adjusting your search query or reset category filters to view all central schemes.', 'Try adjusting your search query or reset category filters to view all central schemes.')}
           </p>
           <button
             type="button"
@@ -441,7 +441,7 @@ export const SchemeExplorer: React.FC<SchemeExplorerProps> = ({
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset All Filters</span>
+            <span>{t('Reset Filters', 'Reset Filters')}</span>
           </button>
         </div>
       )}

@@ -157,7 +157,7 @@ export const YourDataConsent: React.FC<YourDataConsentProps> = ({
           </div>
           <span className="bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-[#133E87] dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 self-start sm:self-auto shrink-0">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Protected by DPDP Act 2023</span>
+            <span>{t('Protected by DPDP Act 2023', 'Protected by DPDP Act 2023')}</span>
           </span>
         </div>
 
@@ -186,23 +186,23 @@ export const YourDataConsent: React.FC<YourDataConsentProps> = ({
                         isActive ? 'bg-emerald-500' : isPending ? 'bg-amber-500 animate-ping' : 'bg-rose-500'
                       }`} />
                       <h4 className="font-bold text-slate-900 dark:text-white text-base">
-                        {c.department}
+                        {t(c.department, c.department)}
                       </h4>
                     </div>
 
                     <p className="text-xs text-slate-600 dark:text-slate-300">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">Statutory Purpose:</span> {c.purpose}
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{t('Statutory Purpose:', 'Statutory Purpose:')}</span> {t(c.purpose, c.purpose)}
                     </p>
 
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] uppercase font-bold text-slate-500 mr-1">Authorized Fields:</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 mr-1">{t('Authorized Fields:', 'Authorized Fields:')}</span>
                       {(c.requestedFields || []).map((field, fIdx) => (
                         <span 
                           key={fIdx} 
                           className="px-2 py-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded text-[10px] font-mono font-bold text-[#133E87] dark:text-blue-400 shadow-2xs flex items-center gap-1"
                         >
                           <FileText className="w-2.5 h-2.5 text-slate-400" />
-                          <span>{field}</span>
+                          <span>{t(field, field)}</span>
                         </span>
                       ))}
                     </div>
@@ -221,13 +221,13 @@ export const YourDataConsent: React.FC<YourDataConsentProps> = ({
                       {isRevoked && <XCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />}
                       {isPending && <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
                       <span>
-                        {isActive ? 'Active DPDP Consent' : isRevoked ? 'Revoked by Citizen' : 'Pending Authorization'}
+                        {isActive ? t('Active DPDP Consent', 'Active DPDP Consent') : isRevoked ? t('Revoked by Citizen', 'Revoked by Citizen') : t('Pending Authorization', 'Pending Authorization')}
                       </span>
                     </span>
 
                     {c.expiryDate && (
                       <span className="text-[10px] text-slate-500 font-mono">
-                        Valid until: {c.expiryDate}
+                        {t('Valid until:', 'Valid until:')} {c.expiryDate}
                       </span>
                     )}
                   </div>
@@ -249,13 +249,13 @@ export const YourDataConsent: React.FC<YourDataConsentProps> = ({
                         className="bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1"
                       >
                         <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Allow Always</span>
+                        <span>{t('Allow Always', 'Allow Always')}</span>
                       </button>
                       <button
                         onClick={() => handleGrant(c, 'ONCE')}
                         className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-2xs"
                       >
-                        <span>Allow Once (Single Transaction)</span>
+                        <span>{t('Allow Once (Single Transaction)', 'Allow Once (Single Transaction)')}</span>
                       </button>
                     </>
                   )}
@@ -276,7 +276,7 @@ export const YourDataConsent: React.FC<YourDataConsentProps> = ({
                       className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1.5"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Re-Authorize DPDP Access</span>
+                      <span>{t('Re-Authorize DPDP Access', 'Re-Authorize DPDP Access')}</span>
                     </button>
                   )}
                 </div>
@@ -294,7 +294,7 @@ export const YourDataConsent: React.FC<YourDataConsentProps> = ({
             <span>{t('consent.auditTrail', 'Immutable Data Access Audit Trail')}</span>
           </h3>
           <span className="text-xs text-slate-500 dark:text-slate-400 font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-0.5 rounded">
-            256-bit Encrypted Ledger
+            {t('256-bit Encrypted Ledger', '256-bit Encrypted Ledger')}
           </span>
         </div>
 

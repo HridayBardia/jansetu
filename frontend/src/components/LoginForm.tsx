@@ -224,7 +224,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
               }`}
             />
             <span className="text-slate-300 text-xs leading-relaxed select-none">
-              I agree to the{' '}
+              {t('I agree to the', 'I agree to the')}{' '}
               <a
                 href="#"
                 onClick={(e) => {
@@ -234,9 +234,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
                 }}
                 className="text-blue-400 hover:text-blue-300 font-medium underline underline-offset-4 decoration-blue-500/60 transition-colors cursor-pointer"
               >
-                Terms and Conditions
+                {t('Terms and Conditions', 'Terms and Conditions')}
               </a>{' '}
-              and{' '}
+              {t('and', 'and')}{' '}
               <a
                 href="#"
                 onClick={(e) => {
@@ -246,7 +246,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onClose }) => {
                 }}
                 className="text-emerald-400 hover:text-emerald-300 font-medium underline underline-offset-4 decoration-emerald-500/60 transition-colors cursor-pointer"
               >
-                Privacy Policy
+                {t('Privacy Policy', 'Privacy Policy')}
               </a>
             </span>
           </div>

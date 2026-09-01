@@ -295,7 +295,11 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ customAp
   };
 
   const handleWithdrawApplication = (appId: string) => {
-    if (confirm(`Are you sure you want to withdraw application #${appId}? This will remove it from the citizen portal and officer scrutiny queue.`)) {
+    const confirmMessage = t(
+      `Are you sure you want to withdraw application #${appId}? This will remove it from the citizen portal and officer scrutiny queue.`,
+      `Are you sure you want to withdraw application #${appId}? This will remove it from the citizen portal and officer scrutiny queue.`
+    );
+    if (confirm(confirmMessage)) {
       if (removeApplication) {
         removeApplication(appId);
       }
@@ -306,34 +310,34 @@ export const ApplicationTracker: React.FC<ApplicationTrackerProps> = ({ customAp
   const handleDownloadReceipt = (app: BenefitApplication) => {
     const text = `
 ================================================================================
-                    JANSETU NATIONAL CITIZEN PORTAL
-              OFFICIAL APPLICATION STATUS ACKNOWLEDGEMENT
+                    ${t('JANSETU NATIONAL CITIZEN PORTAL', 'JANSETU NATIONAL CITIZEN PORTAL')}
+              ${t('OFFICIAL APPLICATION STATUS ACKNOWLEDGEMENT', 'OFFICIAL APPLICATION STATUS ACKNOWLEDGEMENT')}
 ================================================================================
-Date of Generation:    ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-Application Reference: ${app.id}
-Applicant Full Name:   Hriday Bardia
-Citizen Identifier:    1111 2222 1405 (Aadhaar Seeded)
+${t('Date of Generation', 'Date of Generation')}:    ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+${t('Application Reference', 'Application Reference')}: ${app.id}
+${t('Applicant Full Name', 'Applicant Full Name')}:   Hriday Bardia
+${t('Citizen Identifier', 'Citizen Identifier')}:    1111 2222 1405 (${t('Aadhaar Seeded', 'Aadhaar Seeded')})
 --------------------------------------------------------------------------------
-SCHEME / SERVICE DETAILS:
-Service Title:         ${app.title}
-Nodal Department:      ${app.department}
-Current Status:        ${app.status}
-Date of Submission:    ${app.submittedDate}
-Jurisdiction Location: ${app.location || 'India'}
-Sanction Reference:    ${app.sanctionReference || 'SANCTION/2026/JS-8801'}
-Disbursement Account:  ${app.disbursementBank || 'State Bank of India (•••• •••• 4421)'}
+${t('SCHEME / SERVICE DETAILS', 'SCHEME / SERVICE DETAILS')}:
+${t('Service Title', 'Service Title')}:         ${t(app.title, app.title)}
+${t('Nodal Department', 'Nodal Department')}:      ${t(app.department, app.department)}
+${t('Current Status', 'Current Status')}:        ${t(app.status, app.status)}
+${t('Date of Submission', 'Date of Submission')}:    ${app.submittedDate}
+${t('Jurisdiction Location', 'Jurisdiction Location')}: ${t(app.location || 'India', app.location || 'India')}
+${t('Sanction Reference', 'Sanction Reference')}:    ${app.sanctionReference || 'SANCTION/2026/JS-8801'}
+${t('Disbursement Account', 'Disbursement Account')}:  ${app.disbursementBank || 'State Bank of India (•••• •••• 4421)'}
 --------------------------------------------------------------------------------
-OFFICIAL OFFICER REMARKS:
-"${app.officerRemarks || 'Statutory e-KYC cross-verified via JanSetu Multi-Cloud Mesh.'}"
+${t('OFFICIAL OFFICER REMARKS', 'OFFICIAL OFFICER REMARKS')}:
+"${t(app.officerRemarks || 'Statutory e-KYC cross-verified via JanSetu Multi-Cloud Mesh.', app.officerRemarks || 'Statutory e-KYC cross-verified via JanSetu Multi-Cloud Mesh.')}"
 --------------------------------------------------------------------------------
-ATTACHED CREDENTIALS & VERIFICATION:
+${t('ATTACHED CREDENTIALS & VERIFICATION', 'ATTACHED CREDENTIALS & VERIFICATION')}:
 ${(app.documents || [
   { name: 'Aadhaar e-KYC Identity Certificate', status: 'VERIFIED' },
   { name: 'State Domicile / Land Record', status: 'VERIFIED' }
-]).map(d => `• [${d.status}] ${d.name}`).join('\n')}
+]).map(d => `• [${t(d.status, d.status)}] ${t(d.name, d.name)}`).join('\n')}
 --------------------------------------------------------------------------------
-This is an electronically generated receipt verified by the Government of India
-Unified Service Registry. No physical signature is required.
+${t('This is an electronically generated receipt verified by the Government of India', 'This is an electronically generated receipt verified by the Government of India')}
+${t('Unified Service Registry. No physical signature is required.', 'Unified Service Registry. No physical signature is required.')}
 ================================================================================
 `;
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -352,35 +356,35 @@ Unified Service Registry. No physical signature is required.
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Briefcase className="w-5 h-5 text-[#133E87] dark:text-blue-400" />
-            <span>National Benefit & Legal Application Ledger</span>
+            <span>{t('National Benefit & Legal Application Ledger', 'National Benefit & Legal Application Ledger')}</span>
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            Real-time telemetry showing identity verification, nodal officer review, and direct statutory benefit delivery.
+            {t('Real-time telemetry showing identity verification, nodal officer review, and direct statutory benefit delivery.', 'Real-time telemetry showing identity verification, nodal officer review, and direct statutory benefit delivery.')}
           </p>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Synced with Officer Scrutiny Portal</span>
+          <span>{t('Synced with Officer Scrutiny Portal', 'Synced with Officer Scrutiny Portal')}</span>
         </div>
       </div>
 
       {/* Summary Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-1 shadow-2xs">
-          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Applications</span>
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">{t('Total Applications', 'Total Applications')}</span>
           <p className="text-2xl font-black text-slate-900 dark:text-white font-mono">{stats.total}</p>
         </div>
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-1 shadow-2xs">
-          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Sanction Approved</span>
+          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">{t('Sanction Approved', 'Sanction Approved')}</span>
           <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400 font-mono">{stats.approved}</p>
         </div>
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-1 shadow-2xs">
-          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">Under Review</span>
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">{t('Under Review', 'Under Review')}</span>
           <p className="text-2xl font-black text-blue-700 dark:text-blue-400 font-mono">{stats.underReview}</p>
         </div>
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 space-y-1 shadow-2xs">
-          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">Action Required</span>
+          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">{t('Action Required', 'Action Required')}</span>
           <p className="text-2xl font-black text-amber-700 dark:text-amber-400 font-mono">{stats.actionRequired}</p>
         </div>
       </div>
@@ -393,18 +397,18 @@ Unified Service Registry. No physical signature is required.
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by scheme name, Application ID (e.g. JS-2026-8801), or Ministry..."
+            placeholder={t('Search by scheme name, Application ID (e.g. JS-2026-8801), or Ministry...', 'Search by scheme name, Application ID (e.g. JS-2026-8801), or Ministry...')}
             className="w-full pl-9 pr-4 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-[#133E87]"
           />
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-1 md:pb-0">
           {[
-            { id: 'ALL', label: 'All' },
-            { id: 'SUBMITTED', label: 'Submitted' },
-            { id: 'UNDER_VERIFICATION', label: 'Verifying' },
-            { id: 'APPROVED', label: 'Approved' },
-            { id: 'ACTION_REQUIRED', label: 'Action Required' }
+            { id: 'ALL', label: t('All', 'All') },
+            { id: 'SUBMITTED', label: t('Submitted', 'Submitted') },
+            { id: 'UNDER_VERIFICATION', label: t('Verifying', 'Verifying') },
+            { id: 'APPROVED', label: t('Approved', 'Approved') },
+            { id: 'ACTION_REQUIRED', label: t('Action Required', 'Action Required') }
           ].map(tab => (
             <button
               key={tab.id}
@@ -428,9 +432,9 @@ Unified Service Registry. No physical signature is required.
           <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-8 text-center space-y-3">
             <FileText className="w-10 h-10 text-slate-400 mx-auto" />
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">No applications match your criteria</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('No applications match your criteria', 'No applications match your criteria')}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Search in Goal Planner for documents like Voter ID, Passport, PAN Card, or Ration Card and click "Add to My Applications" to populate this tracker.
+                {t('Search in Goal Planner for documents like Voter ID, Passport, PAN Card, or Ration Card and click "Add to My Applications" to populate this tracker.', 'Search in Goal Planner for documents like Voter ID, Passport, PAN Card, or Ration Card and click "Add to My Applications" to populate this tracker.')}
               </p>
             </div>
           </div>
@@ -456,28 +460,28 @@ Unified Service Registry. No physical signature is required.
                         {app.id}
                       </span>
                       <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border}`}>
-                        {statusStyle.label}
+                        {t(statusStyle.label, statusStyle.label)}
                       </span>
                       {app.location && (
                         <span className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
-                          📍 {app.location}
+                          📍 {t(app.location, app.location)}
                         </span>
                       )}
                     </div>
 
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {app.title}
+                      {t(app.title, app.title)}
                     </h3>
 
                     <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{app.department}</span>
+                      <span>{t(app.department, app.department)}</span>
                     </p>
                   </div>
 
                   <div className="flex items-center gap-4 text-xs">
                     <div className="text-right hidden sm:block">
-                      <span className="text-slate-400 text-[10px] uppercase font-bold block">Lodged Date</span>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold block">{t('Lodged Date', 'Lodged Date')}</span>
                       <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{app.submittedDate}</span>
                     </div>
 
@@ -496,15 +500,15 @@ Unified Service Registry. No physical signature is required.
                     {/* 4-Stage Stepper */}
                     <div className="space-y-2">
                       <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block">
-                        Lifecycle & Verification Telemetry
+                        {t('Lifecycle & Verification Telemetry', 'Lifecycle & Verification Telemetry')}
                       </span>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
                         {[
-                          { step: '01', title: 'Application Lodged', state: 'completed', desc: 'UIDAI e-KYC Received' },
-                          { step: '02', title: 'Document Verification', state: app.status === 'SUBMITTED' ? 'current' : 'completed', desc: 'Interoperability Match' },
-                          { step: '03', title: 'Nodal Officer Approval', state: app.status === 'APPROVED' || app.status === 'DISBURSED' ? 'completed' : 'current', desc: 'Digital Sanction Order' },
-                          { step: '04', title: 'Benefit Disbursal', state: app.status === 'DISBURSED' ? 'completed' : 'pending', desc: 'Direct Speed Post / DBT' }
+                          { step: '01', title: t('Application Lodged', 'Application Lodged'), state: 'completed', desc: t('UIDAI e-KYC Received', 'UIDAI e-KYC Received') },
+                          { step: '02', title: t('Document Verification', 'Document Verification'), state: app.status === 'SUBMITTED' ? 'current' : 'completed', desc: t('Interoperability Match', 'Interoperability Match') },
+                          { step: '03', title: t('Nodal Officer Approval', 'Nodal Officer Approval'), state: app.status === 'APPROVED' || app.status === 'DISBURSED' ? 'completed' : 'current', desc: t('Digital Sanction Order', 'Digital Sanction Order') },
+                          { step: '04', title: t('Benefit Disbursal', 'Benefit Disbursal'), state: app.status === 'DISBURSED' ? 'completed' : 'pending', desc: t('Direct Speed Post / DBT', 'Direct Speed Post / DBT') }
                         ].map((st, idx) => (
                           <div 
                             key={idx}
@@ -539,12 +543,12 @@ Unified Service Registry. No physical signature is required.
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                           <span className="flex items-center gap-1.5 text-[#133E87] dark:text-blue-400">
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Official Officer Scrutiny Note</span>
+                            <span>{t('Official Officer Scrutiny Note', 'Official Officer Scrutiny Note')}</span>
                           </span>
                           <span className="font-mono">{app.sanctionReference || 'SANCTION/2026/REF'}</span>
                         </div>
                         <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                          "{app.officerRemarks}"
+                          "{t(app.officerRemarks, app.officerRemarks)}"
                         </p>
                       </div>
                     )}
@@ -555,9 +559,9 @@ Unified Service Registry. No physical signature is required.
                         <div className="flex items-center justify-between">
                           <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                             <FileText className="w-4 h-4 text-[#133E87] dark:text-blue-400" />
-                            <span>Attached Supporting Documents & Verifications</span>
+                            <span>{t('Attached Supporting Documents & Verifications', 'Attached Supporting Documents & Verifications')}</span>
                           </h4>
-                          <span className="text-[10px] text-slate-500">Cross-checked via JanSetu Mesh</span>
+                          <span className="text-[10px] text-slate-500">{t('Cross-checked via JanSetu Mesh', 'Cross-checked via JanSetu Mesh')}</span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -566,11 +570,11 @@ Unified Service Registry. No physical signature is required.
                             { name: 'State Domicile / Land Records Certificate', status: 'VERIFIED' }
                           ]).map((doc, dIdx) => (
                             <div key={dIdx} className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                              <span className="font-medium text-slate-800 dark:text-slate-200 truncate pr-2">{doc.name}</span>
+                              <span className="font-medium text-slate-800 dark:text-slate-200 truncate pr-2">{t(doc.name, doc.name)}</span>
                               <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase shrink-0 ${
                                 doc.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                               }`}>
-                                {doc.status === 'VERIFIED' ? '✓ Verified' : '● In Scrutiny'}
+                                {doc.status === 'VERIFIED' ? t('✓ Verified', '✓ Verified') : t('● In Scrutiny', '● In Scrutiny')}
                               </span>
                             </div>
                           ))}
@@ -582,7 +586,7 @@ Unified Service Registry. No physical signature is required.
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
                       <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                         <CreditCard className="w-4 h-4 text-emerald-600" />
-                        <span>Direct Benefit Destination: <strong className="text-slate-900 dark:text-white">{app.disbursementBank || 'SBI Direct DBT Account'}</strong></span>
+                        <span>{t('Direct Benefit Destination:', 'Direct Benefit Destination:')} <strong className="text-slate-900 dark:text-white">{app.disbursementBank || 'SBI Direct DBT Account'}</strong></span>
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
@@ -592,7 +596,7 @@ Unified Service Registry. No physical signature is required.
                           onClick={() => handleTrackApplication(app)}
                           className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold text-xs border border-[#0B2545] dark:border-blue-500 transition cursor-pointer shadow-xs"
                         >
-                          <span>Track Application</span>
+                          <span>{t('Track Application', 'Track Application')}</span>
                           <ArrowRight className="w-3.5 h-3.5 text-amber-300" />
                         </button>
 
@@ -603,7 +607,7 @@ Unified Service Registry. No physical signature is required.
                           className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 transition cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>{isDocsOpen ? 'Hide Docs' : 'View Documents'}</span>
+                          <span>{isDocsOpen ? t('Hide Docs', 'Hide Docs') : t('View Documents', 'View Documents')}</span>
                         </button>
 
                         {/* Download Official Receipt */}
@@ -613,7 +617,7 @@ Unified Service Registry. No physical signature is required.
                           className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 transition cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
-                          <span>Receipt</span>
+                          <span>{t('Receipt', 'Receipt')}</span>
                         </button>
 
                         {/* Withdraw Application */}
@@ -621,10 +625,10 @@ Unified Service Registry. No physical signature is required.
                           type="button"
                           onClick={() => handleWithdrawApplication(app.id)}
                           className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 font-bold text-xs border border-rose-200 dark:border-rose-800/80 transition cursor-pointer"
-                          title="Withdraw Application"
+                          title={t('Withdraw Application', 'Withdraw Application')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>Withdraw</span>
+                          <span>{t('Withdraw', 'Withdraw')}</span>
                         </button>
                       </div>
                     </div>

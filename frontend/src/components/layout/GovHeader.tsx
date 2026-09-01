@@ -201,7 +201,7 @@ export const GovHeader: React.FC = () => {
             <button
               type="button"
               onClick={() => setFontSizeLevel(-1)}
-              title="Decrease Font Size"
+              title={t('Decrease Font Size', 'Decrease Font Size')}
               className={`px-1.5 py-0.5 rounded transition ${
                 fontSizeLevel === -1 ? 'bg-white dark:bg-slate-900 text-blue-800 dark:text-blue-400 shadow-xs' : 'hover:text-blue-700'
               }`}
@@ -211,7 +211,7 @@ export const GovHeader: React.FC = () => {
             <button
               type="button"
               onClick={() => setFontSizeLevel(0)}
-              title="Standard Font Size"
+              title={t('Standard Font Size', 'Standard Font Size')}
               className={`px-1.5 py-0.5 rounded transition ${
                 fontSizeLevel === 0 ? 'bg-white dark:bg-slate-900 text-blue-800 dark:text-blue-400 shadow-xs' : 'hover:text-blue-700'
               }`}
@@ -221,7 +221,7 @@ export const GovHeader: React.FC = () => {
             <button
               type="button"
               onClick={() => setFontSizeLevel(1)}
-              title="Increase Font Size"
+              title={t('Increase Font Size', 'Increase Font Size')}
               className={`px-1.5 py-0.5 rounded transition ${
                 fontSizeLevel === 1 ? 'bg-white dark:bg-slate-900 text-blue-800 dark:text-blue-400 shadow-xs' : 'hover:text-blue-700'
               }`}
@@ -259,7 +259,7 @@ export const GovHeader: React.FC = () => {
                         type="text"
                         value={langSearch}
                         onChange={(e) => setLangSearch(e.target.value)}
-                        placeholder="Search 23 Indian languages..."
+                        placeholder={t('Search 23 Indian languages...', 'Search 23 Indian languages...')}
                         className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#133E87]"
                         autoFocus
                       />
@@ -324,7 +324,7 @@ export const GovHeader: React.FC = () => {
         <div className="flex items-center gap-3.5">
           <Logo variant="full" height={44} />
           <span className="hidden lg:inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-400 border border-amber-500/30 uppercase tracking-wider self-center">
-            GIGW 3.0 Standard
+            {t('GIGW 3.0 Standard', 'GIGW 3.0 Standard')}
           </span>
         </div>
 
@@ -335,7 +335,7 @@ export const GovHeader: React.FC = () => {
             <div className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
             <div className="text-left">
               <span className="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 block leading-tight">MeriPehchaan</span>
-              <span className="text-[9px] text-slate-500 dark:text-slate-400 block leading-tight font-mono">NSSO SSO Node</span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400 block leading-tight font-mono">{t('NSSO SSO Node', 'NSSO SSO Node')}</span>
             </div>
           </div>
 

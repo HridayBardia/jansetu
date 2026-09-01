@@ -14,10 +14,12 @@ import {
   FileText
 } from 'lucide-react';
 import { useLiveSync } from '@/context/LiveSyncContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { checkDocInVault } from '@/lib/vaultDetection';
 import { eventBus } from '@/utils/eventBus';
 
 export const ActiveAlertBanner: React.FC = () => {
+  const { t } = useLanguage();
   const { pendingKycRequest, authorizeCitizenDoc, dismissPendingKycRequest } = useLiveSync();
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
@@ -127,15 +129,15 @@ export const ActiveAlertBanner: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                 <h3 className="text-sm md:text-base font-black text-amber-900 dark:text-amber-300 uppercase tracking-wide">
-                  🔔 URGENT ACTION REQUIRED: {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'e-KYC Verification' : 'Document Request'} for {docName}
+                  🔔 {t(`URGENT ACTION REQUIRED: Document Request for ${docName}`, `URGENT ACTION REQUIRED: Document Request for ${docName}`)}
                 </h3>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">
-                <span>Requested by <strong>{dept}</strong></span>
+                <span>{t('Requested by', 'Requested by')} <strong>{t(dept, dept)}</strong></span>
                 <span>•</span>
                 <span className="font-mono text-purple-700 dark:text-purple-300 font-bold">App #{appId}</span>
                 <span>•</span>
-                <span>Beneficiary: <strong>{citizenName}</strong></span>
+                <span>{t('Beneficiary:', 'Beneficiary:')} <strong>{citizenName}</strong></span>
               </p>
             </div>
           </div>
@@ -143,7 +145,7 @@ export const ActiveAlertBanner: React.FC = () => {
             type="button"
             onClick={handleDismiss}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
-            title="Dismiss Alert"
+            title={t('Dismiss Alert', 'Dismiss Alert')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -154,19 +156,19 @@ export const ActiveAlertBanner: React.FC = () => {
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <span className="font-semibold text-slate-800 dark:text-slate-200">
-              Department Scrutiny Document: <strong>{docName}</strong>
+              {t(`Department Scrutiny Document: ${docName}`, `Department Scrutiny Document: ${docName}`)}
             </span>
           </div>
 
           {vaultCheck.isInVault ? (
             <div className="flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-3 py-1 rounded-lg border border-emerald-300 dark:border-emerald-700 font-bold">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>✓ Verified Record Found in Document Vault (DigiLocker)</span>
+              <span>{t('✓ Verified Record Found in Document Vault (DigiLocker)', '✓ Verified Record Found in Document Vault (DigiLocker)')}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-xs text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/60 px-3 py-1 rounded-lg border border-amber-300 dark:border-amber-700 font-bold">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span>⚠️ Document Not Found in Digital Vault</span>
+              <span>{t('⚠️ Document Not Found in Digital Vault', '⚠️ Document Not Found in Digital Vault')}</span>
             </div>
           )}
         </div>
@@ -175,13 +177,13 @@ export const ActiveAlertBanner: React.FC = () => {
         {authSuccess ? (
           <div className="bg-emerald-500/15 border-2 border-emerald-500/40 text-emerald-800 dark:text-emerald-300 p-3.5 rounded-xl flex items-center gap-2 text-xs font-bold animate-fade-in">
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-            <span>✓ Attested {uploadedName || docName} securely shared with {dept}. Status updated to VERIFIED!</span>
+            <span>✓ {t('Attested', 'Attested')} {uploadedName || docName} {t('securely shared with', 'securely shared with')} {t(dept, dept)}.</span>
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
             <div className="flex items-center gap-2 text-[11px] font-mono text-slate-600 dark:text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>DPDP Act 2023 End-to-End Cryptographic Token</span>
+              <span>{t('DPDP Act 2023 End-to-End Cryptographic Token', 'DPDP Act 2023 End-to-End Cryptographic Token')}</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
@@ -191,7 +193,7 @@ export const ActiveAlertBanner: React.FC = () => {
                 disabled={isAuthorizing || isUploading}
                 className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition cursor-pointer disabled:opacity-50"
               >
-                Dismiss
+                {t('Dismiss', 'Dismiss')}
               </button>
 
               {vaultCheck.isInVault ? (
@@ -205,12 +207,12 @@ export const ActiveAlertBanner: React.FC = () => {
                     {isUploading ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Uploading...</span>
+                        <span>{t('Uploading...', 'Uploading...')}</span>
                       </>
                     ) : (
                       <>
                         <Upload className="w-3.5 h-3.5" />
-                        <span>Upload Copy</span>
+                        <span>{t('Upload Copy', 'Upload Copy')}</span>
                       </>
                     )}
                   </button>
@@ -224,12 +226,12 @@ export const ActiveAlertBanner: React.FC = () => {
                     {isAuthorizing ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Sharing from Vault...</span>
+                        <span>{t('Sharing from Vault...', 'Sharing from Vault...')}</span>
                       </>
                     ) : (
                       <>
                         <FolderLock className="w-4 h-4" />
-                        <span>⚡ Share {docName} from Document Vault</span>
+                        <span>{t(`⚡ Share ${docName} from Document Vault`, `⚡ Share ${docName} from Document Vault`)}</span>
                       </>
                     )}
                   </button>
@@ -244,12 +246,12 @@ export const ActiveAlertBanner: React.FC = () => {
                   {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Uploading {docName}...</span>
+                      <span>{t('Uploading...', 'Uploading...')}</span>
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4" />
-                      <span>📤 Upload {docName}</span>
+                      <span>📤 {t('Upload Required Document', 'Upload Required Document')}</span>
                     </>
                   )}
                 </button>

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Bot, RefreshCw } from 'lucide-react';
 import { streamCivicHelp, JourneyContext } from '@/services/aiHelpService';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
   isOpen: boolean;
@@ -11,11 +12,12 @@ interface Props {
 }
 
 export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeContext }) => {
+  const { t } = useLanguage();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'bot'; text: string; time: string }>>([
     {
       role: 'bot',
-      text: 'Namaste! I am SetuSahayak. Ask me any question about land, schemes, or civic processes.',
+      text: t('Namaste! I am SetuSahayak. Ask me any question about land, schemes, or civic processes.', 'Namaste! I am SetuSahayak. Ask me any question about land, schemes, or civic processes.'),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -40,7 +42,7 @@ export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeCont
     setMessages((prev) => [
       ...prev,
       { role: 'user', text: query, time },
-      { role: 'bot', text: 'Thinking...', time }
+      { role: 'bot', text: t('Thinking...', 'Thinking...'), time }
     ]);
     
     setInput('');
@@ -76,7 +78,7 @@ export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeCont
         const next = [...prev];
         next[next.length - 1] = {
           role: 'bot',
-          text: 'Unable to load guidance right now. Please try asking again.',
+          text: t('Unable to load guidance right now. Please try asking again.', 'Unable to load guidance right now. Please try asking again.'),
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         return next;
@@ -102,10 +104,10 @@ export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeCont
             <div className="flex items-center gap-1.5">
               <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">SetuSahayak</h3>
               <span className="text-[9px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded">
-                Grounded
+                {t('Grounded', 'Grounded')}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Citizen Journey Copilot</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('Citizen Journey Copilot', 'Citizen Journey Copilot')}</p>
           </div>
         </div>
         <button
@@ -133,7 +135,7 @@ export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeCont
                   : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'
               }`}
             >
-              {/* Standard paragraph rendering - completely prevents layout splitting */}
+              {/* Standard paragraph rendering */}
               <p className="whitespace-pre-wrap text-[12px] text-slate-700 leading-relaxed font-normal">
                 {msg.text}
               </p>
@@ -142,9 +144,9 @@ export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeCont
               {i === 0 && (
                 <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-col gap-1">
                   {[
-                    'What documents are needed to buy land?',
-                    'How to start a hospital in India?',
-                    'Explain in simple Hindi',
+                    t('What documents are needed to buy land?', 'What documents are needed to buy land?'),
+                    t('How to start a hospital in India?', 'How to start a hospital in India?'),
+                    t('Explain in simple Hindi', 'Explain in simple Hindi'),
                   ].map((pill, pIdx) => (
                     <button
                       key={pIdx}
@@ -179,7 +181,7 @@ export const ContextualAiModal: React.FC<Props> = ({ isOpen, onClose, activeCont
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask SetuSahayak..."
+            placeholder={t('Ask SetuSahayak...', 'Ask SetuSahayak...')}
             className="flex-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1.5 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-800 transition"
           />
           <button

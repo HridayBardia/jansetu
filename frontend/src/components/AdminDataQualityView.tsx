@@ -198,27 +198,27 @@ export const AdminDataQualityView = ({ adminUsername }: Props) => {
                 {pendingConflicts.length === 0 ? (
                   <div className="p-8 text-center space-y-2">
                     <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">All Demographics 100% Reconciled</p>
-                    <p className="text-[11px] text-slate-500">No active identity discrepancies in the master registry queue.</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">{t('All Demographics 100% Reconciled', 'All Demographics 100% Reconciled')}</p>
+                    <p className="text-[11px] text-slate-500">{t('No active identity discrepancies in the master registry queue.', 'No active identity discrepancies in the master registry queue.')}</p>
                   </div>
                 ) : (
                   pendingConflicts.map((conflict) => (
                     <div key={conflict.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors space-y-3">
                       <div className="flex justify-between items-start">
                         <span className="text-[10px] font-mono text-slate-500">ID: {conflict.id}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">Today</span>
+                        <span className="text-[10px] text-slate-500 font-mono">{t('Today', 'Today')}</span>
                       </div>
                       <h3 className="text-xs font-bold text-slate-900 dark:text-white capitalize">
-                        {conflict.field_name?.replace('_', ' ')} Discrepancy Flag
+                        {conflict.field_name?.replace('_', ' ')} {t('Discrepancy Flag', 'Discrepancy Flag')}
                       </h3>
 
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                          <p className="text-[10px] text-slate-500 mb-0.5 font-medium">{conflict.source_a}</p>
+                          <p className="text-[10px] text-slate-500 mb-0.5 font-medium">{t(conflict.source_a, conflict.source_a)}</p>
                           <p className="text-slate-900 dark:text-slate-200 font-bold font-mono">{conflict.value_a}</p>
                         </div>
                         <div className="bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-lg border border-rose-200 dark:border-rose-800">
-                          <p className="text-[10px] text-rose-700 dark:text-rose-400 mb-0.5 font-medium">{conflict.source_b}</p>
+                          <p className="text-[10px] text-rose-700 dark:text-rose-400 mb-0.5 font-medium">{t(conflict.source_b, conflict.source_b)}</p>
                           <p className="text-rose-900 dark:text-rose-300 font-bold font-mono">{conflict.value_b}</p>
                         </div>
                       </div>
@@ -229,14 +229,14 @@ export const AdminDataQualityView = ({ adminUsername }: Props) => {
                           onClick={() => handleResolve(conflict.id, conflict.value_a)}
                           className="text-[10px] font-bold px-3 py-1.5 rounded bg-[#0B2545] hover:bg-[#133E87] text-white transition cursor-pointer shadow-2xs disabled:opacity-50"
                         >
-                          {resolving === conflict.id ? 'Reconciling...' : `Accept "${conflict.value_a}"`}
+                          {resolving === conflict.id ? t('Reconciling...', 'Reconciling...') : `${t('Accept', 'Accept')} "${conflict.value_a}"`}
                         </button>
                         <button
                           disabled={resolving === conflict.id}
                           onClick={() => handleResolve(conflict.id, conflict.value_b)}
                           className="text-[10px] font-bold px-3 py-1.5 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
                         >
-                          `Accept "${conflict.value_b}"`
+                          {`${t('Accept', 'Accept')} "${conflict.value_b}"`}
                         </button>
                       </div>
                     </div>
@@ -265,7 +265,7 @@ export const AdminDataQualityView = ({ adminUsername }: Props) => {
                       <div key={connector.id} className="p-3.5 space-y-2">
                         <div className="flex justify-between items-center">
                           <div>
-                            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-200">{connector.name}</h3>
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-200">{t(connector.name, connector.name)}</h3>
                             <p className="text-[10px] font-mono text-slate-500">{connector.id}</p>
                           </div>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
@@ -273,7 +273,7 @@ export const AdminDataQualityView = ({ adminUsername }: Props) => {
                             isDegraded ? 'bg-amber-100 text-amber-800 border-amber-300' :
                             'bg-emerald-100 text-emerald-800 border-emerald-300'
                           }`}>
-                            {connector.status}
+                            {t(connector.status, connector.status)}
                           </span>
                         </div>
 
@@ -284,21 +284,21 @@ export const AdminDataQualityView = ({ adminUsername }: Props) => {
                             className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 hover:bg-red-100 transition cursor-pointer"
                           >
                             <Zap className="w-3 h-3" />
-                            <span>Simulate Fail</span>
+                            <span>{t('Simulate Fail', 'Simulate Fail')}</span>
                           </button>
                           <button
                             disabled={simulating === connector.id}
                             onClick={() => handleSimulate(connector.id, 'DEGRADED')}
                             className="text-[10px] font-bold px-2 py-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 transition cursor-pointer"
                           >
-                            Degrade
+                            {t('Degrade', 'Degrade')}
                           </button>
                           <button
                             disabled={simulating === connector.id}
                             onClick={() => handleSimulate(connector.id, 'HEALTHY')}
                             className="text-[10px] font-bold px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition cursor-pointer"
                           >
-                            Restore
+                            {t('Restore', 'Restore')}
                           </button>
                         </div>
                       </div>

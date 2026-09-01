@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { IndiaMap } from './IndiaMap';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface AmbientParticle {
   id: number;
@@ -13,6 +14,7 @@ interface AmbientParticle {
 }
 
 export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
+  const { t } = useLanguage();
   const [stage, setStage] = useState<'particles' | 'lines' | 'illuminate' | 'network' | 'logo' | 'tagline' | 'fadeout'>('particles');
   const [scale, setScale] = useState(0.82);
   const [ambientParticles, setAmbientParticles] = useState<AmbientParticle[]>([]);
@@ -212,7 +214,7 @@ export function CinematicIntro({ onComplete }: { onComplete: () => void }) {
             transform: showTagline ? 'translateY(0)' : 'translateY(10px)'
           }}
         >
-          Your Journey. Simplified.
+          {t('Your Journey. Simplified.', 'Your Journey. Simplified.')}
         </p>
       </div>
 

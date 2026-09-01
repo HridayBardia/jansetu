@@ -339,7 +339,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
             dept: matchingApp.department || dept
           });
 
-          setActionNotice(`e-KYC verification request for "${docName}" transmitted to ${selectedCitizen.name} across Live Mesh.`);
+          setActionNotice(t(`e-KYC verification request for "${docName}" transmitted to ${selectedCitizen.name} across Live Mesh.`, `e-KYC verification request for "${docName}" transmitted to ${selectedCitizen.name} across Live Mesh.`));
           setTimeout(() => setActionNotice(null), 5000);
         };
 
@@ -363,11 +363,11 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                           selectedCitizen.status === 'Active' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300' :
                           'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300'
                         }`}>
-                          {selectedCitizen.status}
+                          {t(selectedCitizen.status, selectedCitizen.status)}
                         </span>
                       </h2>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">
-                        Aadhaar UID: <strong className="text-slate-800 dark:text-slate-200">{demoInfo?.aadhaar || selectedCitizen.id}</strong> | @{selectedCitizen.username}
+                        {t('Aadhaar UID:', 'Aadhaar UID:')} <strong className="text-slate-800 dark:text-slate-200">{demoInfo?.aadhaar || selectedCitizen.id}</strong> | @{selectedCitizen.username}
                       </p>
                     </div>
                   </div>
@@ -392,35 +392,35 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                 {/* Demographic Details */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                    Master Beneficiary Demographics (NSSO & UIDAI)
+                    {t('Master Beneficiary Demographics (NSSO & UIDAI)', 'Master Beneficiary Demographics (NSSO & UIDAI)')}
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
                     <div>
-                      <p className="text-slate-500 text-[11px] mb-0.5">Phone Number</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('Phone Number', 'Phone Number')}</p>
                       <p className="text-slate-900 dark:text-white font-bold">{demoInfo?.phone || '+91 XXXXX 9901'}</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-[11px] mb-0.5">Date of Birth</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('Date of Birth', 'Date of Birth')}</p>
                       <p className="text-slate-900 dark:text-white font-bold">{demoInfo?.dob || '15/08/2001'}</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-[11px] mb-0.5">Gender / Category</p>
-                      <p className="text-slate-900 dark:text-white font-bold">{demoInfo?.gender || 'Male'} ({demoInfo?.category || 'General'})</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('Gender / Category', 'Gender / Category')}</p>
+                      <p className="text-slate-900 dark:text-white font-bold">{t(demoInfo?.gender || 'Male', demoInfo?.gender || 'Male')} ({t(demoInfo?.category || 'General', demoInfo?.category || 'General')})</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-[11px] mb-0.5">Annual Income Tier</p>
-                      <p className="text-slate-900 dark:text-white font-bold">₹{(demoInfo?.annualIncome || 320000).toLocaleString('en-IN')} ({demoInfo?.incomeCategory || 'Middle Class'})</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('Annual Income Tier', 'Annual Income Tier')}</p>
+                      <p className="text-slate-900 dark:text-white font-bold">₹{(demoInfo?.annualIncome || 320000).toLocaleString('en-IN')} ({t(demoInfo?.incomeCategory || 'Middle Class', demoInfo?.incomeCategory || 'Middle Class')})</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-[11px] mb-0.5">State Domicile</p>
-                      <p className="text-slate-900 dark:text-white font-bold">{selectedCitizen.domicile}</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('State Domicile', 'State Domicile')}</p>
+                      <p className="text-slate-900 dark:text-white font-bold">{t(selectedCitizen.domicile, selectedCitizen.domicile)}</p>
                     </div>
                     <div>
-                      <p className="text-slate-500 text-[11px] mb-0.5">Profile Consistency</p>
-                      <p className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedCitizen.profileCompletion}% Match</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('Profile Consistency', 'Profile Consistency')}</p>
+                      <p className="text-emerald-600 dark:text-emerald-400 font-bold">{selectedCitizen.profileCompletion}% {t('Match', 'Match')}</p>
                     </div>
                     <div className="col-span-2 sm:col-span-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-                      <p className="text-slate-500 text-[11px] mb-0.5">Registered Residential Address</p>
+                      <p className="text-slate-500 text-[11px] mb-0.5">{t('Registered Residential Address', 'Registered Residential Address')}</p>
                       <p className="text-slate-900 dark:text-white font-medium">{demoInfo?.address || selectedCitizen.location}</p>
                     </div>
                   </div>
@@ -429,7 +429,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                 {/* Active Applications */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                    Active Beneficiary Applications & Schemes
+                    {t('Active Beneficiary Applications & Schemes', 'Active Beneficiary Applications & Schemes')}
                   </h3>
                   <div className="space-y-2">
                     {(citizenApps.length > 0 ? citizenApps : (selectedCitizen.applications || [])).map((app: any, idx: number) => (
@@ -439,16 +439,16 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                             {app.id}
                           </span>
                           <h4 className="font-bold text-slate-900 dark:text-white text-xs mt-1">
-                            {app.service}
+                            {t(app.service, app.service)}
                           </h4>
-                          <p className="text-[11px] text-slate-500">{app.department || 'Central Welfare Portal'}</p>
+                          <p className="text-[11px] text-slate-500">{t(app.department || 'Central Welfare Portal', app.department || 'Central Welfare Portal')}</p>
                         </div>
                         <span className={`px-2.5 py-1 rounded text-[10px] font-bold border ${
                           app.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300' :
                           app.status === 'DOCUMENTS_REQUIRED' || app.status === 'ACTION_REQUIRED' ? 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-300' :
                           'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300'
                         }`}>
-                          {app.status}
+                          {t(app.status, app.status)}
                         </span>
                       </div>
                     ))}
@@ -458,14 +458,14 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                 {/* Documents & Direct e-KYC Request Actions */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                    Verified Documents & Department Credential Ledger
+                    {t('Verified Documents & Department Credential Ledger', 'Verified Documents & Department Credential Ledger')}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {(selectedCitizen.documents || []).map((doc: { name: string; status: string }, i: number) => (
                       <div key={i} className="flex items-center justify-between bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-2xs">
                         <span className="text-xs text-slate-900 dark:text-slate-200 font-medium flex items-center gap-2">
                           <FileText className="w-3.5 h-3.5 text-[#133E87] dark:text-blue-400 shrink-0" />
-                          <span>{doc.name}</span>
+                          <span>{t(doc.name, doc.name)}</span>
                         </span>
                         <div className="flex items-center gap-2">
                           {doc.status !== 'Verified' && (
@@ -474,7 +474,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                               onClick={() => handleRequestDocFromCitizen(doc.name)}
                               className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 transition cursor-pointer shadow-xs"
                             >
-                              Request e-KYC
+                              {t('Request e-KYC', 'Request e-KYC')}
                             </button>
                           )}
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
@@ -482,7 +482,7 @@ export const AdminCitizensView = ({ adminUsername }: Props) => {
                               ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
                               : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800 animate-pulse'
                           }`}>
-                            {doc.status}
+                            {t(doc.status, doc.status)}
                           </span>
                         </div>
                       </div>

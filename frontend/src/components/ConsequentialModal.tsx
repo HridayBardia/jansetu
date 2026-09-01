@@ -37,37 +37,37 @@ export const ConsequentialModal: React.FC<ConsequentialModalProps> = ({
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
-              Consequential Safety Review
+              {t('Consequential Safety Review', 'Consequential Safety Review')}
             </span>
             <h3 className="text-lg font-bold text-slate-100">
-              Review Before Submission
+              {t('Review Before Submission', 'Review Before Submission')}
             </h3>
           </div>
         </div>
 
         <p className="text-xs text-slate-300">
-          The AI Engine organizes and verifies your requirements, but <strong>you maintain full control</strong> over consequential submissions to government portals.
+          {t('The AI Engine organizes and verifies your requirements, but you maintain full control over consequential submissions to government portals.', 'The AI Engine organizes and verifies your requirements, but you maintain full control over consequential submissions to government portals.')}
         </p>
 
         <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs">
           <div>
             <p className="text-slate-400 font-semibold uppercase text-[10px]">{t('adminApplications.colNextAction', 'Action')}</p>
-            <p className="font-bold text-slate-100">{step.title}</p>
+            <p className="font-bold text-slate-100">{t(step.title, step.title)}</p>
           </div>
           <div>
             <p className="text-slate-400 font-semibold uppercase text-[10px]">{t('adminDataQuality.destinationDept', 'Destination Department')}</p>
             <p className="font-medium text-amber-300">{t(`adminData.${step.department}`, step.department)}</p>
           </div>
           <div>
-            <p className="text-slate-400 font-semibold uppercase text-[10px]">Information & Proofs Included</p>
+            <p className="text-slate-400 font-semibold uppercase text-[10px]">{t('Information & Proofs Included', 'Information & Proofs Included')}</p>
             <p className="text-slate-300">
               {step.required_documents && step.required_documents.length > 0
-                ? step.required_documents.map((d: any) => d.name).join(', ')
-                : 'Aadhaar KYC & Basic Entity Details'}
+                ? step.required_documents.map((d: any) => t(d.name, d.name)).join(', ')
+                : t('Aadhaar KYC & Basic Entity Details', 'Aadhaar KYC & Basic Entity Details')}
             </p>
           </div>
           <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-            <strong>Consequences:</strong> Proceeding will update your journey status and initiate sandbox application verification.
+            <strong>{t('Consequences:', 'Consequences:')}</strong> {t('Proceeding will update your journey status and initiate sandbox application verification.', 'Proceeding will update your journey status and initiate sandbox application verification.')}
           </div>
         </div>
 
@@ -76,7 +76,7 @@ export const ConsequentialModal: React.FC<ConsequentialModalProps> = ({
             onClick={onClose}
             className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition"
           >
-            Cancel
+            {t('Cancel', 'Cancel')}
           </button>
           <button
             onClick={() => {

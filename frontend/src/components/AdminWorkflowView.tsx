@@ -219,13 +219,13 @@ export const AdminWorkflowView = ({ adminUsername }: Props) => {
                     onClick={handleSendNudge}
                     className="bg-[#133E87] hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer"
                   >
-                    Send Nudge
+                    {t('Send Nudge', 'Send Nudge')}
                   </button>
                   <button
                     onClick={handleOverrideStatus}
                     className="bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-2xs cursor-pointer"
                   >
-                    Override Status
+                    {t('Override Status', 'Override Status')}
                   </button>
                 </div>
               )}
@@ -254,7 +254,7 @@ export const AdminWorkflowView = ({ adminUsername }: Props) => {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className={`text-xs font-bold ${step.status === 'current' ? 'text-slate-900 dark:text-white' : step.status === 'completed' ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}`}>
-                              {t('adminWorkflow.step', 'Step')} {idx + 1}: {step.name}
+                              {t('adminWorkflow.step', 'Step')} {idx + 1}: {t(step.name, step.name)}
                             </h4>
                             {step.status === 'current' && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-[#133E87] dark:text-blue-300 border border-blue-200 dark:border-blue-800">{t('adminWorkflow.current', 'Current')}</span>
@@ -263,14 +263,14 @@ export const AdminWorkflowView = ({ adminUsername }: Props) => {
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">{t('adminWorkflow.done', 'Done')}</span>
                             )}
                           </div>
-                          <p className="text-[10px] text-slate-500 font-mono mt-1">{t('adminWorkflow.type', 'Type:')} {step.type} • {t('adminWorkflow.target', 'Target:')} {step.target}</p>
+                          <p className="text-[10px] text-slate-500 font-mono mt-1">{t('adminWorkflow.type', 'Type:')} {t(step.type, step.type)} • {t('adminWorkflow.target', 'Target:')} {t(step.target, step.target)}</p>
                         </div>
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
                           step.type === 'Validation' ? 'bg-amber-100 text-amber-800 border-amber-300' :
                           step.type === 'Processing' ? 'bg-blue-100 text-blue-800 border-blue-300' :
                           'bg-emerald-100 text-emerald-800 border-emerald-300'
                         }`}>
-                          {step.type}
+                          {t(step.type, step.type)}
                         </span>
                       </div>
                     ) : (

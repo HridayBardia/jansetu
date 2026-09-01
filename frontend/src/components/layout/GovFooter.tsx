@@ -85,7 +85,7 @@ export const GovFooter: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center md:text-right">
             <p>{t('footer.allRightsReserved', '© 2026 JanSetu. All Rights Reserved. Government of India.')}</p>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
-            <p className="font-mono">Last Updated: 31 August 2026 • Build Release v3.0-GIGW</p>
+            <p className="font-mono">{t('Last Updated: 31 August 2026 • Build Release v3.0-GIGW', 'Last Updated: 31 August 2026 • Build Release v3.0-GIGW')}</p>
           </div>
         </div>
       </div>

@@ -100,17 +100,17 @@ export const PendingRequestBanner: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span>⚠️ Action Required: Department {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'e-KYC ' : ''}Request</span>
+                <span>{t('⚠️ Action Required: Department Request', '⚠️ Action Required: Department Request')}</span>
               </h4>
               <p className="text-[11px] font-mono text-amber-700 dark:text-amber-400 font-semibold">
-                Application #{appId} • Live Mesh
+                {t(`Application #${appId} • Live Mesh`, `Application #${appId} • Live Mesh`)}
               </p>
             </div>
           </div>
           <button
             onClick={handleDecline}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-            title="Dismiss request"
+            title={t('Dismiss', 'Dismiss')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -120,10 +120,10 @@ export const PendingRequestBanner: React.FC = () => {
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl p-3.5 text-xs text-slate-800 dark:text-slate-200 space-y-2">
           <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-300">
             <Building2 className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
-            <span>{dept}</span>
+            <span>{t(dept, dept)}</span>
           </div>
           <p className="leading-relaxed">
-            The department has requested {docName.toLowerCase().includes('aadhaar') || docName.toLowerCase().includes('kyc') ? 'verified e-KYC credentials for' : 'a verified copy of'} <strong>{docName}</strong> to finalize processing for beneficiary <strong>{citizenName}</strong>.
+            {t(`The department has requested a verified copy of ${docName} to finalize processing for beneficiary ${citizenName}.`, `The department has requested a verified copy of ${docName} to finalize processing for beneficiary ${citizenName}.`)}
           </p>
 
           {/* Vault Detection Status */}
@@ -133,14 +133,14 @@ export const PendingRequestBanner: React.FC = () => {
               return (
                 <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-800 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>✓ Verified Record Found in Document Vault (DigiLocker)</span>
+                  <span>{t('✓ Verified Record Found in Document Vault (DigiLocker)', '✓ Verified Record Found in Document Vault (DigiLocker)')}</span>
                 </div>
               );
             }
             return (
               <div className="flex items-center gap-1.5 text-[11px] text-amber-900 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-800 font-semibold">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span>⚠️ Document Not Found in Digital Vault</span>
+                <span>{t('⚠️ Document Not Found in Digital Vault', '⚠️ Document Not Found in Digital Vault')}</span>
               </div>
             );
           })()}
@@ -148,9 +148,9 @@ export const PendingRequestBanner: React.FC = () => {
           <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400 pt-0.5">
             <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-bold">
               <ShieldCheck className="w-3 h-3" />
-              <span>DPDP Act 2023 Compliant</span>
+              <span>{t('DPDP Act 2023 Compliant', 'DPDP Act 2023 Compliant')}</span>
             </span>
-            <span>• 256-bit Encrypted Token</span>
+            <span>• {t('256-bit Encrypted Token', '256-bit Encrypted Token')}</span>
           </div>
         </div>
 
@@ -158,7 +158,7 @@ export const PendingRequestBanner: React.FC = () => {
         {authSuccess ? (
           <div className="bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 p-3 rounded-xl flex items-center gap-2 text-xs font-bold animate-fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span>✓ {uploadedName || docName} credential token generated & shared with {dept}.</span>
+            <span>✓ {uploadedName || docName} {t('credential token generated & shared with', 'credential token generated & shared with')} {t(dept, dept)}.</span>
           </div>
         ) : (
           (() => {
@@ -171,7 +171,7 @@ export const PendingRequestBanner: React.FC = () => {
                   disabled={isAuthorizing || isUploading}
                   className="px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition cursor-pointer disabled:opacity-50 text-center"
                 >
-                  Dismiss
+                  {t('Dismiss', 'Dismiss')}
                 </button>
 
                 {vaultCheck.isInVault ? (
@@ -185,12 +185,12 @@ export const PendingRequestBanner: React.FC = () => {
                       {isUploading ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Uploading...</span>
+                          <span>{t('Uploading...', 'Uploading...')}</span>
                         </>
                       ) : (
                         <>
                           <Upload className="w-3.5 h-3.5" />
-                          <span>Upload File</span>
+                          <span>{t('Upload File', 'Upload File')}</span>
                         </>
                       )}
                     </button>
@@ -204,12 +204,12 @@ export const PendingRequestBanner: React.FC = () => {
                       {isAuthorizing ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Sharing from Vault...</span>
+                          <span>{t('Sharing from Vault...', 'Sharing from Vault...')}</span>
                         </>
                       ) : (
                         <>
                           <FolderLock className="w-3.5 h-3.5" />
-                          <span>⚡ Share from Document Vault</span>
+                          <span>{t('⚡ Share from Document Vault', '⚡ Share from Document Vault')}</span>
                         </>
                       )}
                     </button>
@@ -225,12 +225,12 @@ export const PendingRequestBanner: React.FC = () => {
                       {isUploading ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Uploading Document...</span>
+                          <span>{t('Uploading Document...', 'Uploading Document...')}</span>
                         </>
                       ) : (
                         <>
                           <Upload className="w-3.5 h-3.5" />
-                          <span>Upload Required Document</span>
+                          <span>{t('Upload Required Document', 'Upload Required Document')}</span>
                         </>
                       )}
                     </button>
@@ -244,12 +244,12 @@ export const PendingRequestBanner: React.FC = () => {
                       {isAuthorizing ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Attesting...</span>
+                          <span>{t('Attesting...', 'Attesting...')}</span>
                         </>
                       ) : (
                         <>
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Attest via Registry</span>
+                          <span>{t('Attest via Registry', 'Attest via Registry')}</span>
                         </>
                       )}
                     </button>

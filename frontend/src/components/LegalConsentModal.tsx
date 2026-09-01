@@ -14,6 +14,8 @@ import {
   Clock
 } from 'lucide-react';
 
+import { useLanguage } from '@/context/LanguageContext';
+
 export interface LegalConsentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,6 +31,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
   role = 'citizen',
   onAccept
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>('terms');
   const [countdown, setCountdown] = useState<number>(3);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState<boolean>(false);
@@ -135,12 +138,12 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-amber-700 dark:text-amber-400 font-mono font-black uppercase tracking-widest bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded">
-                DPDP & e-KYC Compliance
+                {t('DPDP & e-KYC Compliance', 'DPDP & e-KYC Compliance')}
               </span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Statutory Framework</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{t('Statutory Framework', 'Statutory Framework')}</span>
             </div>
             <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Legal Consent & Governance Policies
+              {t('Legal Consent & Governance Policies', 'Legal Consent & Governance Policies')}
             </h2>
           </div>
 
@@ -166,7 +169,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
             }`}
           >
             <Scale size={16} />
-            <span>Terms & Conditions</span>
+            <span>{t('Terms & Conditions', 'Terms & Conditions')}</span>
           </button>
 
           <button
@@ -179,7 +182,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
             }`}
           >
             <ShieldCheck size={16} />
-            <span>Privacy & e-KYC Policy</span>
+            <span>{t('Privacy & e-KYC Policy', 'Privacy & e-KYC Policy')}</span>
           </button>
         </div>
 
@@ -195,7 +198,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="p-3.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-500/25 text-blue-900 dark:text-blue-200 text-xs flex items-center gap-3">
                 <FileText className="w-5 h-5 text-[#133E87] dark:text-blue-400 flex-shrink-0" />
                 <span>
-                  Please read the complete terms governing JanSetu Unified Citizen Gateway access, scheme routing, and administrative officer oversight.
+                  {t('Please read the complete terms governing JanSetu Unified Citizen Gateway access, scheme routing, and administrative officer oversight.', 'Please read the complete terms governing JanSetu Unified Citizen Gateway access, scheme routing, and administrative officer oversight.')}
                 </span>
               </div>
 
@@ -203,10 +206,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-[#133E87] dark:text-blue-400 text-xs flex items-center justify-center font-bold">1</span>
-                  Platform Access & Authorization Scope
+                  {t('Platform Access & Authorization Scope', 'Platform Access & Authorization Scope')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  JanSetu operates as an intelligent interoperability and public navigation gateway connecting citizens with central, state, and municipal welfare schemes. Access is authorized strictly for verified residents and certified nodal officers for the lawful discovery and processing of public welfare benefits under national e-Governance interoperability frameworks.
+                  {t('JanSetu operates as an intelligent interoperability and public navigation gateway connecting citizens with central, state, and municipal welfare schemes. Access is authorized strictly for verified residents and certified nodal officers for the lawful discovery and processing of public welfare benefits under national e-Governance interoperability frameworks.', 'JanSetu operates as an intelligent interoperability and public navigation gateway connecting citizens with central, state, and municipal welfare schemes. Access is authorized strictly for verified residents and certified nodal officers for the lawful discovery and processing of public welfare benefits under national e-Governance interoperability frameworks.')}
                 </p>
               </div>
 
@@ -214,10 +217,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-[#133E87] dark:text-blue-400 text-xs flex items-center justify-center font-bold">2</span>
-                  User Obligations & Credential Integrity
+                  {t('User Obligations & Credential Integrity', 'User Obligations & Credential Integrity')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  Users agree to provide accurate, verified information during Aadhaar e-KYC or Officer authentication. Automated scraping, load-testing, credential stuffing, brute-forcing simulated OTPs, or bypassing the dynamic Canvas Captcha mechanisms is strictly prohibited and subject to legal prosecution under the Information Technology Act.
+                  {t('Users agree to provide accurate, verified information during Aadhaar e-KYC or Officer authentication. Automated scraping, load-testing, credential stuffing, brute-forcing simulated OTPs, or bypassing the dynamic Canvas Captcha mechanisms is strictly prohibited and subject to legal prosecution under the Information Technology Act.', 'Users agree to provide accurate, verified information during Aadhaar e-KYC or Officer authentication. Automated scraping, load-testing, credential stuffing, brute-forcing simulated OTPs, or bypassing the dynamic Canvas Captcha mechanisms is strictly prohibited and subject to legal prosecution under the Information Technology Act.')}
                 </p>
               </div>
 
@@ -225,12 +228,12 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-[#133E87] dark:text-blue-400 text-xs flex items-center justify-center font-bold">3</span>
-                  Administrative Officer Non-Disclosure & Compliance
+                  {t('Administrative Officer Non-Disclosure & Compliance', 'Administrative Officer Non-Disclosure & Compliance')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
                   {role === 'admin' 
-                    ? 'Departmental officers and system administrators accessing the telemetry console are bound by statutory Non-Disclosure Agreements (NDA). All cross-departmental queries, citizen profile lookups, rule adjustments, and dispute resolutions are cryptographically signed and permanently logged in tamper-evident audit trails.'
-                    : 'System administrators and nodal officers operate under statutory non-disclosure frameworks ensuring strict multi-agency governance and operational segregation across public services.'}
+                    ? t('Departmental officers and system administrators accessing the telemetry console are bound by statutory Non-Disclosure Agreements (NDA). All cross-departmental queries, citizen profile lookups, rule adjustments, and dispute resolutions are cryptographically signed and permanently logged in tamper-evident audit trails.', 'Departmental officers and system administrators accessing the telemetry console are bound by statutory Non-Disclosure Agreements (NDA). All cross-departmental queries, citizen profile lookups, rule adjustments, and dispute resolutions are cryptographically signed and permanently logged in tamper-evident audit trails.')
+                    : t('System administrators and nodal officers operate under statutory non-disclosure frameworks ensuring strict multi-agency governance and operational segregation across public services.', 'System administrators and nodal officers operate under statutory non-disclosure frameworks ensuring strict multi-agency governance and operational segregation across public services.')}
                 </p>
               </div>
 
@@ -238,10 +241,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-[#133E87] dark:text-blue-400 text-xs flex items-center justify-center font-bold">4</span>
-                  Interoperability & Data Integrity
+                  {t('Interoperability & Data Integrity', 'Interoperability & Data Integrity')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  JanSetu orchestrates cross-agency entity resolution to identify discrepancies in citizen records (e.g. name spelling variations across Aadhaar, PAN, and Ration Card). Citizens agree to allow JanSetu to flag and reconcile conflicting data fields to ensure accurate benefit delivery.
+                  {t('JanSetu orchestrates cross-agency entity resolution to identify discrepancies in citizen records (e.g. name spelling variations across Aadhaar, PAN, and Ration Card). Citizens agree to allow JanSetu to flag and reconcile conflicting data fields to ensure accurate benefit delivery.', 'JanSetu orchestrates cross-agency entity resolution to identify discrepancies in citizen records (e.g. name spelling variations across Aadhaar, PAN, and Ration Card). Citizens agree to allow JanSetu to flag and reconcile conflicting data fields to ensure accurate benefit delivery.')}
                 </p>
               </div>
 
@@ -249,10 +252,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-[#133E87] dark:text-blue-400 text-xs flex items-center justify-center font-bold">5</span>
-                  Service Availability & Disclaimer of Warranty
+                  {t('Service Availability & Disclaimer of Warranty', 'Service Availability & Disclaimer of Warranty')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  While JanSetu targets high availability and low latency, integration with downstream departmental databases and DigiLocker repositories is subject to external API availability, scheduled maintenance cycles, and network conditions.
+                  {t('While JanSetu targets high availability and low latency, integration with downstream departmental databases and DigiLocker repositories is subject to external API availability, scheduled maintenance cycles, and network conditions.', 'While JanSetu targets high availability and low latency, integration with downstream departmental databases and DigiLocker repositories is subject to external API availability, scheduled maintenance cycles, and network conditions.')}
                 </p>
               </div>
             </>
@@ -262,7 +265,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-500/25 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-3">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <span>
-                  JanSetu strictly adheres to the Digital Personal Data Protection (DPDP) Act and UIDAI e-KYC Data Minimization standards.
+                  {t('JanSetu strictly adheres to the Digital Personal Data Protection (DPDP) Act and UIDAI e-KYC Data Minimization standards.', 'JanSetu strictly adheres to the Digital Personal Data Protection (DPDP) Act and UIDAI e-KYC Data Minimization standards.')}
                 </span>
               </div>
 
@@ -270,10 +273,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-center font-bold">1</span>
-                  Data Minimization & Selective Demographic Extraction
+                  {t('Data Minimization & Selective Demographic Extraction', 'Data Minimization & Selective Demographic Extraction')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  Only the essential demographic attributes (Verified Full Name, Masked Mobile Number, Date of Birth, Gender, and State of Domicile) are retrieved during the 2-step OTP verification to evaluate scheme eligibility and auto-populate application dossiers.
+                  {t('Only the essential demographic attributes (Verified Full Name, Masked Mobile Number, Date of Birth, Gender, and State of Domicile) are retrieved during the 2-step OTP verification to evaluate scheme eligibility and auto-populate application dossiers.', 'Only the essential demographic attributes (Verified Full Name, Masked Mobile Number, Date of Birth, Gender, and State of Domicile) are retrieved during the 2-step OTP verification to evaluate scheme eligibility and auto-populate application dossiers.')}
                 </p>
               </div>
 
@@ -281,10 +284,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-center font-bold">2</span>
-                  Zero Plaintext Aadhaar Storage
+                  {t('Zero Plaintext Aadhaar Storage', 'Zero Plaintext Aadhaar Storage')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  Aadhaar numbers are processed strictly in transit through encrypted hardware security tunnels and are <strong>never stored in plaintext</strong> on local servers or persistent analytics databases. All persistent identifiers are tokenized using SHA-256 HMAC representations.
+                  {t('Aadhaar numbers are processed strictly in transit through encrypted hardware security tunnels and are never stored in plaintext on local servers or persistent analytics databases. All persistent identifiers are tokenized using SHA-256 HMAC representations.', 'Aadhaar numbers are processed strictly in transit through encrypted hardware security tunnels and are never stored in plaintext on local servers or persistent analytics databases. All persistent identifiers are tokenized using SHA-256 HMAC representations.')}
                 </p>
               </div>
 
@@ -292,10 +295,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-center font-bold">3</span>
-                  Ephemeral Session Retention & Auto-Purge
+                  {t('Ephemeral Session Retention & Auto-Purge', 'Ephemeral Session Retention & Auto-Purge')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  Authenticated session tokens expire automatically after 30 minutes of inactivity. When a citizen clicks Sign Out, closes the browser window, or triggers refresh confirmation, all decrypted in-memory profile stores and cached document previews are immediately wiped.
+                  {t('Authenticated session tokens expire automatically after 30 minutes of inactivity. When a citizen clicks Sign Out, closes the browser window, or triggers refresh confirmation, all decrypted in-memory profile stores and cached document previews are immediately wiped.', 'Authenticated session tokens expire automatically after 30 minutes of inactivity. When a citizen clicks Sign Out, closes the browser window, or triggers refresh confirmation, all decrypted in-memory profile stores and cached document previews are immediately wiped.')}
                 </p>
               </div>
 
@@ -303,10 +306,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-center font-bold">4</span>
-                  Audit Logging & Telemetry Integrity
+                  {t('Audit Logging & Telemetry Integrity', 'Audit Logging & Telemetry Integrity')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  System telemetry logs capture timestamped actions (e.g. login timestamps, scheme recommendation requests, application submissions) strictly for security monitoring, fraud prevention, and performance metrics without recording sensitive personal identity data.
+                  {t('System telemetry logs capture timestamped actions (e.g. login timestamps, scheme recommendation requests, application submissions) strictly for security monitoring, fraud prevention, and performance metrics without recording sensitive personal identity data.', 'System telemetry logs capture timestamped actions (e.g. login timestamps, scheme recommendation requests, application submissions) strictly for security monitoring, fraud prevention, and performance metrics without recording sensitive personal identity data.')}
                 </p>
               </div>
 
@@ -314,10 +317,10 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
               <div className="space-y-1.5">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-center font-bold">5</span>
-                  Citizen Consent & Revocation Controls
+                  {t('Citizen Consent & Revocation Controls', 'Citizen Consent & Revocation Controls')}
                 </h3>
                 <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 pl-7 leading-relaxed">
-                  Citizens retain complete sovereign control over their verified data. You may inspect active agency data linkages, grant selective document access to welfare schemes, or revoke active data sharing anytime via the Privacy & Consent Dashboard.
+                  {t('Citizens retain complete sovereign control over their verified data. You may inspect active agency data linkages, grant selective document access to welfare schemes, or revoke active data sharing anytime via the Privacy & Consent Dashboard.', 'Citizens retain complete sovereign control over their verified data. You may inspect active agency data linkages, grant selective document access to welfare schemes, or revoke active data sharing anytime via the Privacy & Consent Dashboard.')}
                 </p>
               </div>
             </>
@@ -334,16 +337,16 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
                 )}
                 <span>
                   {!hasScrolledToBottom && countdown > 0
-                    ? `Scroll to bottom & review document (${countdown}s remaining)`
+                    ? t(`Scroll to bottom & review document (${countdown}s remaining)`, `Scroll to bottom & review document (${countdown}s remaining)`)
                     : !hasScrolledToBottom && countdown === 0
-                    ? 'Scroll to bottom to enable acceptance'
-                    : `Scrolled to bottom. Unlocking in ${countdown}s...`}
+                    ? t('Scroll to bottom to enable acceptance', 'Scroll to bottom to enable acceptance')
+                    : t(`Scrolled to bottom. Unlocking in ${countdown}s...`, `Scrolled to bottom. Unlocking in ${countdown}s...`)}
                 </span>
               </div>
             ) : (
               <div className="px-4 py-1.5 rounded-full bg-slate-900 text-emerald-300 border border-emerald-500/60 text-xs font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
                 <CheckCircle2 size={14} className="text-emerald-400" />
-                <span>✓ Mandatory review complete. You may now accept.</span>
+                <span>{t('✓ Mandatory review complete. You may now accept.', '✓ Mandatory review complete. You may now accept.')}</span>
               </div>
             )}
           </div>
@@ -356,7 +359,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-bold text-xs md:text-sm transition cursor-pointer"
           >
-            Cancel / Close
+            {t('Cancel / Close', 'Cancel / Close')}
           </button>
           
           <button
@@ -374,14 +377,14 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({
                 <Lock size={15} />
                 <span>
                   {countdown > 0
-                    ? `Please Read & Scroll (${countdown}s)`
-                    : 'Scroll to bottom to accept'}
+                    ? t(`Please Read & Scroll (${countdown}s)`, `Please Read & Scroll (${countdown}s)`)
+                    : t('Scroll to bottom & review document', 'Scroll to bottom to accept')}
                 </span>
               </>
             ) : (
               <>
                 <CheckCircle2 size={16} />
-                <span>I Have Read & Agree</span>
+                <span>{t('I Agree & Accept Terms', 'I Have Read & Agree')}</span>
               </>
             )}
           </button>

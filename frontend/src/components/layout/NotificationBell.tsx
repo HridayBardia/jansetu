@@ -149,8 +149,8 @@ export const NotificationBell: React.FC = () => {
         type="button"
         onClick={handleToggleOpen}
         className="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-[#133E87]"
-        title="Notifications & Action Requests"
-        aria-label="Notifications"
+        title={t('Notifications & Action Requests', 'Notifications & Action Requests')}
+        aria-label={t('Notifications', 'Notifications')}
       >
         <Bell className={`w-4 h-4 ${newNotifsCount > 0 ? 'text-[#133E87] dark:text-blue-400' : 'text-slate-500'}`} />
 
@@ -169,10 +169,10 @@ export const NotificationBell: React.FC = () => {
           <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-[#133E87] dark:text-blue-400" />
-              <h3 className="font-bold text-xs">Notifications & Department Requests</h3>
+              <h3 className="font-bold text-xs">{t('Notifications & Department Requests', 'Notifications & Department Requests')}</h3>
               {newNotifsCount > 0 && (
                 <span className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                  {newNotifsCount} New
+                  {t(`${newNotifsCount} New`, `${newNotifsCount} New`)}
                 </span>
               )}
             </div>
@@ -195,10 +195,10 @@ export const NotificationBell: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="text-xs font-black text-amber-900 dark:text-amber-300 leading-tight">
-                      Action Required: Document e-KYC Request
+                      {t('Action Required: Document e-KYC Request', 'Action Required: Document e-KYC Request')}
                     </h4>
                     <span className="text-[10px] font-mono text-amber-700 dark:text-amber-400">
-                      Application #{activePendingKyc.appId}
+                      {t(`Application #${activePendingKyc.appId}`, `Application #${activePendingKyc.appId}`)}
                     </span>
                   </div>
                 </div>
@@ -206,12 +206,12 @@ export const NotificationBell: React.FC = () => {
 
               <div className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-1.5">
                 <p className="font-medium">
-                  <strong>{activePendingKyc.dept}</strong> has requested verified credential:
+                  <strong>{t(activePendingKyc.dept, activePendingKyc.dept)}</strong> {t('has requested verified credential:', 'has requested verified credential:')}
                 </p>
                 <div className="flex items-center justify-between gap-1">
                   <p className="text-amber-900 dark:text-amber-300 font-bold flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>{activePendingKyc.docName}</span>
+                    <span>{t(activePendingKyc.docName, activePendingKyc.docName)}</span>
                   </p>
                 </div>
 
@@ -219,12 +219,12 @@ export const NotificationBell: React.FC = () => {
                 {vaultCheck.isInVault ? (
                   <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-300 dark:border-emerald-800 font-semibold">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>✓ Verified Record Found in Document Vault (DigiLocker)</span>
+                    <span>{t('✓ Verified Record Found in Document Vault (DigiLocker)', '✓ Verified Record Found in Document Vault (DigiLocker)')}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 text-[10px] text-amber-900 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-950/60 px-2 py-1 rounded-md border border-amber-300 dark:border-amber-800 font-semibold">
                     <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>⚠️ Document Not Found in Digital Vault</span>
+                    <span>{t('⚠️ Document Not Found in Digital Vault', '⚠️ Document Not Found in Digital Vault')}</span>
                   </div>
                 )}
               </div>
@@ -232,7 +232,7 @@ export const NotificationBell: React.FC = () => {
               {authSuccess ? (
                 <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 animate-fade-in">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>✓ {uploadedFileName || activePendingKyc.docName} submitted & verified!</span>
+                  <span>✓ {t(uploadedFileName || activePendingKyc.docName, uploadedFileName || activePendingKyc.docName)} {t('submitted & verified!', 'submitted & verified!')}</span>
                 </div>
               ) : (
                 <div className="space-y-2 pt-0.5">
@@ -245,17 +245,17 @@ export const NotificationBell: React.FC = () => {
                         disabled={isAuthorizing || isUploading}
                         onClick={handleAuthorizeFromVault}
                         className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        title="Share directly using verified credentials in Document Vault"
+                        title={t('Share directly using verified credentials in Document Vault', 'Share directly using verified credentials in Document Vault')}
                       >
                         {isAuthorizing ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Sharing...</span>
+                            <span>{t('Sharing...', 'Sharing...')}</span>
                           </>
                         ) : (
                           <>
                             <FolderLock className="w-3.5 h-3.5" />
-                            <span>⚡ Share from Vault</span>
+                            <span>{t('⚡ Share from Vault', '⚡ Share from Vault')}</span>
                           </>
                         )}
                       </button>
@@ -266,17 +266,17 @@ export const NotificationBell: React.FC = () => {
                         disabled={isAuthorizing || isUploading}
                         onClick={() => fileInputRef.current?.click()}
                         className="px-2.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-bold text-[11px] transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        title="Upload a different document copy"
+                        title={t('Upload a different document copy', 'Upload a different document copy')}
                       >
                         {isUploading ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Uploading...</span>
+                            <span>{t('Uploading...', 'Uploading...')}</span>
                           </>
                         ) : (
                           <>
                             <Upload className="w-3.5 h-3.5" />
-                            <span>Upload File</span>
+                            <span>{t('Upload File', 'Upload File')}</span>
                           </>
                         )}
                       </button>
@@ -289,17 +289,17 @@ export const NotificationBell: React.FC = () => {
                         disabled={isAuthorizing || isUploading}
                         onClick={() => fileInputRef.current?.click()}
                         className="px-2.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-[11px] shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        title="Upload required document from device"
+                        title={t('Upload required document from device', 'Upload required document from device')}
                       >
                         {isUploading ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Uploading...</span>
+                            <span>{t('Uploading...', 'Uploading...')}</span>
                           </>
                         ) : (
                           <>
                             <Upload className="w-3.5 h-3.5" />
-                            <span>Upload Document</span>
+                            <span>{t('Upload Document', 'Upload Document')}</span>
                           </>
                         )}
                       </button>
@@ -310,17 +310,17 @@ export const NotificationBell: React.FC = () => {
                         disabled={isAuthorizing || isUploading}
                         onClick={handleAuthorizeFromVault}
                         className="px-2.5 py-2 bg-emerald-700/80 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        title="Attest via State Registry"
+                        title={t('Attest via State Registry', 'Attest via State Registry')}
                       >
                         {isAuthorizing ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Attesting...</span>
+                            <span>{t('Attesting...', 'Attesting...')}</span>
                           </>
                         ) : (
                           <>
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Attest via Registry</span>
+                            <span>{t('Attest via Registry', 'Attest via Registry')}</span>
                           </>
                         )}
                       </button>
@@ -334,14 +334,14 @@ export const NotificationBell: React.FC = () => {
                       className="text-[#133E87] dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
                     >
                       <Sparkles className="w-3 h-3" />
-                      <span>Manage in Vault</span>
+                      <span>{t('Manage in Vault', 'Manage in Vault')}</span>
                     </Link>
                     <button
                       type="button"
                       onClick={() => dismissPendingKycRequest(activePendingKyc.appId)}
                       className="hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
                     >
-                      Dismiss
+                      {t('Dismiss', 'Dismiss')}
                     </button>
                   </div>
                 </div>
@@ -354,8 +354,8 @@ export const NotificationBell: React.FC = () => {
             {notifications.length === 0 && !activePendingKyc ? (
               <div className="p-6 text-center text-slate-500 dark:text-slate-400 space-y-1">
                 <Bell className="w-6 h-6 mx-auto text-slate-400 opacity-40 mb-2" />
-                <p className="font-semibold">No notifications</p>
-                <p className="text-[10px]">Real-time alerts and document requests will appear here when requested for your account.</p>
+                <p className="font-semibold">{t('No notifications', 'No notifications')}</p>
+                <p className="text-[10px]">{t('Real-time alerts and document requests will appear here when requested for your account.', 'Real-time alerts and document requests will appear here when requested for your account.')}</p>
               </div>
             ) : (
               notifications.map((n, idx) => (
@@ -367,14 +367,14 @@ export const NotificationBell: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      {n.category || 'Notification'}
+                      {t(n.category || 'Notification', n.category || 'Notification')}
                     </span>
                     <span className="text-[9px] text-slate-400 font-mono">
-                      {n.timestamp || 'Just now'}
+                      {t(n.timestamp || 'Just now', n.timestamp || 'Just now')}
                     </span>
                   </div>
                   <p className="text-xs text-slate-800 dark:text-slate-200 leading-snug">
-                    {n.message}
+                    {t(n.message, n.message)}
                   </p>
                 </div>
               ))
@@ -388,7 +388,7 @@ export const NotificationBell: React.FC = () => {
               onClick={() => setIsOpen(false)}
               className="text-[#133E87] dark:text-blue-400 hover:underline flex items-center gap-1"
             >
-              <span>Document Vault</span>
+              <span>{t('Document Vault', 'Document Vault')}</span>
               <ChevronRight className="w-3 h-3" />
             </Link>
             <Link
@@ -396,7 +396,7 @@ export const NotificationBell: React.FC = () => {
               onClick={() => setIsOpen(false)}
               className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             >
-              Privacy & DPDP Consent
+              {t('Privacy & DPDP Consent', 'Privacy & DPDP Consent')}
             </Link>
           </div>
         </div>

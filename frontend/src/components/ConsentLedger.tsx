@@ -29,7 +29,7 @@ export function ConsentLedger({
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-6 shadow-sm text-center">
         <ShieldCheck className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-        <p className="text-slate-600 dark:text-slate-400 text-sm">No consent records found.</p>
+        <p className="text-slate-600 dark:text-slate-400 text-sm">{t('No consent records found.', 'No consent records found.')}</p>
       </div>
     );
   }
@@ -42,13 +42,13 @@ export function ConsentLedger({
             <Lock className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Unified DPDP Consent Ledger</h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400">Cryptographically verifiable record of who accessed your data, when, and why.</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('Unified DPDP Consent Ledger', 'Unified DPDP Consent Ledger')}</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400">{t('Cryptographically verifiable record of who accessed your data, when, and why.', 'Cryptographically verifiable record of who accessed your data, when, and why.')}</p>
           </div>
         </div>
         <span className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 self-start sm:self-auto">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          Protected by DPDP Act
+          {t('Protected by DPDP Act', 'Protected by DPDP Act')}
         </span>
       </div>
 
@@ -80,14 +80,14 @@ export function ConsentLedger({
                       {typeof entry.date === 'string' && entry.date.includes('T') ? new Date(entry.date).toLocaleString() : entry.date}
                     </span>
                   </div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">{entry.department}</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-300"><span className="font-semibold text-slate-700 dark:text-slate-300">Purpose:</span> {entry.purpose}</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">{t(entry.department, entry.department)}</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300"><span className="font-semibold text-slate-700 dark:text-slate-300">{t('Purpose:', 'Purpose:')}</span> {t(entry.purpose, entry.purpose)}</p>
                   
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {entry.dataPoints.map((dp: string, i: number) => (
                       <span key={i} className="flex items-center gap-1 text-[10px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-mono font-bold">
                         <FileText className="w-2.5 h-2.5 text-slate-400" />
-                        {dp}
+                        {t(dp, dp)}
                       </span>
                     ))}
                   </div>
@@ -97,33 +97,33 @@ export function ConsentLedger({
                   {entry.status === 'ACTIVE' && (
                     <>
                       <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-300 dark:border-emerald-800 uppercase">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Active Consent
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> {t('Active Consent', 'Active Consent')}
                       </span>
                       <span className="text-[10px] text-slate-500 font-mono">
-                        Valid until {typeof entry.expires === 'string' && entry.expires.includes('T') ? new Date(entry.expires).toLocaleDateString() : entry.expires}
+                        {t('Valid until', 'Valid until')} {typeof entry.expires === 'string' && entry.expires.includes('T') ? new Date(entry.expires).toLocaleDateString() : entry.expires}
                       </span>
                       <button 
                         onClick={() => onRevoke && onRevoke(entry.id)}
                         className="text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 border border-rose-300 dark:border-rose-800 px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs">
-                        Revoke Access (DPDP Lock)
+                        {t('Revoke Access (DPDP Lock)', 'Revoke Access (DPDP Lock)')}
                       </button>
                     </>
                   )}
                   {entry.status === 'PENDING' && (
                     <>
                       <span className="text-[10px] font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1 bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 rounded border border-amber-300 dark:border-amber-800 uppercase animate-pulse">
-                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> Pending Authorization
+                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> {t('Pending Authorization', 'Pending Authorization')}
                       </span>
                       <div className="flex items-center gap-1.5 pt-1">
                         <button 
                           onClick={() => onGrant && onGrant(entry.id, 'ALWAYS')}
                           className="text-[11px] font-bold text-white bg-[#0B2545] hover:bg-[#133E87] dark:bg-blue-600 dark:hover:bg-blue-500 px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs">
-                          Allow Always
+                          {t('Allow Always', 'Allow Always')}
                         </button>
                         <button 
                           onClick={() => onGrant && onGrant(entry.id, 'ONCE')}
                           className="text-[11px] font-bold text-white bg-amber-600 hover:bg-amber-500 px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-2xs">
-                          Allow Once
+                          {t('Allow Once', 'Allow Once')}
                         </button>
                       </div>
                     </>
@@ -131,19 +131,19 @@ export function ConsentLedger({
                   {entry.status === 'REVOKED' && (
                     <>
                       <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1 bg-rose-100 dark:bg-rose-950/60 px-2.5 py-1 rounded border border-rose-300 dark:border-rose-800 uppercase">
-                        <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" /> Revoked by Citizen
+                        <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" /> {t('Revoked by Citizen', 'Revoked by Citizen')}
                       </span>
                       <button 
                         onClick={() => onGrant && onGrant(entry.id, 'ALWAYS')}
                         className="text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1">
                         <Check className="w-3 h-3" />
-                        <span>Re-Authorize Access</span>
+                        <span>{t('Re-Authorize Access', 'Re-Authorize Access')}</span>
                       </button>
                     </>
                   )}
                   {entry.status === 'EXPIRED' && (
                     <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700">
-                      EXPIRED
+                      {t('EXPIRED', 'EXPIRED')}
                     </span>
                   )}
                 </div>

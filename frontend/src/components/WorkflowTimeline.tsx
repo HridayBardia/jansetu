@@ -85,7 +85,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
                       <Building2 className="w-3 h-3 text-slate-400" />
-                      {step.department}
+                      {t(step.department || 'Government Department', step.department || 'Government Department')}
                     </span>
 
                     {/* Step Status Badge */}
@@ -100,32 +100,32 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300'
                       }`}
                     >
-                      {isCompleted ? 'Completed' : isActive ? 'Active Step' : isBlocked ? 'Locked' : 'Pending'}
+                      {isCompleted ? t('Completed', 'Completed') : isActive ? t('Active Step', 'Active Step') : isBlocked ? t('Locked', 'Locked') : t('Pending', 'Pending')}
                     </span>
 
                     {/* AI Grounded Confidence Badge */}
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-[#133E87] dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" />
-                      Verified Rules
+                      {t('Verified Rules', 'Verified Rules')}
                     </span>
                   </div>
 
                   <h3 className="text-base md:text-lg font-bold text-slate-900 dark:text-white">
-                    {step.title}
+                    {t(step.title, step.title)}
                   </h3>
 
                   <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-                    {step.description}
+                    {t(step.description, step.description)}
                   </p>
 
                   <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      Est: {step.estimated_time}
+                      {t('Est:', 'Est:')} {t(step.estimated_time || '24-48 Hours', step.estimated_time || '24-48 Hours')}
                     </span>
                     {step.consequential && (
                       <span className="text-amber-800 dark:text-amber-300 text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800">
-                        ⚠️ Requires Consequential Confirmation
+                        {t('⚠️ Requires Consequential Confirmation', '⚠️ Requires Consequential Confirmation')}
                       </span>
                     )}
                   </div>
@@ -163,7 +163,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                 {isCompleted && (
                   <span className="px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Completed
+                    {t('Completed', 'Completed')}
                   </span>
                 )}
               </div>
@@ -173,7 +173,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
             {isBlocked && step.lock_reason && (
               <div className="mt-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl p-3 flex items-center gap-2.5 text-xs text-rose-800 dark:text-rose-300">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{step.lock_reason}</span>
+                <span>{t(step.lock_reason, step.lock_reason)}</span>
               </div>
             )}
 
@@ -196,10 +196,10 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                       >
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-[#133E87] dark:bg-blue-400" />
-                          <span className="font-medium text-slate-800 dark:text-slate-200">{docName}</span>
+                          <span className="font-medium text-slate-800 dark:text-slate-200">{t(docName, docName)}</span>
                         </div>
                         <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                          Auto-Fetched
+                          {t('Auto-Fetched', 'Auto-Fetched')}
                         </span>
                       </div>
                     );

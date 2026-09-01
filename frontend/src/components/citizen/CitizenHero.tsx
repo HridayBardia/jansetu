@@ -99,12 +99,12 @@ export const CitizenHero: React.FC = () => {
 
           <div className="space-y-0.5">
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">{t('hero.gender', 'Gender')}</span>
-            <span className="font-medium text-slate-900 dark:text-white">{gender}</span>
+            <span className="font-medium text-slate-900 dark:text-white">{t(gender, gender)}</span>
           </div>
 
           <div className="space-y-0.5">
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">{t('hero.incomeClass', 'Income Class')}</span>
-            <span className="font-bold text-[#C2410C] dark:text-amber-400">{profile?.income_category || 'EWS'} (₹1.8L)</span>
+            <span className="font-bold text-[#C2410C] dark:text-amber-400">{t(profile?.income_category || 'Middle Class', profile?.income_category || 'Middle Class')} (₹1.8L)</span>
           </div>
 
           <div className="space-y-0.5">

@@ -77,7 +77,7 @@ export const CheckMyInformation: React.FC = () => {
     setIsResolved(false);
     setResolutionMethod(null);
     if (val) {
-      setToastMessage("Demo Mode: Simulated middle-initial demographic variance triggered.");
+      setToastMessage(t("Demo Mode: Simulated middle-initial demographic variance triggered.", "Demo Mode: Simulated middle-initial demographic variance triggered."));
       setTimeout(() => setToastMessage(null), 4000);
     } else {
       setToastMessage(null);
@@ -90,7 +90,7 @@ export const CheckMyInformation: React.FC = () => {
       setIsResolving(false);
       setIsResolved(true);
       setResolutionMethod('ATTESTATION');
-      setToastMessage("Cryptographic One-Time e-Attestation generated. Golden record unified at 100% parity.");
+      setToastMessage(t("Cryptographic One-Time e-Attestation generated. Golden record unified at 100% parity.", "Cryptographic One-Time e-Attestation generated. Golden record unified at 100% parity."));
       setTimeout(() => setToastMessage(null), 5000);
     }, 700);
   };
@@ -101,7 +101,7 @@ export const CheckMyInformation: React.FC = () => {
       setIsResolving(false);
       setIsResolved(true);
       setResolutionMethod('PROPAGATION');
-      setToastMessage("Authoritative Aadhaar Golden Record propagated to MoRTH Parivahan Sarathi node.");
+      setToastMessage(t("Authoritative Aadhaar Golden Record propagated to MoRTH Parivahan Sarathi node.", "Authoritative Aadhaar Golden Record propagated to MoRTH Parivahan Sarathi node."));
       setTimeout(() => setToastMessage(null), 5000);
     }, 700);
   };
@@ -116,7 +116,7 @@ export const CheckMyInformation: React.FC = () => {
     setTimeout(() => {
       setIsPropagatingAddress(false);
       setIsAddressPropagated(true);
-      setToastMessage("Address successfully synchronized across all 4 departmental registries.");
+      setToastMessage(t("Address successfully synchronized across all 4 departmental registries.", "Address successfully synchronized across all 4 departmental registries."));
       setTimeout(() => setToastMessage(null), 5000);
     }, 2400);
   };

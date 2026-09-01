@@ -1,14 +1,74 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage, resolveTranslation } from '@/context/LanguageContext';
 import { UNIVERSAL_PHRASES } from '@/locales/universalDict';
 import { translateBatchStrings } from '@/utils/indicTranslator';
 
-// Master in-memory reverse lookup map built once for lightning-fast 0ms DOM translations
+// Master WeakMaps to preserve original English source text for 0ms reversibility
 const originalTextMap = new WeakMap<Node, string>();
 const originalAttrMap = new WeakMap<Element, Record<string, string>>();
-const pendingTranslationNodes = new Set<string>();
+
+/**
+ * Punctuation-aware translation resolver
+ * Strips and re-attaches trailing markers (*, :, •, etc.)
+ */
+function translateWithPunctuation(normLang: string, rawText: string): string | null {
+  if (!rawText || normLang === 'en') return null;
+
+  const trimmed = rawText.trim();
+  if (!trimmed) return null;
+
+  // 1. Direct match
+  if (POLICY_EXTENDED_PHRASES[trimmed]?.[normLang]) {
+    return POLICY_EXTENDED_PHRASES[trimmed][normLang];
+  }
+  if (PORTAL_EXTENDED_PHRASES[trimmed]?.[normLang]) {
+    return PORTAL_EXTENDED_PHRASES[trimmed][normLang];
+  }
+  if (UNIVERSAL_PHRASES[trimmed]?.[normLang]) {
+    return UNIVERSAL_PHRASES[trimmed][normLang];
+  }
+
+  const direct = resolveTranslation(normLang, trimmed, '');
+  if (direct && direct !== trimmed) {
+    return direct;
+  }
+
+  // 2. Trailing punctuation matching (e.g. "12-Digit Aadhaar Number *" -> "12-अंकीय आधार संख्या *")
+  const punctMatch = trimmed.match(/^(.+?)\s*([\*\:\.\,\!\?•]+)$/);
+  if (punctMatch) {
+    const baseText = punctMatch[1].trim();
+    const trailingPunct = punctMatch[2];
+
+    const baseTrans = 
+      PORTAL_EXTENDED_PHRASES[baseText]?.[normLang] ||
+      UNIVERSAL_PHRASES[baseText]?.[normLang] ||
+      resolveTranslation(normLang, baseText, '');
+
+    if (baseTrans && baseTrans !== baseText) {
+      return `${baseTrans} ${trailingPunct}`;
+    }
+  }
+
+  // 3. Leading icons/markers matching (e.g. "✓ Verified Record..." -> "✓ ...")
+  const iconMatch = trimmed.match(/^([✓⚠️🔔⚡]\s*)(.+)$/);
+  if (iconMatch) {
+    const icon = iconMatch[1];
+    const baseText = iconMatch[2].trim();
+
+    const baseTrans = 
+      PORTAL_EXTENDED_PHRASES[baseText]?.[normLang] ||
+      UNIVERSAL_PHRASES[baseText]?.[normLang] ||
+      resolveTranslation(normLang, baseText, '');
+
+    if (baseTrans && baseTrans !== baseText) {
+      return `${icon}${baseTrans}`;
+    }
+  }
+
+  return null;
+}
 
 export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { language, t } = useLanguage();
@@ -63,7 +123,7 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
           const trimmed = rawText.trim();
 
           if (trimmed.length > 0) {
-            // Save original English text if not saved yet or if it has Latin characters
+            // Save original English text
             if (!originalTextMap.has(currentNode) && (normLang === 'en' || /[a-zA-Z]{2,}/.test(rawText))) {
               originalTextMap.set(currentNode, rawText);
             }
@@ -72,7 +132,6 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
             const originalTrimmed = original.trim();
 
             if (normLang === 'en') {
-              // Restore original English text
               if (currentNode.nodeValue !== original) {
                 currentNode.nodeValue = original;
               }
@@ -110,7 +169,7 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
           currentNode = walker.nextNode();
         }
 
-        // Also translate placeholders and titles on inputs and buttons
+        // Also translate placeholders and titles on inputs and buttons (0ms)
         const elementsWithAttrs = document.querySelectorAll<HTMLElement>('[placeholder], [title]');
         elementsWithAttrs.forEach((el) => {
           if (!originalAttrMap.has(el)) {
@@ -131,17 +190,17 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
               el.setAttribute('title', og.title);
             }
           } else {
-            if (og.placeholder) {
+            if (og.placeholder && og.placeholder.trim()) {
               const phTrim = og.placeholder.trim();
-              const transPh = UNIVERSAL_PHRASES[phTrim]?.[normLang] || t(phTrim);
-              if (transPh && transPh !== phTrim) {
+              const transPh = translateWithPunctuation(normLang, phTrim);
+              if (transPh && transPh !== phTrim && el.getAttribute('placeholder') !== transPh) {
                 el.setAttribute('placeholder', transPh);
               }
             }
-            if (og.title) {
+            if (og.title && og.title.trim()) {
               const tTrim = og.title.trim();
-              const transT = UNIVERSAL_PHRASES[tTrim]?.[normLang] || t(tTrim);
-              if (transT && transT !== tTrim) {
+              const transT = translateWithPunctuation(normLang, tTrim);
+              if (transT && transT !== tTrim && el.getAttribute('title') !== transT) {
                 el.setAttribute('title', transT);
               }
             }
@@ -179,15 +238,14 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    // Initial translation run
+    // Instant initial run
     translateDOM();
 
     // Debounced MutationObserver
     const observer = new MutationObserver((mutations) => {
-      let hasRelevantChanges = false;
       for (const m of mutations) {
         if (m.type === 'childList' && m.addedNodes.length > 0) {
-          hasRelevantChanges = true;
+          scheduleTranslate();
           break;
         }
       }
@@ -208,6 +266,7 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       observer.disconnect();
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);

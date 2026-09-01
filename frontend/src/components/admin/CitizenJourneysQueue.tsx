@@ -101,7 +101,7 @@ export const CitizenJourneysQueue: React.FC = () => {
       {recentlyAddedJourneyId && (
         <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 rounded-xl flex items-center gap-2.5 text-xs text-emerald-900 dark:text-emerald-200 font-semibold animate-scaleUp shadow-sm">
           <Sparkles className="w-4 h-4 text-emerald-600 animate-spin shrink-0" />
-          <span>Live Mesh: New Citizen Workflow ({recentlyAddedJourneyId}) initiated and prepended to the queue in real-time.</span>
+          <span>{t(`Live Mesh: New Citizen Workflow (${recentlyAddedJourneyId}) initiated and prepended to the queue in real-time.`, `Live Mesh: New Citizen Workflow (${recentlyAddedJourneyId}) initiated and prepended to the queue in real-time.`)}</span>
         </div>
       )}
 
@@ -174,7 +174,7 @@ export const CitizenJourneysQueue: React.FC = () => {
                       {t(j.status, j.status)}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      Synced {j.lastUpdated || 'Just now'}
+                      {t('Synced', 'Synced')} {t(j.lastUpdated || 'Just now', j.lastUpdated || 'Just now')}
                     </span>
                   </div>
 

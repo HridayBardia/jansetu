@@ -354,7 +354,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>
-              <strong>{uploadToast.name}</strong> uploaded, OCR-attested, and added to your JanSetu Document Vault!
+              <strong>{t(uploadToast.name, uploadToast.name)}</strong> {t('uploaded, OCR-attested, and added to your JanSetu Document Vault!', 'uploaded, OCR-attested, and added to your JanSetu Document Vault!')}
             </span>
           </div>
           <button onClick={() => setUploadToast(null)} className="text-emerald-700 hover:text-emerald-950 dark:hover:text-white">
@@ -367,7 +367,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
       {isUploadingFile && (
         <div className="p-3.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center gap-2.5 text-xs text-[#133E87] dark:text-blue-300 animate-pulse">
           <Loader2 className="w-4 h-4 animate-spin text-[#133E87] dark:text-blue-400 shrink-0" />
-          <span>Processing <strong>{uploadedFileName}</strong> (Running OCR extraction & cryptographic hashing)...</span>
+          <span>{t('Processing', 'Processing')} <strong>{uploadedFileName}</strong> ({t('Running OCR extraction & cryptographic hashing...', 'Running OCR extraction & cryptographic hashing...')})</span>
         </div>
       )}
 
@@ -380,11 +380,11 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-amber-900 dark:text-amber-300">Action Required: Department Document Request</span>
-                <span className="text-[10px] font-mono bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-1.5 py-0.2 rounded font-bold">App #{pendingKycRequest.appId}</span>
+                <span className="font-bold text-amber-900 dark:text-amber-300">{t('Action Required: Department Document Request', 'Action Required: Department Document Request')}</span>
+                <span className="text-[10px] font-mono bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 px-1.5 py-0.2 rounded font-bold">{t(`Application #${pendingKycRequest.appId}`, `Application #${pendingKycRequest.appId}`)}</span>
               </div>
               <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                <strong>{pendingKycRequest.dept}</strong> has requested verified credentials for <strong>{pendingKycRequest.docName}</strong>.
+                <strong>{t(pendingKycRequest.dept, pendingKycRequest.dept)}</strong> {t('has requested verified credentials for', 'has requested verified credentials for')} <strong>{t(pendingKycRequest.docName, pendingKycRequest.docName)}</strong>.
               </p>
 
               {/* Vault Detection Status */}
@@ -394,14 +394,14 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                   return (
                     <div className="flex items-center gap-1.5 text-[11px] text-emerald-800 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800 font-semibold w-fit">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>Found in Vault: {vaultCheck.vaultDocTitle || pendingKycRequest.docName}</span>
+                      <span>{t('Found in Vault:', 'Found in Vault:')} {t(vaultCheck.vaultDocTitle || pendingKycRequest.docName, vaultCheck.vaultDocTitle || pendingKycRequest.docName)}</span>
                     </div>
                   );
                 }
                 return (
                   <div className="flex items-center gap-1.5 text-[11px] text-amber-900 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-800 font-semibold w-fit">
                     <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>Not Found in Vault — Upload Required</span>
+                    <span>{t('Not Found in Vault — Upload Required', 'Not Found in Vault — Upload Required')}</span>
                   </div>
                 );
               })()}
@@ -435,7 +435,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
             {docReqSuccess ? (
               <div className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>✓ {uploadedFileName || pendingKycRequest.docName} Submitted to Department!</span>
+                <span>✓ {t(uploadedFileName || pendingKycRequest.docName, uploadedFileName || pendingKycRequest.docName)} {t('Submitted to Department!', 'Submitted to Department!')}</span>
               </div>
             ) : (
               (() => {
@@ -467,12 +467,12 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                         {isSubmittingReq ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Attesting & Transmitting...</span>
+                            <span>{t('Attesting & Transmitting...', 'Attesting & Transmitting...')}</span>
                           </>
                         ) : (
                           <>
                             <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Submit from Vault</span>
+                            <span>{t('Submit from Vault', 'Submit from Vault')}</span>
                           </>
                         )}
                       </button>
@@ -486,12 +486,12 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                         {isUploadingFile ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Uploading File...</span>
+                            <span>{t('Uploading File...', 'Uploading File...')}</span>
                           </>
                         ) : (
                           <>
                             <Upload className="w-3.5 h-3.5" />
-                            <span>Upload File</span>
+                            <span>{t('Upload File', 'Upload File')}</span>
                           </>
                         )}
                       </button>
@@ -510,12 +510,12 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                       {isUploadingFile ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Uploading Document...</span>
+                          <span>{t('Uploading Document...', 'Uploading Document...')}</span>
                         </>
                       ) : (
                         <>
                           <Upload className="w-3.5 h-3.5" />
-                          <span>Upload Required Document</span>
+                          <span>{t('Upload Required Document', 'Upload Required Document')}</span>
                         </>
                       )}
                     </button>
@@ -544,12 +544,12 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                       {isSubmittingReq ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Attesting...</span>
+                          <span>{t('Attesting...', 'Attesting...')}</span>
                         </>
                       ) : (
                         <>
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Attest via Registry</span>
+                          <span>{t('Attest via Registry', 'Attest via Registry')}</span>
                         </>
                       )}
                     </button>
@@ -565,7 +565,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
       {packetNotice && (
         <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300 animate-fade-in">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="font-medium">{packetNotice}</span>
+          <span className="font-medium">{t(packetNotice, packetNotice)}</span>
         </div>
       )}
 
@@ -647,7 +647,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {doc.document_name || doc.document_type}
+                      {t(doc.document_name || doc.document_type, doc.document_name || doc.document_type)}
                     </h4>
                     {getVerificationBadge(doc.verification_status, doc.is_synthetic)}
                     {doc.expiry_status === 'NO_EXPIRY' && (
@@ -681,7 +681,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                   {/* Remove document from vault */}
                   <button
                     onClick={() => {
-                      if (confirm(`Remove "${doc.document_name || doc.document_type}" from your vault?`)) {
+                      if (confirm(t(`Remove "${doc.document_name || doc.document_type}" from your vault?`, `Remove "${doc.document_name || doc.document_type}" from your vault?`))) {
                         // Remove from localStorage
                         if (typeof window !== 'undefined') {
                           try {
@@ -702,10 +702,10 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
                       }
                     }}
                     className="px-2.5 py-1.5 rounded bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 text-xs font-medium border border-red-200 dark:border-red-800/60 flex items-center gap-1 transition shadow-2xs cursor-pointer"
-                    title="Remove from vault"
+                    title={t('Remove from vault', 'Remove from vault')}
                   >
                     <Trash2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                    <span>Remove</span>
+                    <span>{t('Remove', 'Remove')}</span>
                   </button>
                 </div>
               </div>
@@ -714,7 +714,7 @@ export const DocumentVault: React.FC<DocumentVaultProps> = ({
               {doc.synthetic_notice && (
                 <div className="text-[11px] font-medium text-amber-900 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3 py-1.5 rounded flex items-center gap-1.5">
                   <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <span>{doc.synthetic_notice}</span>
+                  <span>{t(doc.synthetic_notice, doc.synthetic_notice)}</span>
                 </div>
               )}
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
 import { useLiveSync, ApplicationRecord } from '@/context/LiveSyncContext';
 import { 
   X, 
@@ -17,6 +18,7 @@ interface ApplicationModalProps {
 }
 
 export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application, onClose }) => {
+  const { t } = useLanguage();
   const { 
     applications: liveApps, 
     revokedDepartments, 
@@ -42,13 +44,13 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
       dept: activeApp.department
     });
     setAwaitingKyc(true);
-    setToastMsg(`Request for ${docName} transmitted to citizen.`);
+    setToastMsg(t(`Request for ${docName} transmitted to citizen.`, `Request for ${docName} transmitted to citizen.`));
     setTimeout(() => setToastMsg(null), 4000);
   };
 
   const handleApprove = () => {
     broadcastApplicationStatusUpdated(activeApp.id, 'APPROVED', 'Disbursement Approval Generated to Beneficiary Bank');
-    setToastMsg(`Application ${activeApp.id} Approved for DBT Disbursement.`);
+    setToastMsg(t(`Application ${activeApp.id} Approved for DBT Disbursement.`, `Application ${activeApp.id} Approved for DBT Disbursement.`));
     setTimeout(() => setToastMsg(null), 4000);
   };
 
@@ -75,11 +77,11 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
                 {activeApp.id}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-                {activeApp.status}
+                {t(activeApp.status, activeApp.status)}
               </span>
             </div>
             <h2 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-              {activeApp.service}
+              {t(activeApp.service, activeApp.service)}
             </h2>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-100 dark:bg-slate-800 transition">
@@ -89,13 +91,13 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-950/70 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs">
           <div>
-            <p className="text-slate-500 uppercase font-bold text-[10px]">Beneficiary Name</p>
+            <p className="text-slate-500 uppercase font-bold text-[10px]">{t('Beneficiary Name', 'Beneficiary Name')}</p>
             <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{activeApp.citizenName}</p>
             <p className="text-slate-400 font-mono text-[11px] mt-0.5">UID: {activeApp.citizenId}</p>
           </div>
           <div>
-            <p className="text-slate-500 uppercase font-bold text-[10px]">Department</p>
-            <p className="font-medium text-slate-900 dark:text-slate-200 mt-0.5">{activeApp.department}</p>
+            <p className="text-slate-500 uppercase font-bold text-[10px]">{t('Department', 'Department')}</p>
+            <p className="font-medium text-slate-900 dark:text-slate-200 mt-0.5">{t(activeApp.department, activeApp.department)}</p>
           </div>
         </div>
 
@@ -103,28 +105,28 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
           <div className="bg-red-50 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-800 rounded-2xl p-5 space-y-2 text-red-900 dark:text-red-200">
             <div className="flex items-center gap-2 font-bold text-sm text-red-700 dark:text-red-400">
               <Lock className="w-5 h-5" />
-              <span>⚠️ Access Revoked by Citizen under DPDP Act 2023</span>
+              <span>{t('⚠️ Access Revoked by Citizen under DPDP Act 2023', '⚠️ Access Revoked by Citizen under DPDP Act 2023')}</span>
             </div>
-            <p className="text-xs">Document Tokens Purged. Access Denied.</p>
+            <p className="text-xs">{t('Document Tokens Purged. Access Denied.', 'Document Tokens Purged. Access Denied.')}</p>
           </div>
         ) : (
           <div className="space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Supporting Verification Documents
+              {t('Supporting Verification Documents', 'Supporting Verification Documents')}
             </span>
             <div className="space-y-1.5">
               {activeApp.documents?.map((doc, idx) => (
                 <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-100 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                   <div className="flex items-center gap-2">
                     <FileText className="w-3.5 h-3.5 text-purple-500" />
-                    <span className="font-medium">{doc.name}</span>
+                    <span className="font-medium">{t(doc.name, doc.name)}</span>
                   </div>
                   <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold transition-all duration-300 ${
                     doc.status === 'VERIFIED' 
                       ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30' 
                       : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 animate-pulse'
                   }`}>
-                    {doc.status === 'VERIFIED' ? '✓ VERIFIED' : doc.status}
+                    {doc.status === 'VERIFIED' ? t('✓ VERIFIED', '✓ VERIFIED') : t(doc.status, doc.status)}
                   </span>
                 </div>
               ))}
@@ -143,7 +145,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
             }`}
           >
             <FileText className={`w-3.5 h-3.5 ${isKycAwaiting ? 'text-amber-600 animate-spin' : 'text-purple-600 dark:text-purple-400'}`} />
-            <span>{isKycAwaiting ? 'Awaiting Citizen e-KYC ⏳' : 'Request Citizen e-KYC / Document'}</span>
+            <span>{isKycAwaiting ? t('Awaiting Citizen e-KYC ⏳', 'Awaiting Citizen e-KYC ⏳') : t('Request Citizen e-KYC / Document', 'Request Citizen e-KYC / Document')}</span>
           </button>
 
           <button
@@ -157,7 +159,7 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ application,
             }`}
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Approve & Disburse</span>
+            <span>{t('Approve & Disburse', 'Approve & Disburse')}</span>
           </button>
         </div>
       </div>
