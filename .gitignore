@@ -44,3 +44,5 @@ citizen_journey.db
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*

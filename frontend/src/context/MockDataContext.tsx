@@ -197,12 +197,54 @@ const MockDataContext = createContext<MockDataState | undefined>(undefined);
 export const MockDataProvider = ({ children }: { children: ReactNode }) => {
   const [profile] = useState<Profile>(initialProfile);
   const [familyMembers] = useState<Profile[]>(initialFamily);
-  const [documents, setDocuments] = useState<DocumentRecord[]>(initialDocuments);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('jansetu_documents');
+        if (stored) {
+          const customDocs: DocumentRecord[] = JSON.parse(stored);
+          if (Array.isArray(customDocs) && customDocs.length > 0) {
+            // Deduplicate custom docs vs initialDocs
+            const existingIds = new Set(initialDocuments.map(d => d.id));
+            const filteredCustom = customDocs.filter(d => !existingIds.has(d.id));
+            return [...filteredCustom, ...initialDocuments];
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load stored documents:', e);
+      }
+    }
+    return initialDocuments;
+  });
   const [journeys, setJourneys] = useState<Journey[]>(initialJourneys);
   const [applications, setApplications] = useState<Application[]>(initialApplications);
   const [consents, setConsents] = useState<Consent[]>(initialConsents);
   const [governmentConnections] = useState<GovConnection[]>(initialGovConnections);
   const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+
+  // Sync on mount or when external document events fire
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const stored = localStorage.getItem('jansetu_documents');
+        if (stored) {
+          const customDocs: DocumentRecord[] = JSON.parse(stored);
+          if (Array.isArray(customDocs)) {
+            const initialIds = new Set(initialDocuments.map(d => d.id));
+            const filteredCustom = customDocs.filter(d => !initialIds.has(d.id));
+            setDocuments([...filteredCustom, ...initialDocuments]);
+          }
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('jansetu_documents_updated', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('jansetu_documents_updated', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Deterministic event streamer
   useEffect(() => {
@@ -228,11 +270,33 @@ export const MockDataProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const addDocument = (doc: DocumentRecord) => {
-    setDocuments(prev => [doc, ...prev]);
+    setDocuments(prev => {
+      const updated = [doc, ...prev.filter(d => d.id !== doc.id)];
+      if (typeof window !== 'undefined') {
+        try {
+          const initialIds = new Set(initialDocuments.map(d => d.id));
+          const customOnly = updated.filter(d => !initialIds.has(d.id));
+          localStorage.setItem('jansetu_documents', JSON.stringify(customOnly));
+          window.dispatchEvent(new Event('jansetu_documents_updated'));
+        } catch (e) {}
+      }
+      return updated;
+    });
   };
 
   const removeDocument = (id: string) => {
-    setDocuments(prev => prev.filter(d => d.id !== id));
+    setDocuments(prev => {
+      const updated = prev.filter(d => d.id !== id);
+      if (typeof window !== 'undefined') {
+        try {
+          const initialIds = new Set(initialDocuments.map(d => d.id));
+          const customOnly = updated.filter(d => !initialIds.has(d.id));
+          localStorage.setItem('jansetu_documents', JSON.stringify(customOnly));
+          window.dispatchEvent(new Event('jansetu_documents_updated'));
+        } catch (e) {}
+      }
+      return updated;
+    });
   };
 
   const addApplication = (app: any) => {

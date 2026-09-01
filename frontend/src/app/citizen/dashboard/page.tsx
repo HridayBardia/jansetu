@@ -293,6 +293,73 @@ export default function DashboardPage() {
   const [realJourneys, setRealJourneys] = useState<any[]>([]);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
 
+  const allCitizenDocuments = React.useMemo(() => {
+    const seen = new Set<string>();
+    const list: any[] = [];
+
+    // Prioritize realDocuments from backend API
+    for (const d of realDocuments) {
+      if (!d) continue;
+      const key = (d.document_name || d.name || d.document_type || d.type || '').toLowerCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: d.id,
+          document_type: d.document_type || d.type || 'Document',
+          document_name: d.document_name || d.name || d.document_type,
+          file_name: d.file_name || d.name || 'document.pdf',
+          file_size: d.file_size || 102400,
+          status: 'COMPLETED',
+          verification_status: d.verification_status || d.status || 'VERIFIED',
+          is_synthetic: false,
+          issued_by: d.issued_by || d.source || 'Verified Authority'
+        });
+      }
+    }
+
+    // Add mockDocs (which includes custom uploaded docs from MockDataContext/localStorage)
+    for (const d of mockDocs) {
+      if (!d) continue;
+      const key = (d.name || d.type || '').toLowerCase().trim();
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        list.push({
+          id: d.id,
+          document_type: d.type || 'Document',
+          document_name: d.name || d.type,
+          file_name: d.name || 'document.pdf',
+          file_size: 102400,
+          status: 'COMPLETED',
+          verification_status: d.status || 'VERIFIED',
+          is_synthetic: d.isDemo ?? true,
+          issued_by: d.source || 'Self Uploaded & Attested'
+        });
+      }
+    }
+
+    return list;
+  }, [realDocuments, mockDocs]);
+
+  const handleMasterUpload = (file?: File) => {
+    if (!file) return;
+    const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    addDocument({
+      id: `doc_${Date.now()}`,
+      name: cleanName,
+      type: cleanName,
+      status: 'AVAILABLE',
+      uploadDate: new Date().toLocaleDateString('en-GB'),
+      fileType: file.name.endsWith('.pdf') ? 'PDF' : file.name.endsWith('.png') ? 'PNG' : 'JPG',
+      pageCount: 1,
+      source: 'Self Uploaded (OCR Attested)',
+      isDemo: true,
+      fileObject: file
+    });
+    fetchUserDocumentsAPI().then((data) => {
+      if (data && data.length > 0) setRealDocuments(data);
+    });
+  };
+
   const loadInteropData = () => {
     setIsRefreshing(true);
     fetchConnectorHealthAPI().then((data) => setHealthData(data || null));
@@ -1036,17 +1103,11 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-400">Your verified documents</p>
           </div>
         </div>
-        <DocumentVault documents={mockDocs.map(d => ({
-          id: d.id,
-          document_type: d.type,
-          document_name: d.name,
-          file_name: d.name,
-          file_size: 100,
-          status: 'COMPLETED',
-          verification_status: d.status,
-          is_synthetic: d.isDemo,
-          issued_by: d.source
-        })) as any} />
+        <DocumentVault 
+          documents={allCitizenDocuments} 
+          onUpload={handleMasterUpload}
+          onRemove={removeDocument}
+        />
       </div>
 
       {/* 03 - APPLICATIONS */}
@@ -1366,33 +1427,10 @@ export default function DashboardPage() {
             </div>
           )}
           <DocumentVault 
-            documents={[
-              ...realDocuments.map(d => ({
-                id: d.id,
-                document_type: d.document_type || d.type,
-                document_name: d.document_name || d.name,
-                file_name: d.file_name || d.name,
-                file_size: d.file_size || 100,
-                status: 'COMPLETED',
-                verification_status: d.verification_status || d.status || 'VERIFIED',
-                is_synthetic: false,
-                issued_by: d.issued_by || d.source || 'Verified Source'
-              })),
-              ...mockDocs.map(d => ({
-                id: d.id,
-                document_type: d.type,
-                document_name: d.name,
-                file_name: d.name,
-                file_size: 100,
-                status: 'COMPLETED',
-                verification_status: d.status,
-                is_synthetic: d.isDemo,
-                issued_by: d.source
-              }))
-            ] as any} 
+            documents={allCitizenDocuments} 
             goalCategory={journeyAnalysis?.intent?.primary === 'STUDY_ABROAD' ? 'education' : 'business'}
             consistencyStatus={
-              mockDocs.length > 0 ? {
+              allCitizenDocuments.length > 0 ? {
                 overall_status: 'CONSISTENT',
                 identity_status: 'MATCHED',
                 dob_status: 'MATCHED',
@@ -1400,33 +1438,7 @@ export default function DashboardPage() {
               } : undefined
             }
             onRemove={removeDocument}
-            onUpload={(file) => {
-              setUploadingFile(file ? file.name : 'rent_agreement_signed.pdf');
-              setUploadProgress(0);
-              let progress = 0;
-              const timer = setInterval(() => {
-                progress += 20;
-                setUploadProgress(progress);
-                if (progress >= 100) {
-                  clearInterval(timer);
-                  if (file) {
-                    addDocument({
-                      id: `doc_${Date.now()}`,
-                      name: file.name,
-                      type: file.type || 'application/pdf',
-                      status: 'AVAILABLE',
-                      uploadDate: new Date().toLocaleDateString('en-GB'),
-                      fileType: file.type.includes('pdf') ? 'PDF' : file.type.includes('image') ? 'JPG' : 'DOC',
-                      pageCount: 1,
-                      source: 'Self Uploaded',
-                      isDemo: true,
-                      fileObject: file
-                    });
-                  }
-                  setTimeout(() => setUploadingFile(null), 500);
-                }
-              }, 200);
-            }}
+            onUpload={handleMasterUpload}
           />
         </div>
       )}
