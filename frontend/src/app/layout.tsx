@@ -35,16 +35,14 @@ function AppContent({ children }: { children: React.ReactNode }) {
       const isPublic = !pathname || 
         pathname === '/' || 
         pathname === '/login' || 
-        pathname.startsWith('/citizen-portal') || 
         pathname.startsWith('/legal') || 
         pathname.startsWith('/help');
 
       const isProtected = pathname ? !isPublic && (
-        pathname.startsWith('/citizen/dashboard') ||
+        pathname.startsWith('/citizen') ||
         pathname.startsWith('/admin') ||
         pathname.startsWith('/journeys') ||
-        pathname.startsWith('/alerts') ||
-        (pathname.startsWith('/citizen') && !pathname.startsWith('/citizen-portal'))
+        pathname.startsWith('/alerts')
       ) : false;
 
       // Require BOTH authentication AND current-session T&C consent for protected routes

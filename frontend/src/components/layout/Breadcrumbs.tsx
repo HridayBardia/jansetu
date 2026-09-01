@@ -29,7 +29,6 @@ export const Breadcrumbs: React.FC = () => {
 
   const ROUTE_NAME_MAP: Record<string, string> = {
     citizen: t('Citizen Portal', 'Citizen Portal'),
-    'citizen-portal': t('Citizen Portal', 'Citizen Portal'),
     dashboard: t('Beneficiary Dashboard', 'Beneficiary Dashboard'),
     admin: t('Administration Portal', 'Administration Portal'),
     login: t('Unified Sign In', 'Unified Sign In'),
@@ -57,8 +56,8 @@ export const Breadcrumbs: React.FC = () => {
     accumulatedPath += `/${seg}`;
     const rawLabel = ROUTE_NAME_MAP[seg] || seg.charAt(0).toUpperCase() + seg.slice(1);
     
-    // If the segment is 'citizen', point link to the public /citizen-portal page
-    const targetHref = seg === 'citizen' ? '/citizen-portal' : accumulatedPath;
+    // If the segment is 'citizen', point link to the citizen dashboard
+    const targetHref = seg === 'citizen' ? '/citizen/dashboard' : accumulatedPath;
 
     crumbs.push({
       label: t(rawLabel, rawLabel),
