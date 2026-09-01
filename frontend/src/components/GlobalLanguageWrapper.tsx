@@ -3,11 +3,14 @@
 import React, { useEffect, useRef } from 'react';
 import { useLanguage, resolveTranslation } from '@/context/LanguageContext';
 import { UNIVERSAL_PHRASES } from '@/locales/universalDict';
+import { PORTAL_EXTENDED_PHRASES } from '@/locales/portalPhrases';
+import { POLICY_EXTENDED_PHRASES } from '@/locales/policyPhrases';
 import { translateBatchStrings } from '@/utils/indicTranslator';
 
 // Master WeakMaps to preserve original English source text for 0ms reversibility
 const originalTextMap = new WeakMap<Node, string>();
 const originalAttrMap = new WeakMap<Element, Record<string, string>>();
+const pendingTranslationNodes = new Set<string>();
 
 /**
  * Punctuation-aware translation resolver
@@ -243,9 +246,10 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
 
     // Debounced MutationObserver
     const observer = new MutationObserver((mutations) => {
+      let hasRelevantChanges = false;
       for (const m of mutations) {
         if (m.type === 'childList' && m.addedNodes.length > 0) {
-          scheduleTranslate();
+          hasRelevantChanges = true;
           break;
         }
       }
@@ -266,7 +270,6 @@ export const GlobalLanguageWrapper: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => {
-      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       observer.disconnect();
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);

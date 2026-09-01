@@ -29,6 +29,8 @@ import mni from '../locales/mni.json';
 
 import { MASTER_TRANSLATIONS } from '../locales/translations';
 import { UNIVERSAL_PHRASES } from '../locales/universalDict';
+import { PORTAL_EXTENDED_PHRASES } from '../locales/portalPhrases';
+import { POLICY_EXTENDED_PHRASES } from '../locales/policyPhrases';
 import { translateBatchStrings, translateObject as deepTranslateObject } from '../utils/indicTranslator';
 
 const LOCALES: Record<string, Record<string, string>> = {
@@ -127,13 +129,13 @@ function setCached(key: string, value: string) {
 
 /**
  * Universal Key & Text Resolver supporting:
- * 0. UNIVERSAL_PHRASES 23-language phrase index (0ms)
+ * 0. Extended Master Dictionaries & Universal Phrases (0ms)
  * 1. Exact dotted key in JSON locale
  * 2. Reverse English Value -> Key -> Target Locale match
  * 3. MASTER_TRANSLATIONS namespaces (`nav.home`, `auth.aadhaar_number`, etc.)
  * 4. Fallback chain to English
  */
-function resolveTranslation(lang: string, key: string, fallback?: string): string {
+export function resolveTranslation(lang: string, key: string, fallback?: string): string {
   if (!key && !fallback) return '';
   const normLang = lang === 'kok' ? 'gom' : lang;
   if (normLang === 'en') {
@@ -144,7 +146,21 @@ function resolveTranslation(lang: string, key: string, fallback?: string): strin
   const trimmedKey = (key || '').trim();
   const trimmedFallback = (fallback || '').trim();
 
-  // 0. Direct Universal Phrase Match on key or fallback
+  // 0a. Portal & Policy Extended Phrases (0ms master dictionary)
+  if (trimmedKey && POLICY_EXTENDED_PHRASES[trimmedKey]?.[normLang]) {
+    return POLICY_EXTENDED_PHRASES[trimmedKey][normLang];
+  }
+  if (trimmedFallback && POLICY_EXTENDED_PHRASES[trimmedFallback]?.[normLang]) {
+    return POLICY_EXTENDED_PHRASES[trimmedFallback][normLang];
+  }
+  if (trimmedKey && PORTAL_EXTENDED_PHRASES[trimmedKey]?.[normLang]) {
+    return PORTAL_EXTENDED_PHRASES[trimmedKey][normLang];
+  }
+  if (trimmedFallback && PORTAL_EXTENDED_PHRASES[trimmedFallback]?.[normLang]) {
+    return PORTAL_EXTENDED_PHRASES[trimmedFallback][normLang];
+  }
+
+  // 0b. Direct Universal Phrase Match on key or fallback
   if (trimmedKey && UNIVERSAL_PHRASES[trimmedKey]?.[normLang]) {
     return UNIVERSAL_PHRASES[trimmedKey][normLang];
   }

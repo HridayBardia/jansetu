@@ -199,6 +199,22 @@ export const AdminInteropView = () => {
     }, 500);
   };
 
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationStage, setSimulationStage] = useState(0);
+
+  const runSimulation = () => {
+    if (isSimulating) return;
+    setIsSimulating(true);
+    setSimulationStage(1);
+    setTimeout(() => setSimulationStage(2), 700);
+    setTimeout(() => setSimulationStage(3), 1400);
+    setTimeout(() => setSimulationStage(4), 2100);
+    setTimeout(() => {
+      setSimulationStage(5);
+      setIsSimulating(false);
+    }, 2800);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
